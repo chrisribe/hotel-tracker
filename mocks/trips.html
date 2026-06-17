@@ -9,92 +9,184 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-    :root {
-      --bg: #F4F0E8; --surface: #FFFFFF; --charcoal: #1E2228;
-      --teal: #197A6F; --teal-lt: #22A090; --teal-dim: rgba(25,122,111,0.1);
-      --amber: #E8A030; --text: #1E2228; --text-mid: #4A5260;
-      --text-dim: #8A9099; --border: #DDD8CE; --border-lt: #EDE9E0;
-      --green: #1E7A48; --green-dim: rgba(30,122,72,0.1);
-    }
-    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
 
+    :root {
+      --bg:        #F4F0E8;
+      --surface:   #FFFFFF;
+      --charcoal:  #1E2228;
+      --teal:      #197A6F;
+      --teal-lt:   #22A090;
+      --teal-dim:  rgba(25,122,111,0.1);
+      --amber:     #E8A030;
+      --text:      #1E2228;
+      --text-mid:  #4A5260;
+      --text-dim:  #8A9099;
+      --border:    #DDD8CE;
+      --border-lt: #EDE9E0;
+      --green:     #1E7A48;
+      --green-dim: rgba(30,122,72,0.1);
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── NAV (identical to variant-a) ── */
     nav {
-      background:var(--charcoal); padding:0 2rem; height:56px;
-      display:flex; align-items:center; justify-content:space-between;
-      position:sticky; top:0; z-index:5;
+      background: var(--charcoal);
+      padding: 0 2rem; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 5;
     }
     .logo {
-      font-family:'Playfair Display',serif; font-weight:700; font-size:1.15rem;
-      color:#fff; display:flex; align-items:center; gap:0.5rem;
+      font-family: 'Playfair Display', serif;
+      font-weight: 700; font-size: 1.15rem;
+      color: #fff; display: flex; align-items: center; gap: 0.5rem;
     }
-    .logo .dot { color:var(--teal-lt); }
+    .logo .dot { color: var(--teal-lt); }
     .btn {
-      font-family:'DM Sans',sans-serif; font-size:0.82rem; font-weight:600;
-      padding:7px 16px; border-radius:7px; border:none; cursor:pointer;
-      text-decoration:none; display:inline-flex; align-items:center; gap:0.3rem;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.82rem; font-weight: 600;
+      padding: 7px 16px; border-radius: 7px; border: none;
+      cursor: pointer; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 0.3rem;
     }
-    .btn-primary { background:var(--teal); color:#fff; }
-    .btn-primary:hover { background:var(--teal-lt); }
+    .btn-primary { background: var(--teal); color: #fff; }
+    .btn-primary:hover { background: var(--teal-lt); }
 
-    .page { max-width:780px; margin:0 auto; padding:2rem 1.5rem; }
+    /* ── PAGE ── */
+    .page { max-width: 1080px; margin: 0 auto; padding: 2rem 1.5rem; }
 
+    /* ── HEADER (identical structure to trip-header in variant-a) ── */
     .page-header {
-      display:flex; align-items:flex-end; justify-content:space-between;
-      margin-bottom:1.75rem; padding-bottom:1.25rem;
-      border-bottom:2px solid var(--charcoal);
+      display: flex; align-items: flex-end;
+      justify-content: space-between; gap: 1rem;
+      margin-bottom: 1.5rem; padding-bottom: 1.25rem;
+      border-bottom: 2px solid var(--charcoal); flex-wrap: wrap;
     }
-    .eyebrow { font-size:0.7rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--teal); margin-bottom:0.3rem; }
-    .page-title { font-family:'Playfair Display',serif; font-weight:800; font-size:1.8rem; letter-spacing:-0.02em; }
+    .eyebrow {
+      font-size: 0.7rem; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--teal); margin-bottom: 0.3rem;
+    }
+    .page-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem; font-weight: 800;
+      letter-spacing: -0.02em; line-height: 1.1;
+    }
 
-    .trips-list { display:flex; flex-direction:column; gap:0.85rem; }
+    /* ── TRIP CARDS GRID (same grid as hotel cards) ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.1rem;
+    }
 
+    /* ── TRIP CARD (same shape as hotel card) ── */
     .trip-card {
-      background:var(--surface); border-radius:12px;
-      border:1.5px solid var(--border);
-      overflow:hidden; text-decoration:none; color:var(--text);
-      display:flex; transition:box-shadow 0.2s, transform 0.15s;
+      background: var(--surface);
+      border-radius: 12px;
+      border: 1.5px solid var(--border);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+      text-decoration: none; color: var(--text);
+      transition: box-shadow 0.2s, transform 0.15s;
+      position: relative;
     }
-    .trip-card:hover { box-shadow:0 6px 24px rgba(30,34,40,0.1); transform:translateY(-2px); }
+    .trip-card:hover { box-shadow: 0 6px 24px rgba(30,34,40,0.12); transform: translateY(-2px); }
 
-    .trip-band { width:6px; flex-shrink:0; }
-    .band-active   { background:var(--teal); }
-    .band-upcoming { background:var(--amber); }
-    .band-past     { background:var(--border); }
+    /* same top band as hotel card */
+    .card-band { height: 8px; }
+    .band-active   { background: var(--teal); }
+    .band-upcoming { background: var(--amber); }
+    .band-past     { background: var(--border); }
 
+    /* trip hero image — same height as hotel card-img */
     .trip-img {
-      width:140px; flex-shrink:0; position:relative;
-      background-size:cover; background-position:center;
+      height: 130px;
+      background-size: cover; background-position: center;
+      display: flex; align-items: flex-end; padding: 0.75rem;
+      position: relative;
     }
     .trip-img::after {
-      content:''; position:absolute; inset:0;
-      background:linear-gradient(to right, transparent 60%, rgba(255,255,255,0.1));
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.5));
     }
-
-    .trip-body { flex:1; padding:1rem 1.1rem; display:flex; flex-direction:column; justify-content:center; gap:0.4rem; }
-    .trip-eyebrow { font-size:0.65rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--teal); }
-    .trip-name { font-family:'Playfair Display',serif; font-weight:700; font-size:1.1rem; }
-    .trip-dates { font-size:0.78rem; color:var(--text-dim); }
-    .trip-stats { display:flex; gap:1rem; margin-top:0.2rem; flex-wrap:wrap; }
-    .stat { font-size:0.75rem; color:var(--text-mid); display:flex; align-items:center; gap:0.3rem; }
-    .stat strong { color:var(--text); font-weight:600; }
-
-    .trip-arrow {
-      display:flex; align-items:center; padding:0 1.1rem;
-      font-size:1.2rem; color:var(--text-dim);
+    .status-badge {
+      position: relative; z-index: 1;
+      font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      padding: 3px 10px; border-radius: 999px;
+      display: inline-flex; align-items: center; gap: 3px;
     }
+    .badge-active   { background: rgba(25,122,111,0.9);  color: #fff; }
+    .badge-upcoming { background: rgba(232,160,48,0.9);  color: var(--charcoal); }
+    .badge-past     { background: rgba(80,80,80,0.7);    color: #fff; }
 
-    /* ADD TRIP */
-    .trip-add {
-      border:2px dashed var(--border); border-radius:12px;
-      display:flex; align-items:center; justify-content:center;
-      gap:0.6rem; padding:1.25rem;
-      color:var(--text-dim); cursor:pointer;
-      background:rgba(255,255,255,0.5); transition:all 0.15s;
-      text-decoration:none;
+    /* ── TRIP CARD BODY (same padding as hotel card-body) ── */
+    .card-body {
+      padding: 0.9rem 1rem 1rem;
+      flex: 1; display: flex; flex-direction: column; gap: 0.5rem;
     }
-    .trip-add:hover { border-color:var(--teal); color:var(--teal); background:var(--teal-dim); }
-    .trip-add .plus { font-size:1.4rem; font-weight:300; }
-    .trip-add span { font-size:0.85rem; font-weight:600; }
+    .trip-name {
+      font-family: 'Playfair Display', serif;
+      font-weight: 700; font-size: 1.05rem; line-height: 1.25;
+      color: var(--charcoal);
+    }
+    .trip-dates { font-size: 0.75rem; color: var(--text-dim); }
+
+    .sep { height: 1px; background: var(--border-lt); }
+
+    /* stats row — same vibe as review-row */
+    .stats {
+      display: flex; gap: 1rem; flex-wrap: wrap;
+      padding-top: 0.1rem;
+    }
+    .stat {
+      display: flex; align-items: center; gap: 0.3rem;
+      font-size: 0.78rem; color: var(--text-mid);
+    }
+    .stat strong { color: var(--text); font-weight: 600; }
+
+    /* arrow — same as card-foot links */
+    .card-foot {
+      display: flex; align-items: center; justify-content: flex-end;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--border-lt);
+      margin-top: auto;
+    }
+    .arrow-lnk {
+      font-size: 0.78rem; font-weight: 600;
+      padding: 5px 10px; border-radius: 6px;
+      border: 1.5px solid var(--border);
+      background: transparent; color: var(--text-mid);
+      text-decoration: none; cursor: pointer; transition: all 0.12s;
+    }
+    .arrow-lnk:hover { border-color: var(--teal); color: var(--teal); }
+
+    /* past trip faded */
+    .trip-card.past { opacity: 0.55; }
+    .trip-card.past .trip-img { filter: grayscale(50%); }
+
+    /* ── ADD CARD (same as hotel add card) ── */
+    .card-add {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 0.4rem; padding: 2rem;
+      min-height: 180px; cursor: pointer;
+      color: var(--text-dim);
+      background: rgba(255,255,255,0.5); transition: all 0.15s;
+      text-decoration: none;
+    }
+    .card-add:hover { border-color: var(--teal); color: var(--teal); background: var(--teal-dim); }
+    .card-add .plus { font-size: 1.8rem; font-weight: 300; line-height: 1; }
+    .card-add p { font-size: 0.82rem; font-weight: 600; }
+    .card-add small { font-size: 0.7rem; color: var(--text-dim); }
   </style>
 </head>
 <body>
@@ -105,6 +197,7 @@
 </nav>
 
 <div class="page">
+
   <div class="page-header">
     <div>
       <div class="eyebrow">✈️ My Trips</div>
@@ -112,61 +205,80 @@
     </div>
   </div>
 
-  <div class="trips-list">
+  <div class="grid">
 
-    <!-- ACTIVE -->
+    <!-- ACTIVE — Planning -->
     <a href="variant-a.html" class="trip-card">
-      <div class="trip-band band-active"></div>
-      <div class="trip-img" style="background-image:url('https://images.unsplash.com/photo-1597466599360-3b9775841aec?w=280&h=160&fit=crop&auto=format')"></div>
-      <div class="trip-body">
-        <div class="trip-eyebrow">🔵 Planning now</div>
-        <div class="trip-name">Punta Cana 2027</div>
-        <div class="trip-dates">Mar 1–8, 2027 · Dominican Republic</div>
-        <div class="trip-stats">
+      <div class="card-band band-active"></div>
+      <div class="trip-img" style="background-image:url('https://images.unsplash.com/photo-1597466599360-3b9775841aec?w=640&h=130&fit=crop&auto=format')">
+        <span class="status-badge badge-active">🔵 Planning</span>
+      </div>
+      <div class="card-body">
+        <div>
+          <div class="trip-name">Punta Cana 2027</div>
+          <div class="trip-dates">Mar 1–8, 2027 · Dominican Republic</div>
+        </div>
+        <div class="sep"></div>
+        <div class="stats">
           <div class="stat">🏨 <strong>4</strong> hotels</div>
           <div class="stat">✅ <strong>1</strong> booked</div>
           <div class="stat">🔵 <strong>2</strong> considering</div>
         </div>
+        <div class="card-foot">
+          <span class="arrow-lnk">Open →</span>
+        </div>
       </div>
-      <div class="trip-arrow">›</div>
     </a>
 
-    <!-- UPCOMING -->
+    <!-- UPCOMING — Booked -->
     <a href="variant-a.html" class="trip-card">
-      <div class="trip-band band-upcoming"></div>
-      <div class="trip-img" style="background-image:url('https://images.unsplash.com/photo-1605833556294-ea5c7a74f57d?w=280&h=160&fit=crop&auto=format')"></div>
-      <div class="trip-body">
-        <div class="trip-eyebrow" style="color:var(--amber)">🟡 Coming up</div>
-        <div class="trip-name">Vegas Aug 2026</div>
-        <div class="trip-dates">Aug 9–16, 2026 · Las Vegas, NV</div>
-        <div class="trip-stats">
+      <div class="card-band band-upcoming"></div>
+      <div class="trip-img" style="background-image:url('https://images.unsplash.com/photo-1605833556294-ea5c7a74f57d?w=640&h=130&fit=crop&auto=format')">
+        <span class="status-badge badge-upcoming">🟡 Coming up</span>
+      </div>
+      <div class="card-body">
+        <div>
+          <div class="trip-name">Vegas Aug 2026</div>
+          <div class="trip-dates">Aug 9–16, 2026 · Las Vegas, NV</div>
+        </div>
+        <div class="sep"></div>
+        <div class="stats">
           <div class="stat">🏨 <strong>2</strong> hotels</div>
           <div class="stat">✅ <strong>1</strong> booked</div>
         </div>
+        <div class="card-foot">
+          <span class="arrow-lnk">Open →</span>
+        </div>
       </div>
-      <div class="trip-arrow">›</div>
     </a>
 
     <!-- PAST -->
-    <a href="variant-a.html" class="trip-card" style="opacity:0.6">
-      <div class="trip-band band-past"></div>
-      <div class="trip-img" style="background-image:url('https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?w=280&h=160&fit=crop&auto=format'); filter:grayscale(40%)"></div>
-      <div class="trip-body">
-        <div class="trip-eyebrow" style="color:var(--text-dim)">⬜ Past trip</div>
-        <div class="trip-name">Cancún 2024</div>
-        <div class="trip-dates">Jul 14–21, 2024 · Mexico</div>
-        <div class="trip-stats">
+    <a href="variant-a.html" class="trip-card past">
+      <div class="card-band band-past"></div>
+      <div class="trip-img" style="background-image:url('https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?w=640&h=130&fit=crop&auto=format')">
+        <span class="status-badge badge-past">⬜ Past trip</span>
+      </div>
+      <div class="card-body">
+        <div>
+          <div class="trip-name">Cancún 2024</div>
+          <div class="trip-dates">Jul 14–21, 2024 · Mexico</div>
+        </div>
+        <div class="sep"></div>
+        <div class="stats">
           <div class="stat">🏨 <strong>3</strong> hotels researched</div>
           <div class="stat">✅ Riu Palace booked</div>
         </div>
+        <div class="card-foot">
+          <span class="arrow-lnk">Open →</span>
+        </div>
       </div>
-      <div class="trip-arrow">›</div>
     </a>
 
     <!-- ADD -->
-    <a href="#" class="trip-add">
-      <span class="plus">+</span>
-      <span>Plan a new trip</span>
+    <a href="#" class="card-add">
+      <div class="plus">+</div>
+      <p>Plan a new trip</p>
+      <small>Add destination & dates</small>
     </a>
 
   </div>
