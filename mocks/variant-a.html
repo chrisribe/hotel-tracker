@@ -35,6 +35,7 @@
 
     body {
       font-family: 'DM Sans', sans-serif;
+      font-size: 17px;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
@@ -172,7 +173,7 @@
     }
     .status-badge {
       position: relative; z-index: 1;
-      font-size: 0.68rem; font-weight: 700;
+      font-size: 0.8rem; font-weight: 700;
       letter-spacing: 0.04em; text-transform: uppercase;
       padding: 3px 10px; border-radius: 999px;
       display: inline-flex; align-items: center; gap: 3px;
@@ -191,13 +192,13 @@
     .card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem; }
     .hotel-name {
       font-family: 'Playfair Display', serif;
-      font-weight: 700; font-size: 1.05rem; line-height: 1.25;
+      font-weight: 700; font-size: 1.15rem; line-height: 1.25;
       color: var(--charcoal);
     }
-    .hotel-dest { font-size: 0.73rem; color: var(--text-dim); margin-top: 3px; }
+    .hotel-dest { font-size: 0.85rem; color: var(--text-dim); margin-top: 3px; }
     .price-block { text-align: right; flex-shrink: 0; }
-    .price { font-weight: 700; font-size: 1rem; color: var(--teal); }
-    .price-sub { font-size: 0.66rem; color: var(--text-dim); }
+    .price { font-weight: 700; font-size: 1.1rem; color: var(--teal); }
+    .price-sub { font-size: 0.8rem; color: var(--text-dim); }
 
     .sep { height: 1px; background: var(--border-lt); }
 
@@ -212,21 +213,21 @@
       margin-bottom: 0.25rem;
     }
     .dim-lbl {
-      font-size: 0.71rem; color: var(--text-dim);
-      width: 80px; flex-shrink: 0;
+      font-size: 0.82rem; color: var(--text-dim);
+      width: 88px; flex-shrink: 0;
     }
     .bar-track {
       flex: 1; height: 5px;
       background: var(--bg); border-radius: 999px; overflow: hidden;
     }
-    .bar-fill {
-      height: 100%; border-radius: 999px;
-      background: var(--amber);
-      transition: width 0.3s;
-    }
+    .bar-fill { height: 100%; border-radius: 999px; background: var(--amber); transition: width 0.3s; }
     .bar-fill.low { background: var(--red); }
     .dim-val {
-      font-size: 0.68rem; font-weight: 700;
+      font-size: 0.8rem; font-weight: 700;
+      width: 14px; text-align: right; color: var(--text-dim);
+    }
+    .dim-val {
+      font-size: 0.8rem; font-weight: 700;
       width: 12px; text-align: right;
       color: var(--text-dim);
     }
@@ -242,8 +243,8 @@
       font-family: 'Playfair Display', serif;
       font-weight: 700; font-size: 1rem; color: var(--charcoal);
     }
-    .score-stars { color: var(--amber); font-size: 0.75rem; }
-    .review-ct { font-size: 0.68rem; color: var(--text-dim); }
+    .score-stars { color: var(--amber); font-size: 0.88rem; }
+    .review-ct { font-size: 0.82rem; color: var(--text-dim); }
     .trust-pill {
       font-size: 0.62rem; font-weight: 700;
       padding: 2px 8px; border-radius: 999px;
@@ -254,8 +255,8 @@
     .trust-sus  { background: var(--red-dim);   color: var(--red); }
 
     .tags { display:flex; flex-wrap:wrap; gap:0.3rem; margin-top: 0.35rem; }
-    .tag {
-      font-size: 0.66rem; font-weight: 500;
+    
+      font-size: 0.8rem; font-weight: 500;
       padding: 2px 8px; border-radius: 5px;
     }
     .tag-good { background: var(--green-dim); color: var(--green); }
