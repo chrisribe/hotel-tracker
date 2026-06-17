@@ -314,6 +314,103 @@
     .link-btn:hover { background: var(--border); }
     .link-btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
 
+    /* ── OVERLAY ── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(44,36,22,0.45);
+      z-index: 10;
+      backdrop-filter: blur(2px);
+    }
+    .overlay.open { display: block; }
+
+    /* ── BOTTOM SHEET ── */
+    .sheet {
+      position: fixed;
+      bottom: 0; left: 50%;
+      transform: translateX(-50%) translateY(100%);
+      width: 100%;
+      max-width: 500px;
+      background: var(--surface);
+      border-radius: 24px 24px 0 0;
+      z-index: 20;
+      padding: 0 0 2rem;
+      box-shadow: 0 -8px 40px rgba(44,36,22,0.18);
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    .sheet.open { transform: translateX(-50%) translateY(0); }
+    .sheet-handle {
+      width: 40px; height: 4px;
+      background: var(--border);
+      border-radius: 999px;
+      margin: 12px auto 0;
+    }
+    .sheet-header {
+      padding: 1rem 1.25rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .sheet-title { font-family:'Outfit',sans-serif; font-weight:700; font-size:1rem; }
+    .sheet-sub { font-size:0.78rem; color:var(--muted); margin-top:2px; }
+    .hint-bar {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 1.25rem 0.1rem;
+      font-size: 0.65rem;
+      color: var(--muted);
+    }
+    .sheet-dims { padding: 0 1.25rem; display:flex; flex-direction:column; }
+    .sheet-dim {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.55rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .sheet-dim:last-child { border-bottom: none; }
+    .sheet-dim-label {
+      width: 100px; flex-shrink: 0;
+      font-size: 0.85rem; font-weight: 500;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .pip-row { display:flex; gap:6px; flex:1; justify-content:flex-end; }
+    .pip {
+      width: 42px; height: 42px;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem; font-weight: 700; color: var(--muted);
+      cursor: pointer;
+      transition: all 0.12s;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .pip:hover { border-color: var(--secondary); color: var(--text); background: #FFF8EE; }
+    .pip.selected { background: var(--secondary); border-color: var(--secondary); color: #fff; }
+    .pip.selected.warn { background: var(--red); border-color: var(--red); }
+    .sheet-footer {
+      padding: 0.85rem 1.25rem 0;
+      display: flex; gap: 0.75rem;
+    }
+    .btn-save {
+      flex: 1; padding: 14px;
+      border-radius: 12px;
+      background: var(--primary); color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem; font-weight: 700;
+      border: none; cursor: pointer;
+    }
+    .btn-save:hover { background: var(--primary-dk); }
+    .btn-cancel {
+      padding: 14px 18px;
+      border-radius: 12px;
+      background: var(--bg); color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem; font-weight: 600;
+      border: 1px solid var(--border); cursor: pointer;
+    }
+
     /* ADD CARD */
     .card-add {
       border: 2px dashed var(--border);
@@ -692,6 +789,140 @@
 
   </div>
 </div>
+
+<!-- ── OVERLAY ── -->
+<div class="overlay" id="overlay" onclick="closeSheet()"></div>
+
+<!-- ── RATING BOTTOM SHEET ── -->
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title">Rate this hotel</div>
+    <div class="sheet-sub" id="sheet-hotel-name">tap 1–5 for each dimension</div>
+  </div>
+  <div class="hint-bar"><span>← Poor</span><span>Excellent →</span></div>
+  <div class="sheet-dims">
+    <div class="sheet-dim">
+      <div class="sheet-dim-label">🏖️ Beach</div>
+      <div class="pip-row" data-dim="beach"></div>
+    </div>
+    <div class="sheet-dim">
+      <div class="sheet-dim-label">🏨 Property</div>
+      <div class="pip-row" data-dim="property"></div>
+    </div>
+    <div class="sheet-dim">
+      <div class="sheet-dim-label">🍽️ Food</div>
+      <div class="pip-row" data-dim="food"></div>
+    </div>
+    <div class="sheet-dim">
+      <div class="sheet-dim-label">🏊 Pools</div>
+      <div class="pip-row" data-dim="pools"></div>
+    </div>
+    <div class="sheet-dim">
+      <div class="sheet-dim-label">📍 Location</div>
+      <div class="pip-row" data-dim="location"></div>
+    </div>
+    <div class="sheet-dim">
+      <div class="sheet-dim-label">💰 Value</div>
+      <div class="pip-row" data-dim="value"></div>
+    </div>
+  </div>
+  <div class="sheet-footer">
+    <button class="btn-cancel" onclick="closeSheet()">Cancel</button>
+    <button class="btn-save" onclick="saveRatings()">Save Ratings</button>
+  </div>
+</div>
+
+<script>
+  // Current ratings state per hotel (keyed by card index)
+  const ratings = {
+    0: { beach:5, property:4, food:4, pools:5, location:2, value:4 },
+    1: { beach:2, property:4, food:5, pools:3, location:2, value:4 },
+    2: { beach:3, property:2, food:3, pools:4, location:4, value:2 },
+  };
+  let activeCard = null;
+
+  // Wire up Edit Ratings buttons and data-dim attributes on load
+  const dimOrder = ['beach','property','food','pools','location','value'];
+  document.querySelectorAll('.card').forEach((card, i) => {
+    const btn = card.querySelector('.btn-rate');
+    if (btn) {
+      const name = card.querySelector('.card-name').textContent;
+      btn.addEventListener('click', () => openSheet(i, name));
+    }
+    card.querySelectorAll('.dim-bar-fill').forEach((fill, di) => fill.setAttribute('data-dim', dimOrder[di]));
+    card.querySelectorAll('.dim-score').forEach((score, di) => score.setAttribute('data-dim', dimOrder[di]));
+  });
+
+  // Build pip rows
+  document.querySelectorAll('.pip-row').forEach(row => {
+    const dim = row.dataset.dim;
+    for (let i = 1; i <= 5; i++) {
+      const pip = document.createElement('div');
+      pip.className = 'pip';
+      pip.textContent = i;
+      pip.dataset.val = i;
+      pip.addEventListener('click', () => selectPip(row, pip, i));
+      row.appendChild(pip);
+    }
+  });
+
+  function selectPip(row, pip, val) {
+    row.querySelectorAll('.pip').forEach(p => p.classList.remove('selected', 'warn'));
+    pip.classList.add('selected');
+    if (val <= 2) pip.classList.add('warn');
+    // update temp state
+    if (activeCard !== null) {
+      ratings[activeCard][row.dataset.dim] = val;
+    }
+  }
+
+  function openSheet(cardIndex, hotelName) {
+    activeCard = cardIndex;
+    document.getElementById('sheet-hotel-name').textContent = hotelName;
+    // Apply current ratings to pips
+    const r = ratings[cardIndex] || {};
+    document.querySelectorAll('.pip-row').forEach(row => {
+      const dim = row.dataset.dim;
+      const val = r[dim] || 0;
+      row.querySelectorAll('.pip').forEach(pip => {
+        pip.classList.remove('selected', 'warn');
+        if (parseInt(pip.dataset.val) === val) {
+          pip.classList.add('selected');
+          if (val <= 2) pip.classList.add('warn');
+        }
+      });
+    });
+    document.getElementById('overlay').classList.add('open');
+    document.getElementById('sheet').classList.add('open');
+  }
+
+  function closeSheet() {
+    document.getElementById('overlay').classList.remove('open');
+    document.getElementById('sheet').classList.remove('open');
+    activeCard = null;
+  }
+
+  function saveRatings() {
+    if (activeCard === null) return;
+    const r = ratings[activeCard];
+    const dims = ['beach','property','food','pools','location','value'];
+    // Update bars on card
+    const card = document.querySelectorAll('.card')[activeCard];
+    dims.forEach(dim => {
+      const fill = card.querySelector(`.dim-bar-fill[data-dim="${dim}"]`);
+      const score = card.querySelector(`.dim-score[data-dim="${dim}"]`);
+      if (fill && score) {
+        const val = r[dim] || 0;
+        fill.style.width = (val / 5 * 100) + '%';
+        fill.classList.toggle('warn', val <= 2);
+        score.textContent = val || '–';
+        score.style.color = val <= 2 ? 'var(--red)' : 'var(--muted)';
+      }
+    });
+    closeSheet();
+  }
+</script>
 
 </body>
 </html>

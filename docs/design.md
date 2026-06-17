@@ -219,4 +219,133 @@ User pastes URL
 
 ---
 
-*Logged: 2026-06-16 | Status: Napkin Design*
+---
+
+## Rating System (decided June 16, 2026)
+
+### My Ratings — 6 Dimensions
+Each rated 1–5 by the user:
+
+| Dimension | Emoji | Notes |
+|---|---|---|
+| Beach | 🏖️ | Sandy vs rocky, size, cleanliness |
+| Property | 🏨 | Buildings, rooms, modern vs dated |
+| Food | 🍽️ | Quality, variety, all-inclusive value |
+| Pools | 🏊 | Size, vibe, waterpark |
+| Location | 📍 | Airport distance, area, walkability |
+| Value | 💰 | Price vs what you get |
+
+**Card display:** Thin horizontal bars — compact, scannable. Scores ≤ 2 turn red automatically.
+
+**Edit UX — Bottom Sheet pattern** (decided over drag/slider/inline dots):
+- Tap "✏️ Edit Ratings" on card → bottom sheet slides up
+- 6 rows, one per dimension
+- Each row has 5 large numbered tap targets (40×40px) — comfortable thumb hit
+- "Poor ← → Excellent" hint label
+- Low rating (1–2) highlights red on selection
+- Save / Cancel always visible at bottom
+- No drag, no precision required — deliberate one-tap-per-row
+
+### Public Review Intelligence
+Pulled automatically (Hermes cron) from TripAdvisor / Google:
+- Overall score + review count
+- **Pattern tags** extracted from recent comments — grouped as 🟢 praise / 🔴 concerns
+- Examples of concern tags: `musty smell A/C`, `rocky beach`, `mold in bathroom`, `outdated rooms`
+- **Fake review trust flag** — 3 levels:
+  - ✓ Looks genuine (green)
+  - ⚠️ Some fake patterns (amber)
+  - 🚩 High fake risk (red)
+
+---
+
+## Schema Updates (from design review)
+
+Revised from initial design based on big model review:
+
+```sql
+-- Replace travel_dates TEXT with real dates
+ALTER TABLE trips ADD COLUMN travel_start DATE;
+ALTER TABLE trips ADD COLUMN travel_end DATE;
+
+-- Replace price_range TEXT with structured fields
+ALTER TABLE hotels ADD COLUMN price_min INT;  -- in cents
+ALTER TABLE hotels ADD COLUMN price_max INT;
+ALTER TABLE hotels ADD COLUMN price_currency TEXT DEFAULT 'CAD';
+ALTER TABLE hotels ADD COLUMN price_type TEXT DEFAULT 'all_inclusive_pp';
+ALTER TABLE hotels ADD COLUMN price_display TEXT; -- human-readable
+
+-- Add place ID for Google Places re-fetch
+ALTER TABLE hotels ADD COLUMN google_place_id TEXT;
+
+-- Add sort order for manual ranking
+ALTER TABLE hotels ADD COLUMN sort_order INT;
+
+-- Add status constraint
+ALTER TABLE hotels ADD CONSTRAINT hotels_status_check
+  CHECK (status IN ('considering', 'eliminated', 'booked'));
+
+-- 6-dimension ratings (1-5 each)
+ALTER TABLE hotels ADD COLUMN rating_beach INT CHECK (rating_beach BETWEEN 1 AND 5);
+ALTER TABLE hotels ADD COLUMN rating_property INT CHECK (rating_property BETWEEN 1 AND 5);
+ALTER TABLE hotels ADD COLUMN rating_food INT CHECK (rating_food BETWEEN 1 AND 5);
+ALTER TABLE hotels ADD COLUMN rating_pools INT CHECK (rating_pools BETWEEN 1 AND 5);
+ALTER TABLE hotels ADD COLUMN rating_location INT CHECK (rating_location BETWEEN 1 AND 5);
+ALTER TABLE hotels ADD COLUMN rating_value INT CHECK (rating_value BETWEEN 1 AND 5);
+
+-- Replace denormalized youtube fields with hotel_links table
+CREATE TABLE hotel_links (
+  id SERIAL PRIMARY KEY,
+  hotel_id INT REFERENCES hotels(id) ON DELETE CASCADE,
+  link_type TEXT NOT NULL CHECK (link_type IN ('youtube', 'hotel_site', 'package', 'review', 'other')),
+  url TEXT NOT NULL,
+  title TEXT,
+  thumbnail_url TEXT,
+  metadata JSONB,
+  added_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Review intelligence
+ALTER TABLE hotels ADD COLUMN review_score NUMERIC(3,1);
+ALTER TABLE hotels ADD COLUMN review_count INT;
+ALTER TABLE hotels ADD COLUMN review_tags_praise TEXT[];
+ALTER TABLE hotels ADD COLUMN review_tags_concerns TEXT[];
+ALTER TABLE hotels ADD COLUMN review_trust TEXT CHECK (review_trust IN ('genuine', 'warn', 'suspicious'));
+ALTER TABLE hotels ADD COLUMN review_scanned_at TIMESTAMPTZ;
+
+-- Indexes
+CREATE INDEX idx_hotels_trip_id ON hotels(trip_id);
+CREATE INDEX idx_hotels_status ON hotels(status);
+CREATE INDEX idx_trips_travel_start ON trips(travel_start);
+CREATE INDEX idx_hotel_links_hotel_id ON hotel_links(hotel_id);
+```
+
+---
+
+## Revised Phase Plan (from design review)
+
+**Phase 1 — MVP + Comparison** (2-3 weekends)
+- Manual CRUD (trips + hotels)
+- 6-dimension rating with bottom sheet UX
+- Card grid view + compare table view
+- Status toggle (considering/eliminated/booked)
+- Basic auth (`express-basic-auth`)
+
+**Phase 1.5 — Hermes Integration** (1 weekend)
+- `/api/*` JSON endpoints (GET trips/hotels, PATCH hotel, POST link)
+- API key header auth (`X-API-Key`)
+- Hermes cron jobs: YouTube monitoring, morning briefing, Google rating refresh
+
+**Phase 2 — In-App Enrichment** (2 weekends)
+- OG tag extraction on URL paste
+- YouTube Data API v3
+- Google Places lookup (rating, photo, place_id)
+- Enrichment status badge
+
+**Phase 3 — Polish** (1 weekend)
+- Package URL storage + price snapshot attempt
+- JSON export/backup
+- Read-only trip share view
+
+---
+
+*Updated: 2026-06-16 | Status: Mocks complete, ready for scaffold*
