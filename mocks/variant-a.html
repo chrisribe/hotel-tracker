@@ -141,6 +141,7 @@
       overflow: hidden;
       display: flex; flex-direction: column;
       transition: box-shadow 0.2s, transform 0.15s;
+      cursor: pointer;
     }
     .card:hover { box-shadow: 0 6px 24px rgba(30,34,40,0.12); transform: translateY(-2px); }
 
@@ -686,6 +687,17 @@
       row.appendChild(pip);
     }
   });
+
+  // Card click → hotel detail (stop propagation on btn-rate and links)
+  document.querySelectorAll('.card').forEach((card, i) => {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.btn-rate') || e.target.closest('.lnk')) return;
+      window.location.href = 'hotel-detail.html';
+    });
+  });
+
+  // Nav All Trips
+  document.querySelector('a[href="#"]')?.setAttribute('href','trips.html');
 
   document.querySelectorAll('.card').forEach((card, i) => {
     const btn = card.querySelector('.btn-rate');

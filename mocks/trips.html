@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hotel Tracker — All Trips</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+      --bg: #F4F0E8; --surface: #FFFFFF; --charcoal: #1E2228;
+      --teal: #197A6F; --teal-lt: #22A090; --teal-dim: rgba(25,122,111,0.1);
+      --amber: #E8A030; --text: #1E2228; --text-mid: #4A5260;
+      --text-dim: #8A9099; --border: #DDD8CE; --border-lt: #EDE9E0;
+      --green: #1E7A48; --green-dim: rgba(30,122,72,0.1);
+    }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+    nav {
+      background:var(--charcoal); padding:0 2rem; height:56px;
+      display:flex; align-items:center; justify-content:space-between;
+      position:sticky; top:0; z-index:5;
+    }
+    .logo {
+      font-family:'Playfair Display',serif; font-weight:700; font-size:1.15rem;
+      color:#fff; display:flex; align-items:center; gap:0.5rem;
+    }
+    .logo .dot { color:var(--teal-lt); }
+    .btn {
+      font-family:'DM Sans',sans-serif; font-size:0.82rem; font-weight:600;
+      padding:7px 16px; border-radius:7px; border:none; cursor:pointer;
+      text-decoration:none; display:inline-flex; align-items:center; gap:0.3rem;
+    }
+    .btn-primary { background:var(--teal); color:#fff; }
+    .btn-primary:hover { background:var(--teal-lt); }
+
+    .page { max-width:780px; margin:0 auto; padding:2rem 1.5rem; }
+
+    .page-header {
+      display:flex; align-items:flex-end; justify-content:space-between;
+      margin-bottom:1.75rem; padding-bottom:1.25rem;
+      border-bottom:2px solid var(--charcoal);
+    }
+    .eyebrow { font-size:0.7rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--teal); margin-bottom:0.3rem; }
+    .page-title { font-family:'Playfair Display',serif; font-weight:800; font-size:1.8rem; letter-spacing:-0.02em; }
+
+    .trips-list { display:flex; flex-direction:column; gap:0.85rem; }
+
+    .trip-card {
+      background:var(--surface); border-radius:12px;
+      border:1.5px solid var(--border);
+      overflow:hidden; text-decoration:none; color:var(--text);
+      display:flex; transition:box-shadow 0.2s, transform 0.15s;
+    }
+    .trip-card:hover { box-shadow:0 6px 24px rgba(30,34,40,0.1); transform:translateY(-2px); }
+
+    .trip-band { width:6px; flex-shrink:0; }
+    .band-active   { background:var(--teal); }
+    .band-upcoming { background:var(--amber); }
+    .band-past     { background:var(--border); }
+
+    .trip-img {
+      width:140px; flex-shrink:0; position:relative;
+      background-size:cover; background-position:center;
+    }
+    .trip-img::after {
+      content:''; position:absolute; inset:0;
+      background:linear-gradient(to right, transparent 60%, rgba(255,255,255,0.1));
+    }
+
+    .trip-body { flex:1; padding:1rem 1.1rem; display:flex; flex-direction:column; justify-content:center; gap:0.4rem; }
+    .trip-eyebrow { font-size:0.65rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--teal); }
+    .trip-name { font-family:'Playfair Display',serif; font-weight:700; font-size:1.1rem; }
+    .trip-dates { font-size:0.78rem; color:var(--text-dim); }
+    .trip-stats { display:flex; gap:1rem; margin-top:0.2rem; flex-wrap:wrap; }
+    .stat { font-size:0.75rem; color:var(--text-mid); display:flex; align-items:center; gap:0.3rem; }
+    .stat strong { color:var(--text); font-weight:600; }
+
+    .trip-arrow {
+      display:flex; align-items:center; padding:0 1.1rem;
+      font-size:1.2rem; color:var(--text-dim);
+    }
+
+    /* ADD TRIP */
+    .trip-add {
+      border:2px dashed var(--border); border-radius:12px;
+      display:flex; align-items:center; justify-content:center;
+      gap:0.6rem; padding:1.25rem;
+      color:var(--text-dim); cursor:pointer;
+      background:rgba(255,255,255,0.5); transition:all 0.15s;
+      text-decoration:none;
+    }
+    .trip-add:hover { border-color:var(--teal); color:var(--teal); background:var(--teal-dim); }
+    .trip-add .plus { font-size:1.4rem; font-weight:300; }
+    .trip-add span { font-size:0.85rem; font-weight:600; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">🏨 Hotel<span class="dot">Tracker</span></div>
+  <button class="btn btn-primary">+ New Trip</button>
+</nav>
+
+<div class="page">
+  <div class="page-header">
+    <div>
+      <div class="eyebrow">✈️ My Trips</div>
+      <div class="page-title">All Trips</div>
+    </div>
+  </div>
+
+  <div class="trips-list">
+
+    <!-- ACTIVE -->
+    <a href="variant-a.html" class="trip-card">
+      <div class="trip-band band-active"></div>
+      <div class="trip-img" style="background-image:url('https://images.unsplash.com/photo-1597466599360-3b9775841aec?w=280&h=160&fit=crop&auto=format')"></div>
+      <div class="trip-body">
+        <div class="trip-eyebrow">🔵 Planning now</div>
+        <div class="trip-name">Punta Cana 2027</div>
+        <div class="trip-dates">Mar 1–8, 2027 · Dominican Republic</div>
+        <div class="trip-stats">
+          <div class="stat">🏨 <strong>4</strong> hotels</div>
+          <div class="stat">✅ <strong>1</strong> booked</div>
+          <div class="stat">🔵 <strong>2</strong> considering</div>
+        </div>
+      </div>
+      <div class="trip-arrow">›</div>
+    </a>
+
+    <!-- UPCOMING -->
+    <a href="variant-a.html" class="trip-card">
+      <div class="trip-band band-upcoming"></div>
+      <div class="trip-img" style="background-image:url('https://images.unsplash.com/photo-1605833556294-ea5c7a74f57d?w=280&h=160&fit=crop&auto=format')"></div>
+      <div class="trip-body">
+        <div class="trip-eyebrow" style="color:var(--amber)">🟡 Coming up</div>
+        <div class="trip-name">Vegas Aug 2026</div>
+        <div class="trip-dates">Aug 9–16, 2026 · Las Vegas, NV</div>
+        <div class="trip-stats">
+          <div class="stat">🏨 <strong>2</strong> hotels</div>
+          <div class="stat">✅ <strong>1</strong> booked</div>
+        </div>
+      </div>
+      <div class="trip-arrow">›</div>
+    </a>
+
+    <!-- PAST -->
+    <a href="variant-a.html" class="trip-card" style="opacity:0.6">
+      <div class="trip-band band-past"></div>
+      <div class="trip-img" style="background-image:url('https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?w=280&h=160&fit=crop&auto=format'); filter:grayscale(40%)"></div>
+      <div class="trip-body">
+        <div class="trip-eyebrow" style="color:var(--text-dim)">⬜ Past trip</div>
+        <div class="trip-name">Cancún 2024</div>
+        <div class="trip-dates">Jul 14–21, 2024 · Mexico</div>
+        <div class="trip-stats">
+          <div class="stat">🏨 <strong>3</strong> hotels researched</div>
+          <div class="stat">✅ Riu Palace booked</div>
+        </div>
+      </div>
+      <div class="trip-arrow">›</div>
+    </a>
+
+    <!-- ADD -->
+    <a href="#" class="trip-add">
+      <span class="plus">+</span>
+      <span>Plan a new trip</span>
+    </a>
+
+  </div>
+</div>
+
+</body>
+</html>
