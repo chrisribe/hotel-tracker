@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hotel Tracker — Mocks Index</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+      --bg: #F8F4EE;
+      --surface: #FFFFFF;
+      --primary: #B85A2C;
+      --secondary: #E8A246;
+      --text: #2C2416;
+      --muted: #8A7A6A;
+      --border: #E2D8CC;
+    }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: 2.5rem 2rem 2rem;
+      text-align: center;
+    }
+    header h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+    header p { opacity: 0.85; font-size: 0.95rem; max-width: 520px; margin: 0 auto; }
+
+    .palette {
+      display: flex;
+      justify-content: center;
+      gap: 0.6rem;
+      margin-top: 1.2rem;
+      flex-wrap: wrap;
+    }
+    .swatch {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.3);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.55rem;
+      color: rgba(255,255,255,0.8);
+      font-weight: 600;
+    }
+
+    .page { max-width: 1000px; margin: 0 auto; padding: 2.5rem 2rem; }
+    h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1.2rem;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+    }
+
+    .variants { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; margin-bottom: 2.5rem; }
+    .variant-card {
+      background: var(--surface);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      text-decoration: none;
+      color: var(--text);
+      display: block;
+      transition: box-shadow 0.2s, transform 0.15s;
+    }
+    .variant-card:hover { box-shadow: 0 6px 24px rgba(44,36,22,0.12); transform: translateY(-2px); }
+    .variant-preview {
+      height: 180px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+      position: relative;
+    }
+    .variant-preview iframe {
+      width: 200%;
+      height: 200%;
+      transform: scale(0.5);
+      transform-origin: top left;
+      pointer-events: none;
+      border: none;
+    }
+    .my-pick {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: var(--secondary);
+      color: var(--text);
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 999px;
+      letter-spacing: 0.05em;
+    }
+    .variant-body { padding: 1.1rem; }
+    .variant-body h3 {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 0.35rem;
+    }
+    .variant-body p { font-size: 0.83rem; color: var(--muted); line-height: 1.5; }
+    .open-btn {
+      display: inline-block;
+      margin-top: 0.85rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--primary);
+      text-decoration: none;
+    }
+    .open-btn:hover { text-decoration: underline; }
+
+    .info-box {
+      background: var(--surface);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 1.25rem 1.5rem;
+      font-size: 0.87rem;
+      line-height: 1.7;
+      color: var(--muted);
+    }
+    .info-box strong { color: var(--text); }
+
+    footer {
+      text-align: center;
+      padding: 2rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🏨 Hotel Tracker — Mocks</h1>
+  <p>Warm/casual trip planning tool. Sandy tones, terracotta accents, vacation vibes.</p>
+  <div class="palette">
+    <div class="swatch" style="background:#F8F4EE;border-color:#E2D8CC;color:#8A7A6A">BG</div>
+    <div class="swatch" style="background:#B85A2C">PRI</div>
+    <div class="swatch" style="background:#E8A246">SEC</div>
+    <div class="swatch" style="background:#2C2416">TXT</div>
+    <div class="swatch" style="background:#3A6647">OK</div>
+    <div class="swatch" style="background:#B84040">NO</div>
+    <div class="swatch" style="background:#3A6FA8">?</div>
+  </div>
+</header>
+
+<div class="page">
+
+  <h2>Variants</h2>
+  <div class="variants">
+
+    <a class="variant-card" href="variant-a.html" target="_blank">
+      <div class="variant-preview">
+        <iframe src="variant-a.html" scrolling="no" tabindex="-1"></iframe>
+        <span class="my-pick">MY PICK</span>
+      </div>
+      <div class="variant-body">
+        <h3>A — Card Grid</h3>
+        <p>Hotel cards in a responsive grid. Visual, photo-forward, great for browsing candidates. Status badges, pros/cons, quick links.</p>
+        <span class="open-btn">Open full screen →</span>
+      </div>
+    </a>
+
+    <a class="variant-card" href="variant-b.html" target="_blank">
+      <div class="variant-preview">
+        <iframe src="variant-b.html" scrolling="no" tabindex="-1"></iframe>
+      </div>
+      <div class="variant-body">
+        <h3>B — Compare Table</h3>
+        <p>Sortable table with all hotels side by side. The decision view — compare price, ratings, and status at a glance. Less visual, more decisive.</p>
+        <span class="open-btn">Open full screen →</span>
+      </div>
+    </a>
+
+  </div>
+
+  <h2>Design Notes</h2>
+  <div class="info-box">
+    <strong>Palette:</strong> Sandy background (#F8F4EE), terracotta primary (#B85A2C), warm amber accent (#E8A246). Feels like a vacation journal — approachable, not corporate.<br><br>
+    <strong>Fonts:</strong> Outfit (headings, logo) + DM Sans (body) — both Google Fonts, free.<br><br>
+    <strong>Status badges:</strong> Blue = Considering, Red = Eliminated, Green = Booked. Pill-shaped, muted tints — readable at a glance.<br><br>
+    <strong>Both views ship:</strong> A = browsing/adding phase · B = decision phase. Toggle between them from the nav.
+  </div>
+
+</div>
+
+<footer>Hotel Tracker · Design Mocks · June 2026</footer>
+
+</body>
+</html>

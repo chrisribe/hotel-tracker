@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hotel Tracker — Variant B (Comparison Table)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:         #F8F4EE;
+      --surface:    #FFFFFF;
+      --primary:    #B85A2C;
+      --primary-dk: #8F3F14;
+      --secondary:  #E8A246;
+      --text:       #2C2416;
+      --muted:      #8A7A6A;
+      --border:     #E2D8CC;
+      --green:      #3A6647;
+      --green-bg:   #EAF3EC;
+      --red:        #B84040;
+      --red-bg:     #FAEAEA;
+      --blue:       #3A6FA8;
+      --blue-bg:    #EBF2FA;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+    }
+    .logo {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .btn {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 600;
+      padding: 8px 18px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-ghost { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); }
+
+    .page { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .page-header h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    .page-header p { color: var(--muted); font-size: 0.85rem; margin-top: 2px; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      padding: 3px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .badge-considering { background: var(--blue-bg);  color: var(--blue); }
+    .badge-eliminated  { background: var(--red-bg);   color: var(--red); }
+    .badge-booked      { background: var(--green-bg);  color: var(--green); }
+
+    /* TABLE */
+    .table-wrap {
+      background: var(--surface);
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    thead {
+      background: #FDF8F3;
+      border-bottom: 2px solid var(--border);
+    }
+    th {
+      padding: 12px 16px;
+      text-align: left;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      text-transform: uppercase;
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+    th:hover { color: var(--primary); }
+    th .sort-arrow { margin-left: 4px; opacity: 0.5; }
+    th.sorted { color: var(--primary); }
+    th.sorted .sort-arrow { opacity: 1; }
+
+    td { padding: 14px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #FDF8F3; }
+    tr.eliminated td { opacity: 0.5; }
+    tr.booked { background: #FDFFFE; }
+
+    .hotel-name { font-weight: 600; font-size: 0.95rem; }
+    .hotel-dest { color: var(--muted); font-size: 0.78rem; margin-top: 2px; }
+    .stars { color: var(--secondary); }
+    .my-stars { color: var(--secondary); }
+    .price { font-weight: 600; color: var(--primary); white-space: nowrap; }
+    .pros-cons-cell { font-size: 0.8rem; max-width: 220px; }
+    .pro { color: var(--green); display: block; }
+    .con { color: var(--red); display: block; }
+    .links-cell { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .link-chip {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .link-chip:hover { background: var(--border); }
+    .action-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 1rem;
+      padding: 4px 6px;
+      border-radius: 6px;
+    }
+    .action-btn:hover { background: var(--bg); color: var(--primary); }
+
+    /* WINNER ROW */
+    tr.booked .hotel-name::after {
+      content: " 🏆";
+    }
+
+    /* FOOTER ROW */
+    .table-footer {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--border);
+      background: #FDF8F3;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">🏨 Hotel Tracker</div>
+  <div style="display:flex;gap:.75rem;align-items:center;">
+    <a href="#" class="btn btn-ghost">🃏 Card View</a>
+    <button class="btn btn-primary">+ Add Hotel</button>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>📊 Compare — Punta Cana 2027</h1>
+      <p>Mar 1–8, 2027 · 5 hotels · click a column header to sort</p>
+    </div>
+    <a href="#" style="color:var(--muted);font-size:0.85rem;text-decoration:none;">← All Trips</a>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:200px">Hotel <span class="sort-arrow">↕</span></th>
+          <th class="sorted">My Rating <span class="sort-arrow">↓</span></th>
+          <th>Google <span class="sort-arrow">↕</span></th>
+          <th>Price <span class="sort-arrow">↕</span></th>
+          <th>Status <span class="sort-arrow">↕</span></th>
+          <th>Pros / Cons</th>
+          <th>Links</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <tr class="booked">
+          <td>
+            <div class="hotel-name">Barceló Bávaro Palace</div>
+            <div class="hotel-dest">📍 Punta Cana, DR</div>
+          </td>
+          <td><span class="my-stars">⭐⭐⭐⭐⭐</span></td>
+          <td><span class="stars">⭐⭐⭐⭐⭐</span> <span style="color:var(--muted);font-size:0.78rem">(4.5)</span></td>
+          <td class="price">$2,800/pp</td>
+          <td><span class="badge badge-booked">✅ Booked</span></td>
+          <td class="pros-cons-cell">
+            <span class="pro">✓ Massive beachfront</span>
+            <span class="pro">✓ Waterpark</span>
+            <span class="con">✗ Crowded</span>
+          </td>
+          <td>
+            <div class="links-cell">
+              <a href="#" class="link-chip">🎥</a>
+              <a href="#" class="link-chip">🌐</a>
+              <a href="#" class="link-chip">✈️</a>
+            </div>
+          </td>
+          <td><button class="action-btn">⋯</button></td>
+        </tr>
+
+        <tr>
+          <td>
+            <div class="hotel-name">Dreams Onyx</div>
+            <div class="hotel-dest">📍 Punta Cana, DR</div>
+          </td>
+          <td><span class="my-stars">⭐⭐⭐⭐</span></td>
+          <td><span class="stars">⭐⭐⭐⭐½</span> <span style="color:var(--muted);font-size:0.78rem">(4.3)</span></td>
+          <td class="price">$2,400/pp</td>
+          <td><span class="badge badge-considering">🔵 Considering</span></td>
+          <td class="pros-cons-cell">
+            <span class="pro">✓ Adults-only option</span>
+            <span class="pro">✓ Great food</span>
+            <span class="con">✗ 45min airport</span>
+          </td>
+          <td>
+            <div class="links-cell">
+              <a href="#" class="link-chip">🎥</a>
+              <a href="#" class="link-chip">🌐</a>
+              <a href="#" class="link-chip">✈️</a>
+            </div>
+          </td>
+          <td><button class="action-btn">⋯</button></td>
+        </tr>
+
+        <tr>
+          <td>
+            <div class="hotel-name">Hard Rock Punta Cana</div>
+            <div class="hotel-dest">📍 Punta Cana, DR</div>
+          </td>
+          <td><span class="my-stars">⭐⭐⭐</span></td>
+          <td><span class="stars">⭐⭐⭐⭐</span> <span style="color:var(--muted);font-size:0.78rem">(4.1)</span></td>
+          <td class="price">$2,600/pp</td>
+          <td><span class="badge badge-considering">🔵 Considering</span></td>
+          <td class="pros-cons-cell">
+            <span class="pro">✓ Great entertainment</span>
+            <span class="con">✗ Feels like a casino</span>
+            <span class="con">✗ Pricey add-ons</span>
+          </td>
+          <td>
+            <div class="links-cell">
+              <a href="#" class="link-chip">🎥</a>
+              <a href="#" class="link-chip">🌐</a>
+            </div>
+          </td>
+          <td><button class="action-btn">⋯</button></td>
+        </tr>
+
+        <tr class="eliminated">
+          <td>
+            <div class="hotel-name">Iberostar Bavaro</div>
+            <div class="hotel-dest">📍 Punta Cana, DR</div>
+          </td>
+          <td><span class="my-stars">⭐⭐</span></td>
+          <td><span class="stars">⭐⭐⭐</span> <span style="color:var(--muted);font-size:0.78rem">(3.6)</span></td>
+          <td class="price">$1,900/pp</td>
+          <td><span class="badge badge-eliminated">❌ Eliminated</span></td>
+          <td class="pros-cons-cell">
+            <span class="con">✗ Outdated rooms</span>
+            <span class="con">✗ Weak beach</span>
+          </td>
+          <td>
+            <div class="links-cell">
+              <a href="#" class="link-chip">🌐</a>
+            </div>
+          </td>
+          <td><button class="action-btn">⋯</button></td>
+        </tr>
+
+      </tbody>
+    </table>
+    <div class="table-footer">
+      4 hotels · Sorted by my rating · Eliminated hotels faded out
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
