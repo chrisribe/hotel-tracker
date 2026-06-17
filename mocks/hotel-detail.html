@@ -70,21 +70,29 @@
       letter-spacing:-0.02em; text-shadow:0 2px 8px rgba(0,0,0,0.4);
     }
     .hero-dest { font-size:0.82rem; color:rgba(255,255,255,0.8); margin-top:4px; }
-    .hero-price {
-      text-align:right; flex-shrink:0;
-    }
+    .hero-price { text-align:right; flex-shrink:0; }
     .hero-price .amount {
       font-family:'Playfair Display',serif; font-weight:700;
       font-size:1.6rem; color:#fff;
     }
     .hero-price .sub { font-size:0.72rem; color:rgba(255,255,255,0.7); }
-    .badge-booked {
-      display:inline-flex; align-items:center; gap:4px;
-      font-size:0.68rem; font-weight:700; letter-spacing:0.04em;
-      padding:3px 10px; border-radius:999px;
-      background:rgba(25,122,111,0.9); color:#fff;
-      margin-bottom:0.4rem;
+
+    /* Status pills — inline in hero */
+    .hero-status {
+      display:flex; align-items:center; gap:0.5rem; margin-top:0.6rem;
+      flex-wrap:wrap;
     }
+    .status-toggle {
+      font-size:0.72rem; font-weight:700; letter-spacing:0.03em;
+      padding:5px 13px; border-radius:999px; cursor:pointer;
+      border:2px solid rgba(255,255,255,0.3);
+      background:rgba(255,255,255,0.12); color:rgba(255,255,255,0.65);
+      backdrop-filter:blur(4px); transition:all 0.15s;
+    }
+    .status-toggle:hover { border-color:rgba(255,255,255,0.6); color:#fff; }
+    .status-toggle.active-considering { background:rgba(25,122,111,0.85); border-color:var(--teal-lt); color:#fff; }
+    .status-toggle.active-booked      { background:rgba(30,122,72,0.85);  border-color:#4CC87A; color:#fff; }
+    .status-toggle.active-eliminated  { background:rgba(192,57,43,0.8);   border-color:#E05F5F; color:#fff; }
 
     /* CONTENT */
     .content { max-width:780px; margin:0 auto; padding:1.5rem; display:flex; flex-direction:column; gap:1.25rem; }
@@ -238,9 +246,13 @@
 <div class="hero">
   <div class="hero-content">
     <div>
-      <div><span class="badge-booked">✅ Booked</span></div>
       <div class="hero-name">Barceló Bávaro Palace</div>
       <div class="hero-dest">📍 Punta Cana, Dominican Republic · ⭐⭐⭐⭐⭐</div>
+      <div class="hero-status">
+        <button class="status-toggle" onclick="setStatus('considering', this)">🔵 Considering</button>
+        <button class="status-toggle active-booked" onclick="setStatus('booked', this)">✅ Booked</button>
+        <button class="status-toggle" onclick="setStatus('eliminated', this)">❌ Eliminated</button>
+      </div>
     </div>
     <div class="hero-price">
       <div class="amount">$2,800</div>
@@ -250,20 +262,6 @@
 </div>
 
 <div class="content">
-
-  <!-- STATUS -->
-  <div class="section-card">
-    <div class="section-head">
-      <span class="section-title">Status</span>
-    </div>
-    <div class="section-body">
-      <div class="status-row">
-        <button class="status-pill s-considering">🔵 Considering</button>
-        <button class="status-pill s-booked" style="background:var(--green-dim);color:var(--green);border-color:var(--green)">✅ Booked</button>
-        <button class="status-pill s-eliminated">❌ Eliminated</button>
-      </div>
-    </div>
-  </div>
 
   <!-- MY RATINGS -->
   <div class="section-card">
@@ -419,3 +417,11 @@
 
 </body>
 </html>
+<script>
+  function setStatus(status, btn) {
+    document.querySelectorAll('.status-toggle').forEach(b => {
+      b.className = 'status-toggle';
+    });
+    btn.classList.add('active-' + status);
+  }
+</script>
