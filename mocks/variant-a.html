@@ -365,8 +365,13 @@
       user-select: none; -webkit-tap-highlight-color: transparent;
     }
     .pip:hover { border-color: var(--teal); color: var(--teal); background: var(--teal-dim); }
-    .pip.sel { background: var(--amber); border-color: var(--amber); color: var(--charcoal); }
-    .pip.sel.low { background: var(--red); border-color: var(--red); color: #fff; }
+    .pip.sel { border-color: currentColor; color: #fff; }
+    .pip.sel[data-val="1"] { background:#C0392B; border-color:#C0392B; }
+    .pip.sel[data-val="2"] { background:#D4622A; border-color:#D4622A; }
+    .pip.sel[data-val="3"] { background:#E8A030; border-color:#E8A030; color: var(--charcoal); }
+    .pip.sel[data-val="4"] { background:#7AB030; border-color:#7AB030; }
+    .pip.sel[data-val="5"] { background:#1E7A48; border-color:#1E7A48; }
+    .pip.sel.low { background: var(--red); border-color: var(--red); }
     .sheet-foot {
       display: flex; gap: 0.6rem;
       padding: 0.85rem 1.25rem 1.75rem;
