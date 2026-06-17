@@ -666,6 +666,8 @@
 
 <script>
   const DIMS = ['beach','property','food','pools','location','value'];
+  const ratingColor = v => ['','#C0392B','#D4622A','#E8A030','#7AB030','#1E7A48'][v] || '#E8A030';
+
   const ratings = {
     0: { beach:5, property:4, food:4, pools:5, location:2, value:4 },
     1: { beach:2, property:4, food:5, pools:3, location:2, value:4 },
@@ -737,12 +739,25 @@
       if (!fill || !score) return;
       const v = r[dim] || 0;
       fill.style.width = (v/5*100) + '%';
+      fill.style.background = ratingColor(v);
       fill.classList.toggle('low', v <= 2);
       score.textContent = v || '–';
       score.classList.toggle('low', v <= 2);
     });
     closeSheet();
   }
+
+  // Apply color scale to all bars on load
+  document.querySelectorAll('.card').forEach((card, i) => {
+    const r = ratings[i] || {};
+    DIMS.forEach(dim => {
+      const fill  = card.querySelector(`.bar-fill[data-dim="${dim}"]`);
+      const score = card.querySelector(`.dim-val[data-dim="${dim}"]`);
+      if (!fill || !score) return;
+      const v = r[dim] || 0;
+      fill.style.background = ratingColor(v);
+    });
+  });
 </script>
 </body>
 </html>
