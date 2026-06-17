@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hotel Tracker — Variant A (Card Grid)</title>
+  <title>Hotel Tracker — Variant A (Card Grid v2)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -25,6 +25,8 @@
       --red-bg:     #FAEAEA;
       --blue:       #3A6FA8;
       --blue-bg:    #EBF2FA;
+      --amber:      #C47F00;
+      --amber-bg:   #FFF5D6;
     }
 
     body {
@@ -53,13 +55,6 @@
       align-items: center;
       gap: 0.4rem;
     }
-    .logo span { font-size: 1.3rem; }
-    nav .trip-name {
-      font-family: 'Outfit', sans-serif;
-      font-weight: 600;
-      font-size: 1rem;
-      color: var(--text);
-    }
     .nav-right { display: flex; align-items: center; gap: 1rem; }
     .btn {
       font-family: 'DM Sans', sans-serif;
@@ -82,7 +77,6 @@
     /* PAGE */
     .page { max-width: 1100px; margin: 0 auto; padding: 2rem; }
 
-    /* TRIP HEADER */
     .trip-header {
       display: flex;
       align-items: flex-start;
@@ -94,7 +88,6 @@
     .trip-title { font-family: 'Outfit', sans-serif; font-size: 1.8rem; font-weight: 700; }
     .trip-meta { color: var(--muted); font-size: 0.9rem; margin-top: 0.25rem; }
 
-    /* TOOLBAR */
     .toolbar {
       display: flex;
       align-items: center;
@@ -127,7 +120,7 @@
     /* GRID */
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
       gap: 1.25rem;
     }
 
@@ -142,63 +135,172 @@
       transition: box-shadow 0.2s;
     }
     .card:hover { box-shadow: 0 4px 20px rgba(44,36,22,0.1); }
+
+    /* CARD IMAGE */
     .card-img {
       width: 100%;
-      height: 160px;
-      object-fit: cover;
-      background: linear-gradient(135deg, #d4a96a 0%, #e8c99a 50%, #c4956a 100%);
+      height: 150px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 3rem;
-      color: rgba(255,255,255,0.6);
+      font-size: 2.8rem;
       position: relative;
     }
     .card-img .thumb-overlay {
       position: absolute;
       inset: 0;
-      background: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.25));
+      background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.3));
     }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
-      font-size: 0.72rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      padding: 3px 10px;
-      border-radius: 999px;
-    }
-    .badge-considering { background: var(--blue-bg); color: var(--blue); }
-    .badge-eliminated  { background: var(--red-bg);  color: var(--red); }
-    .badge-booked      { background: var(--green-bg); color: var(--green); }
     .card-img-badges {
       position: absolute;
       top: 10px;
       right: 10px;
+      display: flex;
+      gap: 0.4rem;
     }
-    .card-body { padding: 1.1rem; flex: 1; display: flex; flex-direction: column; gap: 0.6rem; }
-    .card-top { display: flex; justify-content: space-between; align-items: flex-start; }
-    .card-name { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.05rem; }
-    .card-dest { font-size: 0.82rem; color: var(--muted); margin-top: 1px; }
-    .stars { color: var(--secondary); font-size: 0.95rem; letter-spacing: 0.05em; }
-    .my-rating { font-size: 0.75rem; color: var(--muted); }
-    .price { font-weight: 600; font-size: 0.95rem; color: var(--primary); }
-    .pros-cons { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.82rem; }
-    .pro { color: var(--green); }
-    .con { color: var(--red); }
+
+    /* BADGES */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      padding: 3px 9px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .badge-considering { background: var(--blue-bg);  color: var(--blue); }
+    .badge-eliminated  { background: var(--red-bg);   color: var(--red); }
+    .badge-booked      { background: var(--green-bg); color: var(--green); }
+
+    /* CARD BODY */
+    .card-body { padding: 1rem 1.1rem; flex: 1; display: flex; flex-direction: column; gap: 0.85rem; }
+
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
+    .card-name { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.05rem; line-height: 1.2; }
+    .card-dest { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+    .price { font-weight: 700; font-size: 1rem; color: var(--primary); white-space: nowrap; }
+    .price-sub { font-size: 0.7rem; font-weight: 400; color: var(--muted); }
+
+    /* DIVIDER */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 0 -1.1rem;
+    }
+
+    /* ── MY RATINGS ── */
+    .section-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+    .dim-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.4rem 0.6rem;
+    }
+    .dim {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .dim-label {
+      font-size: 0.68rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .dim-dots {
+      display: flex;
+      gap: 2px;
+    }
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--border);
+    }
+    .dot.filled { background: var(--secondary); }
+    .dot.filled.warn { background: var(--red); } /* low rating */
+
+    /* ── PUBLIC REVIEWS ── */
+    .reviews-section { display: flex; flex-direction: column; gap: 0.5rem; }
+
+    .review-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .public-score {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .score-num {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--text);
+    }
+    .score-source {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+    .score-stars { color: var(--secondary); font-size: 0.85rem; }
+    .review-count { font-size: 0.72rem; color: var(--muted); }
+
+    /* Fake review warning */
+    .review-trust {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .trust-ok     { background: var(--green-bg); color: var(--green); }
+    .trust-warn   { background: var(--amber-bg); color: var(--amber); }
+    .trust-sus    { background: var(--red-bg);   color: var(--red); }
+
+    /* Comment pattern tags */
+    .pattern-row { display: flex; flex-direction: column; gap: 0.3rem; }
+    .pattern-group { display: flex; align-items: flex-start; gap: 0.4rem; flex-wrap: wrap; }
+    .pattern-icon { font-size: 0.75rem; flex-shrink: 0; margin-top: 2px; }
+    .tag {
+      font-size: 0.7rem;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .tag-concern { background: var(--red-bg);   color: var(--red); }
+    .tag-praise  { background: var(--green-bg); color: var(--green); }
+    .tag-neutral { background: var(--bg);       color: var(--muted); border: 1px solid var(--border); }
+    .review-date { font-size: 0.68rem; color: var(--muted); font-style: italic; }
+
+    /* ── CARD LINKS ── */
     .card-links {
       display: flex;
       gap: 0.5rem;
-      margin-top: auto;
       padding-top: 0.5rem;
       border-top: 1px solid var(--border);
       flex-wrap: wrap;
+      margin-top: auto;
     }
     .link-btn {
       font-size: 0.78rem;
       font-weight: 600;
-      padding: 5px 10px;
+      padding: 5px 11px;
       border-radius: 8px;
       border: 1px solid var(--border);
       background: var(--bg);
@@ -210,6 +312,7 @@
       gap: 0.3rem;
     }
     .link-btn:hover { background: var(--border); }
+    .link-btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
 
     /* ADD CARD */
     .card-add {
@@ -224,18 +327,15 @@
       min-height: 200px;
       cursor: pointer;
       color: var(--muted);
-      transition: border-color 0.2s, color 0.2s;
     }
     .card-add:hover { border-color: var(--primary); color: var(--primary); }
     .card-add .plus { font-size: 2rem; font-weight: 300; }
-    .card-add p { font-size: 0.85rem; font-weight: 500; }
   </style>
 </head>
 <body>
 
 <nav>
-  <div class="logo"><span>🏨</span> Hotel Tracker</div>
-  <div class="trip-name">Punta Cana 2027</div>
+  <div class="logo">🏨 Hotel Tracker</div>
   <div class="nav-right">
     <a href="#" class="btn btn-ghost">All Trips</a>
     <button class="btn btn-primary">+ Add Hotel</button>
@@ -247,158 +347,347 @@
   <div class="trip-header">
     <div>
       <h1 class="trip-title">🌴 Punta Cana 2027</h1>
-      <p class="trip-meta">Mar 1–8, 2027 · 6 hotels · 1 booked</p>
+      <p class="trip-meta">Mar 1–8, 2027 · 3 hotels shown · 1 booked</p>
     </div>
     <a href="#" class="btn btn-ghost">📊 Compare View</a>
   </div>
 
   <div class="toolbar">
-    <button class="filter-btn active">All (6)</button>
-    <button class="filter-btn">🔵 Considering (4)</button>
+    <button class="filter-btn active">All (4)</button>
+    <button class="filter-btn">🔵 Considering (2)</button>
     <button class="filter-btn">✅ Booked (1)</button>
     <button class="filter-btn">❌ Eliminated (1)</button>
     <span class="spacer"></span>
     <select>
       <option>Sort: My Rating ↓</option>
-      <option>Sort: Google Rating ↓</option>
+      <option>Sort: Beach ↓</option>
       <option>Sort: Price ↑</option>
-      <option>Sort: Recently Added</option>
+      <option>Sort: Google ↓</option>
     </select>
   </div>
 
   <div class="grid">
 
-    <!-- BOOKED -->
+    <!-- ══ CARD 1 — BOOKED ══ -->
     <div class="card">
-      <div class="card-img" style="background: linear-gradient(135deg,#7fb3d3,#aed6f1)">
+      <div class="card-img" style="background:linear-gradient(135deg,#5ba4cf,#8dcfea)">
         🏝️
         <div class="thumb-overlay"></div>
-        <div class="card-img-badges"><span class="badge badge-booked">✅ Booked</span></div>
+        <div class="card-img-badges">
+          <span class="badge badge-booked">✅ Booked</span>
+        </div>
       </div>
+
       <div class="card-body">
-        <div class="card-top">
+
+        <!-- HEADER -->
+        <div class="card-header">
           <div>
             <div class="card-name">Barceló Bávaro Palace</div>
-            <div class="card-dest">📍 Punta Cana, DR</div>
+            <div class="card-dest">📍 Punta Cana, DR · 5-star</div>
           </div>
-          <div>
-            <div class="stars">⭐⭐⭐⭐⭐</div>
-            <div class="my-rating">My: ⭐⭐⭐⭐⭐</div>
+          <div style="text-align:right">
+            <div class="price">$2,800<span class="price-sub">/pp AI</span></div>
           </div>
         </div>
-        <div class="price">~$2,800/pp all-incl.</div>
-        <div class="pros-cons">
-          <span class="pro">✓ Massive beachfront</span>
-          <span class="pro">✓ Great pools + waterpark</span>
-          <span class="con">✗ Can be crowded</span>
+
+        <div class="divider"></div>
+
+        <!-- MY RATINGS -->
+        <div>
+          <div class="section-label">My Ratings</div>
+          <div class="dim-grid">
+            <div class="dim">
+              <div class="dim-label">🏖️ Beach</div>
+              <div class="dim-dots">
+                <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div>
+              </div>
+            </div>
+            <div class="dim">
+              <div class="dim-label">🏨 Property</div>
+              <div class="dim-dots">
+                <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div>
+              </div>
+            </div>
+            <div class="dim">
+              <div class="dim-label">🍽️ Food</div>
+              <div class="dim-dots">
+                <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div>
+              </div>
+            </div>
+            <div class="dim">
+              <div class="dim-label">🏊 Pools</div>
+              <div class="dim-dots">
+                <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div>
+              </div>
+            </div>
+            <div class="dim">
+              <div class="dim-label">📍 Location</div>
+              <div class="dim-dots">
+                <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div><div class="dot"></div>
+              </div>
+            </div>
+            <div class="dim">
+              <div class="dim-label">💰 Value</div>
+              <div class="dim-dots">
+                <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <div class="divider"></div>
+
+        <!-- PUBLIC REVIEWS -->
+        <div class="reviews-section">
+          <div class="review-header">
+            <div class="public-score">
+              <span class="score-num">4.5</span>
+              <span class="score-stars">⭐⭐⭐⭐⭐</span>
+              <span class="review-count">· 14,200 reviews</span>
+            </div>
+            <span class="review-trust trust-warn">⚠️ Some fake patterns</span>
+          </div>
+          <div class="pattern-row">
+            <div class="pattern-group">
+              <span class="pattern-icon">🟢</span>
+              <span class="tag tag-praise">huge beach</span>
+              <span class="tag tag-praise">great pools</span>
+              <span class="tag tag-praise">friendly staff</span>
+            </div>
+            <div class="pattern-group">
+              <span class="pattern-icon">🔴</span>
+              <span class="tag tag-concern">crowded at peak</span>
+              <span class="tag tag-concern">slow check-in</span>
+            </div>
+          </div>
+          <div class="review-date">Last scanned: Jun 14, 2026 · TripAdvisor</div>
+        </div>
+
+        <!-- LINKS -->
         <div class="card-links">
           <a href="#" class="link-btn">🎥 Review</a>
           <a href="#" class="link-btn">🌐 Hotel</a>
           <a href="#" class="link-btn">✈️ Package</a>
         </div>
+
       </div>
     </div>
 
-    <!-- CONSIDERING #1 -->
+    <!-- ══ CARD 2 — CONSIDERING (bad beach) ══ -->
     <div class="card">
-      <div class="card-img" style="background: linear-gradient(135deg,#a3c4a8,#c8e6c9)">
+      <div class="card-img" style="background:linear-gradient(135deg,#a3c4a8,#c8e6c9)">
         🌿
         <div class="thumb-overlay"></div>
-        <div class="card-img-badges"><span class="badge badge-considering">🔵 Considering</span></div>
+        <div class="card-img-badges">
+          <span class="badge badge-considering">🔵 Considering</span>
+        </div>
       </div>
+
       <div class="card-body">
-        <div class="card-top">
+
+        <div class="card-header">
           <div>
-            <div class="card-name">Dreams Onyx</div>
-            <div class="card-dest">📍 Punta Cana, DR</div>
+            <div class="card-name">Dreams Onyx Resort</div>
+            <div class="card-dest">📍 Punta Cana, DR · 5-star</div>
           </div>
-          <div>
-            <div class="stars">⭐⭐⭐⭐½</div>
-            <div class="my-rating">My: ⭐⭐⭐⭐</div>
+          <div style="text-align:right">
+            <div class="price">$2,400<span class="price-sub">/pp AI</span></div>
           </div>
         </div>
-        <div class="price">~$2,400/pp all-incl.</div>
-        <div class="pros-cons">
-          <span class="pro">✓ Adults-only section</span>
-          <span class="pro">✓ Excellent food</span>
-          <span class="con">✗ Smaller beach</span>
-          <span class="con">✗ 45 min from airport</span>
+
+        <div class="divider"></div>
+
+        <!-- MY RATINGS — rocky beach flagged -->
+        <div>
+          <div class="section-label">My Ratings</div>
+          <div class="dim-grid">
+            <div class="dim">
+              <div class="dim-label">🏖️ Beach</div>
+              <div class="dim-dots">
+                <div class="dot filled warn"></div><div class="dot filled warn"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+              </div>
+            </div>
+            <div class="dim">
+              <div class="dim-label">🏨 Property</div>
+              <div class="dim-dots">
+                <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div>
+              </div>
+            </div>
+            <div class="dim">
+              <div class="dim-label">🍽️ Food</div>
+              <div class="dim-dots">
+                <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div>
+              </div>
+            </div>
+            <div class="dim">
+              <div class="dim-label">🏊 Pools</div>
+              <div class="dim-dots">
+                <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div><div class="dot"></div>
+              </div>
+            </div>
+            <div class="dim">
+              <div class="dim-label">📍 Location</div>
+              <div class="dim-dots">
+                <div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+              </div>
+            </div>
+            <div class="dim">
+              <div class="dim-label">💰 Value</div>
+              <div class="dim-dots">
+                <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <div class="divider"></div>
+
+        <!-- PUBLIC REVIEWS — mold concern -->
+        <div class="reviews-section">
+          <div class="review-header">
+            <div class="public-score">
+              <span class="score-num">4.2</span>
+              <span class="score-stars">⭐⭐⭐⭐</span>
+              <span class="review-count">· 8,400 reviews</span>
+            </div>
+            <span class="review-trust trust-ok">✓ Looks genuine</span>
+          </div>
+          <div class="pattern-row">
+            <div class="pattern-group">
+              <span class="pattern-icon">🟢</span>
+              <span class="tag tag-praise">excellent food</span>
+              <span class="tag tag-praise">clean rooms</span>
+            </div>
+            <div class="pattern-group">
+              <span class="pattern-icon">🔴</span>
+              <span class="tag tag-concern">musty smell A/C</span>
+              <span class="tag tag-concern">rocky beach</span>
+              <span class="tag tag-concern">far from airport</span>
+            </div>
+          </div>
+          <div class="review-date">Last scanned: Jun 14, 2026 · Google + TripAdvisor</div>
+        </div>
+
+        <!-- LINKS -->
         <div class="card-links">
           <a href="#" class="link-btn">🎥 Review</a>
           <a href="#" class="link-btn">🌐 Hotel</a>
           <a href="#" class="link-btn">✈️ Package</a>
         </div>
+
       </div>
     </div>
 
-    <!-- CONSIDERING #2 -->
+    <!-- ══ CARD 3 — CONSIDERING (old building) ══ -->
     <div class="card">
-      <div class="card-img" style="background: linear-gradient(135deg,#e8c99a,#f5e0c0)">
+      <div class="card-img" style="background:linear-gradient(135deg,#e8c99a,#f5e0c0)">
         🌅
         <div class="thumb-overlay"></div>
-        <div class="card-img-badges"><span class="badge badge-considering">🔵 Considering</span></div>
+        <div class="card-img-badges">
+          <span class="badge badge-considering">🔵 Considering</span>
+        </div>
       </div>
+
       <div class="card-body">
-        <div class="card-top">
+
+        <div class="card-header">
           <div>
             <div class="card-name">Hard Rock Punta Cana</div>
-            <div class="card-dest">📍 Punta Cana, DR</div>
+            <div class="card-dest">📍 Punta Cana, DR · 5-star</div>
           </div>
-          <div>
-            <div class="stars">⭐⭐⭐⭐</div>
-            <div class="my-rating">My: ⭐⭐⭐</div>
+          <div style="text-align:right">
+            <div class="price">$2,600<span class="price-sub">/pp AI</span></div>
           </div>
         </div>
-        <div class="price">~$2,600/pp all-incl.</div>
-        <div class="pros-cons">
-          <span class="pro">✓ Great entertainment</span>
-          <span class="con">✗ Feels like a casino</span>
-          <span class="con">✗ Pricey add-ons</span>
+
+        <div class="divider"></div>
+
+        <!-- MY RATINGS — old building flagged -->
+        <div>
+          <div class="section-label">My Ratings</div>
+          <div class="dim-grid">
+            <div class="dim">
+              <div class="dim-label">🏖️ Beach</div>
+              <div class="dim-dots">
+                <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div><div class="dot"></div>
+              </div>
+            </div>
+            <div class="dim">
+              <div class="dim-label">🏨 Property</div>
+              <div class="dim-dots">
+                <div class="dot filled warn"></div><div class="dot filled warn"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+              </div>
+            </div>
+            <div class="dim">
+              <div class="dim-label">🍽️ Food</div>
+              <div class="dim-dots">
+                <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div><div class="dot"></div>
+              </div>
+            </div>
+            <div class="dim">
+              <div class="dim-label">🏊 Pools</div>
+              <div class="dim-dots">
+                <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div>
+              </div>
+            </div>
+            <div class="dim">
+              <div class="dim-label">📍 Location</div>
+              <div class="dim-dots">
+                <div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div>
+              </div>
+            </div>
+            <div class="dim">
+              <div class="dim-label">💰 Value</div>
+              <div class="dim-dots">
+                <div class="dot filled"></div><div class="dot filled"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <div class="divider"></div>
+
+        <!-- PUBLIC REVIEWS — suspicious -->
+        <div class="reviews-section">
+          <div class="review-header">
+            <div class="public-score">
+              <span class="score-num">4.0</span>
+              <span class="score-stars">⭐⭐⭐⭐</span>
+              <span class="review-count">· 22,000 reviews</span>
+            </div>
+            <span class="review-trust trust-sus">🚩 High fake risk</span>
+          </div>
+          <div class="pattern-row">
+            <div class="pattern-group">
+              <span class="pattern-icon">🟢</span>
+              <span class="tag tag-praise">great entertainment</span>
+              <span class="tag tag-praise">big beach</span>
+            </div>
+            <div class="pattern-group">
+              <span class="pattern-icon">🔴</span>
+              <span class="tag tag-concern">outdated rooms</span>
+              <span class="tag tag-concern">mold in bathroom</span>
+              <span class="tag tag-concern">aggressive upsells</span>
+            </div>
+          </div>
+          <div class="review-date">Last scanned: Jun 14, 2026 · Google</div>
+        </div>
+
+        <!-- LINKS -->
         <div class="card-links">
           <a href="#" class="link-btn">🎥 Review</a>
           <a href="#" class="link-btn">🌐 Hotel</a>
         </div>
-      </div>
-    </div>
 
-    <!-- ELIMINATED -->
-    <div class="card" style="opacity:0.6">
-      <div class="card-img" style="background: linear-gradient(135deg,#ccc,#e8e8e8)">
-        🏨
-        <div class="thumb-overlay"></div>
-        <div class="card-img-badges"><span class="badge badge-eliminated">❌ Eliminated</span></div>
-      </div>
-      <div class="card-body">
-        <div class="card-top">
-          <div>
-            <div class="card-name">Iberostar Bavaro</div>
-            <div class="card-dest">📍 Punta Cana, DR</div>
-          </div>
-          <div>
-            <div class="stars">⭐⭐⭐</div>
-            <div class="my-rating">My: ⭐⭐</div>
-          </div>
-        </div>
-        <div class="price">~$1,900/pp all-incl.</div>
-        <div class="pros-cons">
-          <span class="con">✗ Outdated rooms</span>
-          <span class="con">✗ Weak beach</span>
-          <span class="con">✗ Mixed reviews</span>
-        </div>
-        <div class="card-links">
-          <a href="#" class="link-btn">🌐 Hotel</a>
-        </div>
       </div>
     </div>
 
     <!-- ADD NEW -->
     <div class="card-add">
       <div class="plus">+</div>
-      <p>Add a hotel</p>
-      <p style="font-size:0.75rem; color: var(--muted)">Paste a URL or type a name</p>
+      <p style="font-weight:600">Add a hotel</p>
+      <p style="font-size:0.75rem">Paste a URL or type a name</p>
     </div>
 
   </div>

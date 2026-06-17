@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hotel Tracker — Rating UX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+      --bg:      #F8F4EE;
+      --surface: #FFFFFF;
+      --primary: #B85A2C;
+      --primary-dk: #8F3F14;
+      --secondary: #E8A246;
+      --text:    #2C2416;
+      --muted:   #8A7A6A;
+      --border:  #E2D8CC;
+      --green:   #3A6647;
+      --green-bg:#EAF3EC;
+      --red:     #B84040;
+      --red-bg:  #FAEAEA;
+      --blue:    #3A6FA8;
+      --blue-bg: #EBF2FA;
+    }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      /* Simulate phone viewport */
+      max-width: 390px;
+      margin: 0 auto;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    /* ── CARD (abbreviated) ── */
+    .card {
+      background: var(--surface);
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      margin: 1rem;
+      overflow: hidden;
+    }
+    .card-img {
+      height: 130px;
+      background: linear-gradient(135deg,#5ba4cf,#8dcfea);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem;
+      position: relative;
+    }
+    .card-img-badges { position:absolute; top:10px; right:10px; }
+    .badge {
+      font-size: 0.7rem; font-weight: 700;
+      padding: 3px 9px; border-radius: 999px;
+      background: var(--blue-bg); color: var(--blue);
+    }
+    .card-body { padding: 1rem; display:flex; flex-direction:column; gap:0.75rem; }
+    .card-name { font-family:'Outfit',sans-serif; font-weight:700; font-size:1rem; }
+    .card-dest { font-size:0.78rem; color:var(--muted); }
+    .price { font-weight:700; color:var(--primary); font-size:0.95rem; }
+    .divider { height:1px; background:var(--border); margin: 0 -1rem; }
+
+    /* ── COMPACT RATING DISPLAY (read-only, on card) ── */
+    .rating-display {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .section-label {
+      font-size:0.68rem; font-weight:700; letter-spacing:0.07em;
+      text-transform:uppercase; color:var(--muted);
+    }
+    .dim-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .dim-label-sm {
+      font-size: 0.75rem;
+      color: var(--muted);
+      width: 90px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .dim-bar-wrap {
+      flex: 1;
+      height: 6px;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .dim-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--secondary);
+      transition: width 0.3s;
+    }
+    .dim-bar-fill.warn { background: var(--red); }
+    .dim-score {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--muted);
+      width: 16px;
+      text-align: right;
+    }
+
+    /* ── RATE BUTTON ── */
+    .card-footer {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      padding-top: 0.25rem;
+      flex-wrap: wrap;
+    }
+    .btn-rate {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 10px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      flex: 1;
+      justify-content: center;
+    }
+    .btn-rate:hover { background: var(--primary-dk); }
+    .link-btn {
+      font-size: 0.78rem; font-weight:600;
+      padding: 7px 11px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    /* ── OVERLAY ── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(44,36,22,0.45);
+      z-index: 10;
+      backdrop-filter: blur(2px);
+    }
+
+    /* ── BOTTOM SHEET ── */
+    .sheet {
+      position: fixed;
+      bottom: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 390px;
+      background: var(--surface);
+      border-radius: 24px 24px 0 0;
+      z-index: 20;
+      padding: 0 0 2rem;
+      box-shadow: 0 -8px 40px rgba(44,36,22,0.18);
+    }
+
+    /* drag handle */
+    .sheet-handle {
+      width: 40px; height: 4px;
+      background: var(--border);
+      border-radius: 999px;
+      margin: 12px auto 0;
+    }
+
+    .sheet-header {
+      padding: 1rem 1.25rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .sheet-title {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700; font-size: 1rem;
+    }
+    .sheet-sub { font-size:0.78rem; color:var(--muted); margin-top:2px; }
+
+    /* ── DIMENSION ROWS ── */
+    .sheet-dims { padding: 0.5rem 1.25rem; display:flex; flex-direction:column; gap:0.25rem; }
+
+    .sheet-dim {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .sheet-dim:last-child { border-bottom: none; }
+
+    .sheet-dim-label {
+      width: 100px;
+      flex-shrink: 0;
+      font-size: 0.85rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* 5 large tap targets */
+    .pip-row {
+      display: flex;
+      gap: 6px;
+      flex: 1;
+      justify-content: flex-end;
+    }
+    .pip {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .pip:hover { border-color: var(--secondary); color: var(--text); }
+    .pip.selected {
+      background: var(--secondary);
+      border-color: var(--secondary);
+      color: var(--surface);
+    }
+    /* Low rating gets red fill */
+    .pip.selected.warn {
+      background: var(--red);
+      border-color: var(--red);
+    }
+
+    /* ── SHEET FOOTER ── */
+    .sheet-footer {
+      padding: 0.75rem 1.25rem 0;
+      display: flex;
+      gap: 0.75rem;
+    }
+    .btn-save {
+      flex: 1;
+      padding: 14px;
+      border-radius: 12px;
+      background: var(--primary);
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-save:hover { background: var(--primary-dk); }
+    .btn-cancel {
+      padding: 14px 18px;
+      border-radius: 12px;
+      background: var(--bg);
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      cursor: pointer;
+    }
+
+    /* ── LABEL HINT ── */
+    .hint-bar {
+      display: flex;
+      justify-content: space-between;
+      padding: 0 1.25rem;
+      font-size: 0.65rem;
+      color: var(--muted);
+      margin-top: -0.1rem;
+      margin-bottom: 0.1rem;
+    }
+
+    /* ── ANNOTATION CALLOUTS ── */
+    .callout {
+      margin: 0 1rem 0.5rem;
+      padding: 0.65rem 0.9rem;
+      border-radius: 10px;
+      font-size: 0.78rem;
+      line-height: 1.5;
+      border-left: 3px solid;
+    }
+    .callout-blue { background: var(--blue-bg); border-color: var(--blue); color: var(--blue); }
+    .callout-green { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+    .callout-amber { background: #FFF5D6; border-color: #C47F00; color: #7A4F00; }
+  </style>
+</head>
+<body>
+
+<!-- ── CARD (compact, with rating bars read-only) ── -->
+<div class="card">
+  <div class="card-img">
+    🏝️
+    <div class="card-img-badges">
+      <span class="badge">🔵 Considering</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div class="card-name">Barceló Bávaro Palace</div>
+        <div class="card-dest">📍 Punta Cana, DR</div>
+      </div>
+      <div class="price">$2,800<span style="font-weight:400;font-size:0.72rem;color:var(--muted)">/pp</span></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- COMPACT BAR DISPLAY — read only, scannable -->
+    <div class="rating-display">
+      <div class="section-label">My Ratings</div>
+      <div class="dim-row">
+        <div class="dim-label-sm">🏖️ Beach</div>
+        <div class="dim-bar-wrap"><div class="dim-bar-fill" style="width:100%"></div></div>
+        <div class="dim-score">5</div>
+      </div>
+      <div class="dim-row">
+        <div class="dim-label-sm">🏨 Property</div>
+        <div class="dim-bar-wrap"><div class="dim-bar-fill" style="width:80%"></div></div>
+        <div class="dim-score">4</div>
+      </div>
+      <div class="dim-row">
+        <div class="dim-label-sm">🍽️ Food</div>
+        <div class="dim-bar-wrap"><div class="dim-bar-fill" style="width:80%"></div></div>
+        <div class="dim-score">4</div>
+      </div>
+      <div class="dim-row">
+        <div class="dim-label-sm">🏊 Pools</div>
+        <div class="dim-bar-wrap"><div class="dim-bar-fill" style="width:100%"></div></div>
+        <div class="dim-score">5</div>
+      </div>
+      <div class="dim-row">
+        <div class="dim-label-sm">📍 Location</div>
+        <div class="dim-bar-wrap"><div class="dim-bar-fill warn" style="width:40%"></div></div>
+        <div class="dim-score" style="color:var(--red)">2</div>
+      </div>
+      <div class="dim-row">
+        <div class="dim-label-sm">💰 Value</div>
+        <div class="dim-bar-wrap"><div class="dim-bar-fill" style="width:60%"></div></div>
+        <div class="dim-score">3</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="card-footer">
+      <button class="btn-rate">✏️ Edit Ratings</button>
+      <a href="#" class="link-btn">🎥</a>
+      <a href="#" class="link-btn">🌐</a>
+      <a href="#" class="link-btn">✈️</a>
+    </div>
+  </div>
+</div>
+
+<div class="callout callout-blue">
+  <strong>Card view:</strong> Thin horizontal bars show ratings at a glance — compact, readable, low ratings turn red automatically.
+</div>
+
+<div class="callout callout-green">
+  <strong>Tap "✏️ Edit Ratings"</strong> → bottom sheet slides up with large 40×40px tap targets per dimension. No drag, no precision needed.
+</div>
+
+<div class="callout callout-amber">
+  <strong>Touch hint:</strong> Pips are 40px — well above the 44px iOS guideline (close enough). Each row is fully independent. Tap any number, sheet auto-advances after last row.
+</div>
+
+<!-- ── OVERLAY ── -->
+<div class="overlay"></div>
+
+<!-- ── BOTTOM SHEET ── -->
+<div class="sheet">
+  <div class="sheet-handle"></div>
+
+  <div class="sheet-header">
+    <div class="sheet-title">Rate this hotel</div>
+    <div class="sheet-sub">Barceló Bávaro Palace · tap 1–5 for each</div>
+  </div>
+
+  <div class="hint-bar">
+    <span>← Poor</span>
+    <span>Excellent →</span>
+  </div>
+
+  <div class="sheet-dims">
+
+    <div class="sheet-dim">
+      <div class="sheet-dim-label">🏖️ Beach</div>
+      <div class="pip-row">
+        <div class="pip">1</div>
+        <div class="pip">2</div>
+        <div class="pip">3</div>
+        <div class="pip">4</div>
+        <div class="pip selected">5</div>
+      </div>
+    </div>
+
+    <div class="sheet-dim">
+      <div class="sheet-dim-label">🏨 Property</div>
+      <div class="pip-row">
+        <div class="pip">1</div>
+        <div class="pip">2</div>
+        <div class="pip">3</div>
+        <div class="pip selected">4</div>
+        <div class="pip">5</div>
+      </div>
+    </div>
+
+    <div class="sheet-dim">
+      <div class="sheet-dim-label">🍽️ Food</div>
+      <div class="pip-row">
+        <div class="pip">1</div>
+        <div class="pip">2</div>
+        <div class="pip">3</div>
+        <div class="pip selected">4</div>
+        <div class="pip">5</div>
+      </div>
+    </div>
+
+    <div class="sheet-dim">
+      <div class="sheet-dim-label">🏊 Pools</div>
+      <div class="pip-row">
+        <div class="pip">1</div>
+        <div class="pip">2</div>
+        <div class="pip">3</div>
+        <div class="pip">4</div>
+        <div class="pip selected">5</div>
+      </div>
+    </div>
+
+    <div class="sheet-dim">
+      <div class="sheet-dim-label">📍 Location</div>
+      <div class="pip-row">
+        <div class="pip">1</div>
+        <div class="pip selected warn">2</div>
+        <div class="pip">3</div>
+        <div class="pip">4</div>
+        <div class="pip">5</div>
+      </div>
+    </div>
+
+    <div class="sheet-dim">
+      <div class="sheet-dim-label">💰 Value</div>
+      <div class="pip-row">
+        <div class="pip">1</div>
+        <div class="pip">2</div>
+        <div class="pip selected">3</div>
+        <div class="pip">4</div>
+        <div class="pip">5</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="sheet-footer">
+    <button class="btn-cancel">Cancel</button>
+    <button class="btn-save">Save Ratings</button>
+  </div>
+</div>
+
+</body>
+</html>
