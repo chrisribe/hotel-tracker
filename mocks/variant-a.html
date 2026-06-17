@@ -41,34 +41,40 @@
       min-height: 100vh;
     }
 
+    /* ── NAV ── */
     nav {
       background: var(--charcoal);
-      padding: 0 2rem;
-      height: 56px;
+      padding: 0 1.25rem; height: 56px;
       display: flex; align-items: center; justify-content: space-between;
-      position: sticky; top: 0; z-index: 5;
+      position: sticky; top: 0; z-index: 5; gap: 0.75rem;
     }
     .logo {
       font-family: 'Playfair Display', serif;
-      font-weight: 700; font-size: 1.15em;
-      color: #fff; letter-spacing: -0.01em;
-      display: flex; align-items: center; gap: 0.5rem;
+      font-weight: 700; font-size: 1.1rem;
+      color: #fff; display: flex; align-items: center; gap: 0.4rem;
+      flex-shrink: 0;
     }
     .logo .dot { color: var(--teal-lt); }
-    .nav-r { display:flex; gap:0.6rem; align-items:center; }
+    .nav-r { display: flex; gap: 0.5rem; align-items: center; flex-shrink: 0; }
     .btn {
       font-family: 'DM Sans', sans-serif;
-      font-size: 0.82em; font-weight: 600;
-      padding: 7px 16px; border-radius: 7px; border: none;
+      font-size: 0.82rem; font-weight: 600;
+      padding: 7px 14px; border-radius: 7px; border: none;
       cursor: pointer; text-decoration: none;
       display: inline-flex; align-items: center; gap: 0.3rem;
+      white-space: nowrap;
     }
     .btn-primary { background: var(--teal); color: #fff; }
     .btn-primary:hover { background: var(--teal-lt); }
-    .btn-ghost { background: transparent; color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.15); }
-    .btn-ghost:hover { color: #fff; border-color: rgba(255,255,255,0.4); }
+    .btn-ghost { background: transparent; color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.2); }
+    .btn-ghost:hover { color: #fff; border-color: rgba(255,255,255,0.5); }
+    @media (max-width: 500px) {
+      .btn-label { display: none; }
+      .btn-ghost { padding: 7px 10px; }
+      .btn-primary { padding: 7px 11px; font-size: 0.78rem; }
+    }
 
-    /* ── PAGE ── */
+        /* ── PAGE ── */
     .page { max-width: 1080px; margin: 0 auto; padding: 2rem 1.5rem; }
 
     /* ── TRIP HEADER ── */
@@ -104,8 +110,12 @@
     /* ── TOOLBAR ── */
     .toolbar {
       display: flex; align-items: center; gap: 0.5rem;
-      margin-bottom: 1.25rem; flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; padding-bottom: 2px;
     }
+    .toolbar::-webkit-scrollbar { display: none; }
+    .filter-pill { flex-shrink: 0; }
     .filter-pill {
       font-size: 0.75em; font-weight: 600;
       padding: 5px 13px; border-radius: 999px;
@@ -399,8 +409,8 @@
 <nav>
   <div class="logo">🏨 Hotel<span class="dot">Tracker</span></div>
   <div class="nav-r">
-    <a href="trips.html" class="btn btn-ghost">All Trips</a>
-    <button class="btn btn-primary">+ Add Hotel</button>
+    <a href="trips.html" class="btn btn-ghost">✈️ <span class="btn-label">All Trips</span></a>
+    <button class="btn btn-primary">+ <span class="btn-label">Add Hotel</span></button>
   </div>
 </nav>
 
