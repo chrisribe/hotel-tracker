@@ -35,29 +35,12 @@
 
     body {
       font-family: 'DM Sans', sans-serif;
-      font-size: 19px;
+      font-size: 18px;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
     }
 
-    /* Font size toggle */
-    .font-toggle {
-      display: flex; align-items: center; gap: 2px;
-      background: rgba(255,255,255,0.08);
-      border-radius: 7px; padding: 3px;
-    }
-    .font-btn {
-      border: none; background: transparent; color: rgba(255,255,255,0.55);
-      cursor: pointer; border-radius: 5px; padding: 3px 8px;
-      font-family: 'DM Sans', sans-serif; font-weight: 700;
-      transition: all 0.15s; line-height: 1;
-    }
-    .font-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
-    .font-btn.active { background: var(--teal); color: #fff; }
-    .font-btn.sm { font-size: 12px; }
-    .font-btn.md { font-size: 16px; }
-    .font-btn.lg { font-size: 20px; }
     nav {
       background: var(--charcoal);
       padding: 0 2rem;
@@ -416,11 +399,6 @@
 <nav>
   <div class="logo">🏨 Hotel<span class="dot">Tracker</span></div>
   <div class="nav-r">
-    <div class="font-toggle">
-      <button class="font-btn sm active" onclick="setFont(16,'sm')">A</button>
-      <button class="font-btn md" onclick="setFont(22,'md')">A</button>
-      <button class="font-btn lg" onclick="setFont(28,'lg')">A</button>
-    </div>
     <a href="trips.html" class="btn btn-ghost">All Trips</a>
     <button class="btn btn-primary">+ Add Hotel</button>
   </div>
@@ -692,16 +670,6 @@
 </div>
 
 <script>
-  function setFont(scale, cls) {
-    document.body.style.fontSize = scale + 'px';
-    document.querySelectorAll('.font-btn').forEach(b => b.classList.remove('active'));
-    document.querySelector('.font-btn.' + cls).classList.add('active');
-    localStorage.setItem('ht-fontsize', scale);
-    localStorage.setItem('ht-fontsizecls', cls);
-  }
-  const savedSize = localStorage.getItem('ht-fontsize');
-  const savedCls  = localStorage.getItem('ht-fontsizecls');
-  if (savedSize) setFont(parseInt(savedSize), savedCls);
 
   const DIMS = ['beach','property','food','pools','location','value'];
   const ratingColor = v => ['','#C0392B','#D4622A','#E8A030','#7AB030','#1E7A48'][v] || '#E8A030';
