@@ -6,27 +6,31 @@
   <title>Hotel Tracker</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
     :root {
-      --bg:        #14172A;
-      --bg2:       #1C2038;
-      --surface:   #222642;
-      --surface2:  #2A2F52;
-      --primary:   #E0703A;
-      --primary-dk:#B8541F;
-      --amber:     #F0A847;
-      --text:      #EDE9F4;
-      --text-dim:  #9097B8;
-      --border:    #2E3460;
-      --green:     #4CC87A;
-      --green-dim: rgba(76,200,122,0.12);
-      --red:       #E05F5F;
-      --red-dim:   rgba(224,95,95,0.12);
-      --blue:      #5B9EE8;
-      --blue-dim:  rgba(91,158,232,0.12);
+      --bg:        #F4F0E8;
+      --surface:   #FFFFFF;
+      --charcoal:  #1E2228;
+      --teal:      #197A6F;
+      --teal-lt:   #22A090;
+      --teal-dim:  rgba(25,122,111,0.1);
+      --teal-dim2: rgba(25,122,111,0.18);
+      --amber:     #E8A030;
+      --amber-dim: rgba(232,160,48,0.15);
+      --text:      #1E2228;
+      --text-mid:  #4A5260;
+      --text-dim:  #8A9099;
+      --border:    #DDD8CE;
+      --border-lt: #EDE9E0;
+      --green:     #1E7A48;
+      --green-dim: rgba(30,122,72,0.1);
+      --red:       #C0392B;
+      --red-dim:   rgba(192,57,43,0.1);
+      --blue:      #1A5FA8;
+      --blue-dim:  rgba(26,95,168,0.1);
     }
 
     body {
@@ -38,52 +42,64 @@
 
     /* ── NAV ── */
     nav {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 1.5rem;
-      height: 58px;
-      border-bottom: 1px solid var(--border);
-      background: var(--bg);
+      background: var(--charcoal);
+      padding: 0 2rem;
+      height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
       position: sticky; top: 0; z-index: 5;
     }
     .logo {
-      font-family: 'Outfit', sans-serif;
-      font-weight: 800;
-      font-size: 1.05rem;
-      letter-spacing: -0.01em;
-      display: flex; align-items: center; gap: 0.4rem;
-      color: var(--text);
+      font-family: 'Playfair Display', serif;
+      font-weight: 700; font-size: 1.15rem;
+      color: #fff; letter-spacing: -0.01em;
+      display: flex; align-items: center; gap: 0.5rem;
     }
-    .logo span { color: var(--primary); }
-    .nav-r { display:flex; gap:0.75rem; align-items:center; }
+    .logo .dot { color: var(--teal-lt); }
+    .nav-r { display:flex; gap:0.6rem; align-items:center; }
     .btn {
       font-family: 'DM Sans', sans-serif;
       font-size: 0.82rem; font-weight: 600;
-      padding: 7px 16px; border-radius: 8px; border: none;
+      padding: 7px 16px; border-radius: 7px; border: none;
       cursor: pointer; text-decoration: none;
-      display: inline-flex; align-items: center; gap: 0.35rem;
+      display: inline-flex; align-items: center; gap: 0.3rem;
     }
-    .btn-primary { background: var(--primary); color: #fff; }
-    .btn-primary:hover { background: var(--primary-dk); }
-    .btn-ghost { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
-    .btn-ghost:hover { border-color: var(--text-dim); color: var(--text); }
+    .btn-primary { background: var(--teal); color: #fff; }
+    .btn-primary:hover { background: var(--teal-lt); }
+    .btn-ghost { background: transparent; color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.15); }
+    .btn-ghost:hover { color: #fff; border-color: rgba(255,255,255,0.4); }
 
     /* ── PAGE ── */
-    .page { max-width: 1080px; margin: 0 auto; padding: 1.75rem 1.5rem; }
+    .page { max-width: 1080px; margin: 0 auto; padding: 2rem 1.5rem; }
 
     /* ── TRIP HEADER ── */
     .trip-header {
-      display: flex; align-items: flex-start;
+      display: flex; align-items: flex-end;
       justify-content: space-between; gap: 1rem;
       margin-bottom: 1.5rem; flex-wrap: wrap;
+      padding-bottom: 1.25rem;
+      border-bottom: 2px solid var(--charcoal);
+    }
+    .trip-eyebrow {
+      font-size: 0.7rem; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--teal); margin-bottom: 0.3rem;
     }
     .trip-title {
-      font-family: 'Outfit', sans-serif;
-      font-size: 1.6rem; font-weight: 800;
-      letter-spacing: -0.02em; line-height: 1.15;
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem; font-weight: 800;
+      letter-spacing: -0.02em; line-height: 1.1;
+      color: var(--charcoal);
     }
-    .trip-meta { color: var(--text-dim); font-size: 0.82rem; margin-top: 4px; }
+    .trip-meta { color: var(--text-dim); font-size: 0.82rem; margin-top: 5px; }
+    .btn-compare {
+      font-size: 0.8rem; font-weight: 600;
+      padding: 8px 16px; border-radius: 7px;
+      border: 1.5px solid var(--charcoal);
+      background: transparent; color: var(--charcoal);
+      cursor: pointer; text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn-compare:hover { background: var(--charcoal); color: #fff; }
 
     /* ── TOOLBAR ── */
     .toolbar {
@@ -93,105 +109,114 @@
     .filter-pill {
       font-size: 0.75rem; font-weight: 600;
       padding: 5px 13px; border-radius: 999px;
-      border: 1px solid var(--border);
+      border: 1.5px solid var(--border);
       background: transparent; color: var(--text-dim);
       cursor: pointer; transition: all 0.15s;
     }
-    .filter-pill.active { border-color: var(--primary); color: var(--primary); background: rgba(224,112,58,0.1); }
-    .filter-pill:hover:not(.active) { border-color: var(--text-dim); color: var(--text); }
+    .filter-pill.active {
+      border-color: var(--teal); color: var(--teal);
+      background: var(--teal-dim);
+    }
+    .filter-pill:hover:not(.active) { border-color: var(--text-mid); color: var(--text); }
     .spacer { flex:1; }
     select {
       font-family: 'DM Sans', sans-serif;
-      font-size: 0.8rem; padding: 6px 10px;
-      border-radius: 7px; border: 1px solid var(--border);
-      background: var(--surface); color: var(--text-dim);
+      font-size: 0.78rem; padding: 6px 10px;
+      border-radius: 7px; border: 1.5px solid var(--border);
+      background: var(--surface); color: var(--text-mid);
     }
 
     /* ── GRID ── */
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 1rem;
+      gap: 1.1rem;
     }
 
     /* ── CARD ── */
     .card {
       background: var(--surface);
-      border-radius: 14px;
-      border: 1px solid var(--border);
+      border-radius: 12px;
+      border: 1.5px solid var(--border);
       overflow: hidden;
       display: flex; flex-direction: column;
-      transition: transform 0.15s, box-shadow 0.15s;
-      position: relative;
+      transition: box-shadow 0.2s, transform 0.15s;
     }
-    .card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+    .card:hover { box-shadow: 0 6px 24px rgba(30,34,40,0.12); transform: translateY(-2px); }
 
-    /* status left-strip */
-    .card::before {
-      content: '';
-      position: absolute;
-      left: 0; top: 0; bottom: 0;
-      width: 4px;
-      border-radius: 14px 0 0 14px;
+    /* ── CARD IMAGE BAND ── */
+    .card-band {
+      height: 8px;
     }
-    .card.considering::before { background: var(--blue); }
-    .card.booked::before      { background: var(--green); }
-    .card.eliminated::before  { background: var(--border); }
+    .card.booked      .card-band { background: var(--teal); }
+    .card.considering .card-band { background: var(--amber); }
+    .card.eliminated  .card-band { background: var(--border); }
 
-    /* ── CARD IMAGE ── */
+    /* ── CARD IMG ── */
     .card-img {
-      height: 140px;
-      display: flex; align-items: flex-end; justify-content: flex-start;
-      padding: 0.75rem 0.75rem 0.75rem 1.1rem;
+      height: 130px;
+      display: flex; align-items: flex-end; padding: 0.75rem;
       position: relative;
-      font-size: 0;
     }
-    .card-img .status-badge {
+    /* Tropical gradient overlays */
+    .grad-ocean   { background: linear-gradient(155deg, #0a3d62 0%, #1a6b8a 50%, #22a090 100%); }
+    .grad-jungle  { background: linear-gradient(155deg, #0d3b1e 0%, #1a6b35 50%, #2ea055 100%); }
+    .grad-sunset  { background: linear-gradient(155deg, #4a1a42 0%, #8b3a5c 50%, #c4745e 100%); }
+    .grad-sand    { background: linear-gradient(155deg, #2a1f0a 0%, #5c4018 50%, #9a7030 100%); }
+
+    .card-img::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.35));
+    }
+    .status-badge {
+      position: relative; z-index: 1;
       font-size: 0.68rem; font-weight: 700;
-      letter-spacing: 0.04em;
-      padding: 3px 9px; border-radius: 999px;
-      display: inline-flex; align-items: center; gap: 4px;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      padding: 3px 10px; border-radius: 999px;
+      display: inline-flex; align-items: center; gap: 3px;
     }
-    .badge-considering { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(91,158,232,0.3); }
-    .badge-booked      { background: var(--green-dim); color: var(--green); border: 1px solid rgba(76,200,122,0.3); }
-    .badge-eliminated  { background: rgba(255,255,255,0.05); color: var(--text-dim); border: 1px solid var(--border); }
+    .badge-booked      { background: rgba(25,122,111,0.9); color: #fff; }
+    .badge-considering { background: rgba(232,160,48,0.9); color: #1E2228; }
+    .badge-eliminated  { background: rgba(100,100,100,0.7); color: #fff; }
 
     /* ── CARD BODY ── */
-    .card-body { padding: 0.9rem 1rem 1rem 1.25rem; flex:1; display:flex; flex-direction:column; gap:0.7rem; }
+    .card-body {
+      padding: 0.9rem 1rem 1rem;
+      flex: 1; display: flex; flex-direction: column; gap: 0.7rem;
+    }
+    .card.eliminated .card-body { opacity: 0.55; }
 
     .card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem; }
     .hotel-name {
-      font-family: 'Outfit', sans-serif;
-      font-weight: 800; font-size: 1.05rem;
-      letter-spacing: -0.02em; line-height: 1.2;
+      font-family: 'Playfair Display', serif;
+      font-weight: 700; font-size: 1.05rem; line-height: 1.25;
+      color: var(--charcoal);
     }
-    .hotel-dest { font-size: 0.75rem; color: var(--text-dim); margin-top: 3px; }
+    .hotel-dest { font-size: 0.73rem; color: var(--text-dim); margin-top: 3px; }
     .price-block { text-align: right; flex-shrink: 0; }
-    .price { font-family:'Outfit',sans-serif; font-weight:700; font-size:1rem; color: var(--primary); }
-    .price-sub { font-size:0.68rem; color:var(--text-dim); font-weight:400; }
+    .price { font-weight: 700; font-size: 1rem; color: var(--teal); }
+    .price-sub { font-size: 0.66rem; color: var(--text-dim); }
 
-    /* sep */
-    .sep { height:1px; background: var(--border); margin: 0 -1rem 0 -1.25rem; }
+    .sep { height: 1px; background: var(--border-lt); }
 
     /* ── MY RATINGS ── */
     .section-label {
-      font-size: 0.65rem; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
+      font-size: 0.62rem; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
       color: var(--text-dim); margin-bottom: 0.4rem;
     }
     .dim-row {
       display: flex; align-items: center; gap: 0.5rem;
-      margin-bottom: 0.28rem;
+      margin-bottom: 0.25rem;
     }
     .dim-lbl {
-      font-size: 0.72rem; color: var(--text-dim);
-      width: 82px; flex-shrink: 0;
-      display: flex; align-items: center; gap: 4px;
+      font-size: 0.71rem; color: var(--text-dim);
+      width: 80px; flex-shrink: 0;
     }
     .bar-track {
       flex: 1; height: 5px;
-      background: var(--bg);
-      border-radius: 999px; overflow: hidden;
+      background: var(--bg); border-radius: 999px; overflow: hidden;
     }
     .bar-fill {
       height: 100%; border-radius: 999px;
@@ -200,93 +225,87 @@
     }
     .bar-fill.low { background: var(--red); }
     .dim-val {
-      font-size: 0.7rem; font-weight: 600;
-      width: 14px; text-align: right;
+      font-size: 0.68rem; font-weight: 700;
+      width: 12px; text-align: right;
       color: var(--text-dim);
     }
     .dim-val.low { color: var(--red); }
 
-    /* ── REVIEW SECTION ── */
+    /* ── REVIEWS ── */
     .review-row {
       display: flex; align-items: center;
       justify-content: space-between; gap: 0.5rem;
-      flex-wrap: wrap;
     }
-    .pub-score {
-      display: flex; align-items: center; gap: 0.4rem;
-    }
+    .pub-score { display:flex; align-items:center; gap:0.35rem; }
     .score-num {
-      font-family: 'Outfit', sans-serif;
-      font-weight: 700; font-size: 1rem; color: var(--text);
+      font-family: 'Playfair Display', serif;
+      font-weight: 700; font-size: 1rem; color: var(--charcoal);
     }
-    .score-stars { color: var(--amber); font-size: 0.8rem; }
-    .review-ct { font-size: 0.7rem; color: var(--text-dim); }
+    .score-stars { color: var(--amber); font-size: 0.75rem; }
+    .review-ct { font-size: 0.68rem; color: var(--text-dim); }
     .trust-pill {
-      font-size: 0.65rem; font-weight: 700;
+      font-size: 0.62rem; font-weight: 700;
       padding: 2px 8px; border-radius: 999px;
-      letter-spacing: 0.03em;
+      letter-spacing: 0.03em; white-space: nowrap;
     }
-    .trust-ok  { background: var(--green-dim); color: var(--green); }
-    .trust-warn{ background: rgba(240,168,71,0.12); color: var(--amber); }
-    .trust-sus { background: var(--red-dim); color: var(--red); }
+    .trust-ok   { background: var(--green-dim); color: var(--green); }
+    .trust-warn { background: var(--amber-dim); color: #9A6200; }
+    .trust-sus  { background: var(--red-dim);   color: var(--red); }
 
-    .tags { display:flex; flex-wrap:wrap; gap: 0.3rem; }
+    .tags { display:flex; flex-wrap:wrap; gap:0.3rem; margin-top: 0.35rem; }
     .tag {
-      font-size: 0.68rem; font-weight: 500;
-      padding: 2px 8px; border-radius: 6px;
+      font-size: 0.66rem; font-weight: 500;
+      padding: 2px 8px; border-radius: 5px;
     }
     .tag-good { background: var(--green-dim); color: var(--green); }
     .tag-bad  { background: var(--red-dim);   color: var(--red); }
-    .scan-date { font-size:0.65rem; color:var(--text-dim); font-style:italic; margin-top:2px; }
+    .scan-date { font-size:0.62rem; color:var(--text-dim); font-style:italic; margin-top: 3px; }
 
     /* ── CARD FOOTER ── */
     .card-foot {
       display: flex; align-items: center; gap: 0.4rem;
       padding-top: 0.5rem;
-      border-top: 1px solid var(--border);
+      border-top: 1px solid var(--border-lt);
       margin-top: auto;
     }
     .btn-rate {
-      width: 34px; height: 34px; border-radius: 8px;
-      background: var(--primary); color: #fff;
-      border: none; cursor: pointer; font-size: 0.95rem;
+      width: 32px; height: 32px; border-radius: 7px;
+      background: var(--teal); color: #fff;
+      border: none; cursor: pointer; font-size: 0.85rem;
       display: inline-flex; align-items:center; justify-content:center;
       flex-shrink: 0;
     }
-    .btn-rate:hover { background: var(--primary-dk); }
+    .btn-rate:hover { background: var(--teal-lt); }
     .lnk {
       font-size: 0.75rem; font-weight: 600;
-      padding: 6px 10px; border-radius: 7px;
-      border: 1px solid var(--border);
-      background: transparent; color: var(--text-dim);
-      text-decoration: none; cursor: pointer;
-      transition: all 0.12s;
+      padding: 5px 10px; border-radius: 6px;
+      border: 1.5px solid var(--border);
+      background: transparent; color: var(--text-mid);
+      text-decoration: none; cursor: pointer; transition: all 0.12s;
     }
-    .lnk:hover { border-color: var(--text-dim); color: var(--text); background: var(--surface2); }
-
-    /* eliminated card */
-    .card.eliminated { opacity: 0.5; }
+    .lnk:hover { border-color: var(--teal); color: var(--teal); }
 
     /* ── ADD CARD ── */
     .card-add {
-      border: 1.5px dashed var(--border);
-      border-radius: 14px;
+      border: 2px dashed var(--border);
+      border-radius: 12px;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       gap: 0.4rem; padding: 2rem;
       min-height: 180px; cursor: pointer;
       color: var(--text-dim);
-      transition: border-color 0.15s, color 0.15s;
+      transition: all 0.15s;
+      background: rgba(255,255,255,0.5);
     }
-    .card-add:hover { border-color: var(--primary); color: var(--primary); }
-    .card-add .plus { font-size: 1.8rem; font-weight: 300; }
-    .card-add p { font-size: 0.8rem; font-weight: 500; }
+    .card-add:hover { border-color: var(--teal); color: var(--teal); background: var(--teal-dim); }
+    .card-add .plus { font-size: 1.8rem; line-height: 1; font-weight: 300; }
+    .card-add p { font-size: 0.82rem; font-weight: 600; }
     .card-add small { font-size: 0.7rem; color: var(--text-dim); }
 
     /* ── OVERLAY ── */
     .overlay {
       display: none; position: fixed; inset: 0;
-      background: rgba(10,12,28,0.7);
+      background: rgba(15,18,24,0.55);
       z-index: 10; backdrop-filter: blur(3px);
     }
     .overlay.open { display: block; }
@@ -296,13 +315,12 @@
       position: fixed; bottom: 0; left: 50%;
       transform: translateX(-50%) translateY(100%);
       width: 100%; max-width: 480px;
-      background: var(--bg2);
-      border-radius: 20px 20px 0 0;
-      border: 1px solid var(--border);
-      border-bottom: none;
+      background: var(--surface);
+      border-radius: 18px 18px 0 0;
+      border: 1.5px solid var(--border); border-bottom: none;
       z-index: 20;
-      box-shadow: 0 -12px 48px rgba(0,0,0,0.6);
-      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      box-shadow: 0 -8px 40px rgba(30,34,40,0.2);
+      transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
     }
     .sheet.open { transform: translateX(-50%) translateY(0); }
     .sheet-handle {
@@ -311,69 +329,69 @@
       margin: 10px auto 0;
     }
     .sheet-header {
-      padding: 0.9rem 1.25rem 0.75rem;
-      border-bottom: 1px solid var(--border);
+      padding: 0.85rem 1.25rem 0.75rem;
+      border-bottom: 1.5px solid var(--border-lt);
     }
     .sheet-title {
-      font-family: 'Outfit', sans-serif;
-      font-weight: 700; font-size: 0.95rem; color: var(--text);
+      font-family: 'Playfair Display', serif;
+      font-weight: 700; font-size: 1rem; color: var(--charcoal);
     }
     .sheet-sub { font-size: 0.75rem; color: var(--text-dim); margin-top: 2px; }
     .hint-bar {
       display: flex; justify-content: space-between;
-      padding: 0.5rem 1.25rem 0;
-      font-size: 0.62rem; color: var(--text-dim); letter-spacing: 0.04em;
+      padding: 0.5rem 1.25rem 0.1rem;
+      font-size: 0.6rem; color: var(--text-dim);
+      letter-spacing: 0.08em; text-transform: uppercase;
     }
     .sheet-dims { padding: 0 1.25rem; }
     .sheet-dim {
       display: flex; align-items: center; gap: 0.75rem;
-      padding: 0.5rem 0; border-bottom: 1px solid var(--border);
+      padding: 0.45rem 0; border-bottom: 1px solid var(--border-lt);
     }
     .sheet-dim:last-child { border-bottom: none; }
     .sdim-lbl {
       width: 96px; flex-shrink: 0;
-      font-size: 0.82rem; font-weight: 500; color: var(--text-dim);
-      display: flex; align-items: center; gap: 4px;
+      font-size: 0.82rem; color: var(--text-mid); font-weight: 500;
     }
-    .pip-row { display:flex; gap: 5px; flex:1; justify-content:flex-end; }
+    .pip-row { display:flex; gap:5px; flex:1; justify-content:flex-end; }
     .pip {
-      width: 42px; height: 40px; border-radius: 8px;
-      border: 1px solid var(--border);
-      background: var(--surface);
+      width: 42px; height: 40px; border-radius: 7px;
+      border: 1.5px solid var(--border);
+      background: var(--bg);
       display: flex; align-items: center; justify-content: center;
       font-size: 0.88rem; font-weight: 700; color: var(--text-dim);
       cursor: pointer; transition: all 0.12s;
       user-select: none; -webkit-tap-highlight-color: transparent;
     }
-    .pip:hover { border-color: var(--amber); color: var(--text); background: var(--surface2); }
-    .pip.sel { background: var(--amber); border-color: var(--amber); color: #1A1000; }
+    .pip:hover { border-color: var(--teal); color: var(--teal); background: var(--teal-dim); }
+    .pip.sel { background: var(--amber); border-color: var(--amber); color: var(--charcoal); }
     .pip.sel.low { background: var(--red); border-color: var(--red); color: #fff; }
     .sheet-foot {
       display: flex; gap: 0.6rem;
-      padding: 0.85rem 1.25rem 1.5rem;
+      padding: 0.85rem 1.25rem 1.75rem;
+      border-top: 1.5px solid var(--border-lt);
     }
     .btn-save {
-      flex: 1; padding: 13px; border-radius: 10px;
-      background: var(--primary); color: #fff;
+      flex: 1; padding: 13px; border-radius: 9px;
+      background: var(--teal); color: #fff;
       font-family: 'DM Sans', sans-serif;
-      font-size: 0.9rem; font-weight: 700;
-      border: none; cursor: pointer;
+      font-size: 0.9rem; font-weight: 700; border: none; cursor: pointer;
     }
-    .btn-save:hover { background: var(--primary-dk); }
+    .btn-save:hover { background: var(--teal-lt); }
     .btn-cancel {
-      padding: 13px 18px; border-radius: 10px;
+      padding: 13px 18px; border-radius: 9px;
       background: transparent; color: var(--text-dim);
       font-family: 'DM Sans', sans-serif;
       font-size: 0.9rem; font-weight: 600;
-      border: 1px solid var(--border); cursor: pointer;
+      border: 1.5px solid var(--border); cursor: pointer;
     }
-    .btn-cancel:hover { color: var(--text); border-color: var(--text-dim); }
+    .btn-cancel:hover { color: var(--text); border-color: var(--text-mid); }
   </style>
 </head>
 <body>
 
 <nav>
-  <div class="logo">🏨 Hotel<span>Tracker</span></div>
+  <div class="logo">🏨 Hotel<span class="dot">Tracker</span></div>
   <div class="nav-r">
     <a href="#" class="btn btn-ghost">All Trips</a>
     <button class="btn btn-primary">+ Add Hotel</button>
@@ -384,16 +402,17 @@
 
   <div class="trip-header">
     <div>
-      <div class="trip-title">🌴 Punta Cana 2027</div>
+      <div class="trip-eyebrow">🌴 Trip Planning</div>
+      <div class="trip-title">Punta Cana 2027</div>
       <div class="trip-meta">Mar 1–8 · 4 hotels · 1 booked</div>
     </div>
-    <a href="#" class="btn btn-ghost">📊 Compare</a>
+    <a href="#" class="btn-compare">📊 Compare View</a>
   </div>
 
   <div class="toolbar">
     <button class="filter-pill active">All (4)</button>
-    <button class="filter-pill">🔵 Considering (2)</button>
     <button class="filter-pill">✅ Booked (1)</button>
+    <button class="filter-pill">🔵 Considering (2)</button>
     <button class="filter-pill">❌ Eliminated (1)</button>
     <span class="spacer"></span>
     <select>
@@ -405,16 +424,17 @@
 
   <div class="grid">
 
-    <!-- ═══ CARD 1 — BOOKED ═══ -->
+    <!-- CARD 1 — BOOKED -->
     <div class="card booked">
-      <div class="card-img" style="background: linear-gradient(160deg, #0f2942 0%, #1a4a7a 60%, #2167a8 100%)">
+      <div class="card-band"></div>
+      <div class="card-img grad-ocean">
         <span class="status-badge badge-booked">✅ Booked</span>
       </div>
       <div class="card-body">
         <div class="card-top">
           <div>
             <div class="hotel-name">Barceló Bávaro Palace</div>
-            <div class="hotel-dest">📍 Punta Cana, DR · ⭐⭐⭐⭐⭐</div>
+            <div class="hotel-dest">📍 Punta Cana, DR &nbsp;·&nbsp; ⭐⭐⭐⭐⭐</div>
           </div>
           <div class="price-block">
             <div class="price">$2,800</div>
@@ -437,11 +457,11 @@
             <div class="pub-score">
               <span class="score-num">4.5</span>
               <span class="score-stars">⭐⭐⭐⭐⭐</span>
-              <span class="review-ct">· 14,200</span>
+              <span class="review-ct">· 14,200 reviews</span>
             </div>
             <span class="trust-pill trust-warn">⚠️ Some fake</span>
           </div>
-          <div class="tags" style="margin-top:0.4rem">
+          <div class="tags">
             <span class="tag tag-good">huge beach</span>
             <span class="tag tag-good">great pools</span>
             <span class="tag tag-bad">crowded</span>
@@ -451,23 +471,22 @@
         </div>
         <div class="card-foot">
           <button class="btn-rate" title="Edit ratings">✏️</button>
-          <a href="#" class="lnk">🎥</a>
-          <a href="#" class="lnk">🌐</a>
-          <a href="#" class="lnk">✈️</a>
+          <a href="#" class="lnk">🎥</a><a href="#" class="lnk">🌐</a><a href="#" class="lnk">✈️</a>
         </div>
       </div>
     </div>
 
-    <!-- ═══ CARD 2 — CONSIDERING (rocky beach) ═══ -->
+    <!-- CARD 2 — CONSIDERING (rocky beach) -->
     <div class="card considering">
-      <div class="card-img" style="background: linear-gradient(160deg, #0f2e1a 0%, #1a5c30 60%, #237a42 100%)">
+      <div class="card-band"></div>
+      <div class="card-img grad-jungle">
         <span class="status-badge badge-considering">🔵 Considering</span>
       </div>
       <div class="card-body">
         <div class="card-top">
           <div>
             <div class="hotel-name">Dreams Onyx Resort</div>
-            <div class="hotel-dest">📍 Punta Cana, DR · ⭐⭐⭐⭐⭐</div>
+            <div class="hotel-dest">📍 Punta Cana, DR &nbsp;·&nbsp; ⭐⭐⭐⭐⭐</div>
           </div>
           <div class="price-block">
             <div class="price">$2,400</div>
@@ -490,36 +509,35 @@
             <div class="pub-score">
               <span class="score-num">4.2</span>
               <span class="score-stars">⭐⭐⭐⭐</span>
-              <span class="review-ct">· 8,400</span>
+              <span class="review-ct">· 8,400 reviews</span>
             </div>
             <span class="trust-pill trust-ok">✓ Genuine</span>
           </div>
-          <div class="tags" style="margin-top:0.4rem">
+          <div class="tags">
             <span class="tag tag-good">excellent food</span>
-            <span class="tag tag-bad">musty A/C smell</span>
+            <span class="tag tag-bad">musty A/C</span>
             <span class="tag tag-bad">rocky beach</span>
           </div>
           <div class="scan-date">Scanned Jun 14 · Google + TripAdvisor</div>
         </div>
         <div class="card-foot">
           <button class="btn-rate" title="Edit ratings">✏️</button>
-          <a href="#" class="lnk">🎥</a>
-          <a href="#" class="lnk">🌐</a>
-          <a href="#" class="lnk">✈️</a>
+          <a href="#" class="lnk">🎥</a><a href="#" class="lnk">🌐</a><a href="#" class="lnk">✈️</a>
         </div>
       </div>
     </div>
 
-    <!-- ═══ CARD 3 — CONSIDERING (old building) ═══ -->
+    <!-- CARD 3 — CONSIDERING (old building) -->
     <div class="card considering">
-      <div class="card-img" style="background: linear-gradient(160deg, #2a1a08 0%, #5c3a10 60%, #8a5818 100%)">
+      <div class="card-band"></div>
+      <div class="card-img grad-sunset">
         <span class="status-badge badge-considering">🔵 Considering</span>
       </div>
       <div class="card-body">
         <div class="card-top">
           <div>
             <div class="hotel-name">Hard Rock Punta Cana</div>
-            <div class="hotel-dest">📍 Punta Cana, DR · ⭐⭐⭐⭐⭐</div>
+            <div class="hotel-dest">📍 Punta Cana, DR &nbsp;·&nbsp; ⭐⭐⭐⭐⭐</div>
           </div>
           <div class="price-block">
             <div class="price">$2,600</div>
@@ -542,11 +560,11 @@
             <div class="pub-score">
               <span class="score-num">4.0</span>
               <span class="score-stars">⭐⭐⭐⭐</span>
-              <span class="review-ct">· 22,000</span>
+              <span class="review-ct">· 22,000 reviews</span>
             </div>
             <span class="trust-pill trust-sus">🚩 Fake risk</span>
           </div>
-          <div class="tags" style="margin-top:0.4rem">
+          <div class="tags">
             <span class="tag tag-good">entertainment</span>
             <span class="tag tag-bad">outdated rooms</span>
             <span class="tag tag-bad">mold bathroom</span>
@@ -555,22 +573,22 @@
         </div>
         <div class="card-foot">
           <button class="btn-rate" title="Edit ratings">✏️</button>
-          <a href="#" class="lnk">🎥</a>
-          <a href="#" class="lnk">🌐</a>
+          <a href="#" class="lnk">🎥</a><a href="#" class="lnk">🌐</a>
         </div>
       </div>
     </div>
 
-    <!-- ═══ CARD 4 — ELIMINATED ═══ -->
+    <!-- CARD 4 — ELIMINATED -->
     <div class="card eliminated">
-      <div class="card-img" style="background: linear-gradient(160deg, #1a1a2e 0%, #2a2a42 100%)">
+      <div class="card-band"></div>
+      <div class="card-img grad-sand">
         <span class="status-badge badge-eliminated">❌ Eliminated</span>
       </div>
       <div class="card-body">
         <div class="card-top">
           <div>
             <div class="hotel-name">Iberostar Bavaro</div>
-            <div class="hotel-dest">📍 Punta Cana, DR · ⭐⭐⭐⭐</div>
+            <div class="hotel-dest">📍 Punta Cana, DR &nbsp;·&nbsp; ⭐⭐⭐⭐</div>
           </div>
           <div class="price-block">
             <div class="price">$1,900</div>
@@ -592,12 +610,12 @@
           <div class="review-row">
             <div class="pub-score">
               <span class="score-num">3.6</span>
-              <span class="score-stars">⭐⭐⭐⭐</span>
-              <span class="review-ct">· 6,100</span>
+              <span class="score-stars">⭐⭐⭐</span>
+              <span class="review-ct">· 6,100 reviews</span>
             </div>
             <span class="trust-pill trust-ok">✓ Genuine</span>
           </div>
-          <div class="tags" style="margin-top:0.4rem">
+          <div class="tags">
             <span class="tag tag-bad">outdated rooms</span>
             <span class="tag tag-bad">weak beach</span>
           </div>
@@ -630,7 +648,7 @@
     <div class="sheet-title">Rate this hotel</div>
     <div class="sheet-sub" id="sheet-name">Tap 1–5 for each dimension</div>
   </div>
-  <div class="hint-bar"><span>POOR</span><span>EXCELLENT</span></div>
+  <div class="hint-bar"><span>Poor</span><span>Excellent</span></div>
   <div class="sheet-dims">
     <div class="sheet-dim"><div class="sdim-lbl">🏖️ Beach</div><div class="pip-row" data-dim="beach"></div></div>
     <div class="sheet-dim"><div class="sdim-lbl">🏨 Property</div><div class="pip-row" data-dim="property"></div></div>
@@ -647,7 +665,6 @@
 
 <script>
   const DIMS = ['beach','property','food','pools','location','value'];
-
   const ratings = {
     0: { beach:5, property:4, food:4, pools:5, location:2, value:4 },
     1: { beach:2, property:4, food:5, pools:3, location:2, value:4 },
@@ -656,13 +673,10 @@
   };
   let activeCard = null;
 
-  // Build pip rows
   document.querySelectorAll('.pip-row').forEach(row => {
     for (let i = 1; i <= 5; i++) {
       const pip = document.createElement('div');
-      pip.className = 'pip';
-      pip.textContent = i;
-      pip.dataset.val = i;
+      pip.className = 'pip'; pip.textContent = i; pip.dataset.val = i;
       pip.addEventListener('click', () => {
         row.querySelectorAll('.pip').forEach(p => p.classList.remove('sel','low'));
         pip.classList.add('sel');
@@ -673,14 +687,12 @@
     }
   });
 
-  // Wire up cards
   document.querySelectorAll('.card').forEach((card, i) => {
     const btn = card.querySelector('.btn-rate');
     if (!btn) return;
     btn.addEventListener('click', () => {
       activeCard = i;
-      document.getElementById('sheet-name').textContent =
-        card.querySelector('.hotel-name').textContent;
+      document.getElementById('sheet-name').textContent = card.querySelector('.hotel-name').textContent;
       const r = ratings[i] || {};
       document.querySelectorAll('.pip-row').forEach(row => {
         const val = r[row.dataset.dim] || 0;
