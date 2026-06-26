@@ -6,24 +6,24 @@
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
 :root {
-  --bg:        #F4F0E8;
+  --bg:        #F9F9F7;
   --surface:   #FFFFFF;
   --charcoal:  #1E2228;
   --teal:      #197A6F;
   --teal-lt:   #22A090;
-  --teal-dim:  rgba(25,122,111,0.1);
-  --teal-dim2: rgba(25,122,111,0.18);
+  --teal-dim:  rgba(25,122,111,0.09);
+  --teal-dim2: rgba(25,122,111,0.16);
   --amber:     #E8A030;
-  --amber-dim: rgba(232,160,48,0.15);
+  --amber-dim: rgba(232,160,48,0.12);
   --text:      #1E2228;
   --text-mid:  #4A5260;
   --text-dim:  #8A9099;
-  --border:    #DDD8CE;
-  --border-lt: #EDE9E0;
+  --border:    #E6E4E0;
+  --border-lt: #EFEEEB;
   --green:     #1E7A48;
-  --green-dim: rgba(30,122,72,0.1);
+  --green-dim: rgba(30,122,72,0.09);
   --red:       #C0392B;
-  --red-dim:   rgba(192,57,43,0.1);
+  --red-dim:   rgba(192,57,43,0.09);
 }
 
 body {
@@ -237,28 +237,50 @@ select {
 /* ── GRID ── */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1.1rem;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1.25rem;
 }
+/* Card size modes — set on .grid via JS */
+.grid.size-sm  { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.85rem; }
+.grid.size-md  { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.25rem; }
+.grid.size-lg  { grid-template-columns: repeat(auto-fill, minmax(480px, 1fr)); gap: 1.5rem; }
+.grid.size-xl  { grid-template-columns: 1fr; gap: 1rem; max-width: 640px; }
+
+/* Size picker buttons */
+.size-picker { display: flex; gap: 2px; align-items: center; flex-shrink: 0; }
+.size-btn {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem;
+  transition: all 0.12s;
+  padding: 0;
+}
+.size-btn:hover { border-color: var(--teal); color: var(--teal); }
+.size-btn.active { background: var(--charcoal); border-color: var(--charcoal); color: #fff; }
 
 /* ── HOTEL CARD ── */
 .card {
   background: var(--surface);
   border-radius: 12px;
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--border);
   overflow: hidden;
   display: flex;
   flex-direction: column;
   transition: box-shadow 0.2s, transform 0.15s;
   cursor: pointer;
 }
-.card:hover { box-shadow: 0 6px 24px rgba(30,34,40,0.12); transform: translateY(-2px); }
-.card-band { height: 8px; }
+.card:hover { box-shadow: 0 4px 20px rgba(30,34,40,0.09); transform: translateY(-2px); }
+.card-band { height: 4px; }
 .card.booked      .card-band { background: var(--teal); }
 .card.considering .card-band { background: var(--amber); }
 .card.eliminated  .card-band { background: var(--border); }
 .card-img {
-  height: 130px;
+  height: 150px;
   display: flex;
   align-items: flex-end;
   padding: 0.75rem;
@@ -277,19 +299,27 @@ select {
 .status-badge {
   position: relative;
   z-index: 1;
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 0.7rem;
+  font-weight: 600;
   letter-spacing: 0.04em;
-  text-transform: uppercase;
-  padding: 3px 10px;
+  padding: 3px 9px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
 }
-.badge-booked      { background: rgba(25,122,111,0.9); color: #fff; }
-.badge-considering { background: rgba(232,160,48,0.9); color: #1E2228; }
-.badge-eliminated  { background: rgba(100,100,100,0.7); color: #fff; }
+.status-badge::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.badge-booked      { background: rgba(25,122,111,0.88); color: #fff; }
+.badge-booked::before { background: #7AE0C8; }
+.badge-considering { background: rgba(40,42,48,0.7); color: rgba(255,255,255,0.9); }
+.badge-considering::before { background: var(--amber); }
+.badge-eliminated  { background: rgba(40,42,48,0.55); color: rgba(255,255,255,0.7); }
+.badge-eliminated::before { background: #888; }
 .card-body {
   padding: 0.9rem 1rem 1rem;
   flex: 1;
@@ -322,10 +352,13 @@ select {
   margin-bottom: 0.4rem;
 }
 .dim-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }
-.dim-lbl { font-size: 0.8rem; color: var(--text-dim); width: 88px; flex-shrink: 0; }
-.bar-track { flex: 1; height: 5px; background: var(--bg); border-radius: 999px; overflow: hidden; }
-.bar-fill { height: 100%; border-radius: 999px; background: var(--amber); transition: width 0.3s; }
-.dim-val { font-size: 0.8rem; font-weight: 700; width: 14px; text-align: right; color: var(--text-dim); }
+/* Strip emojis from labels in card view — text only, less visual noise */
+.dim-lbl { font-size: 0.8rem; color: var(--text-dim); width: 72px; flex-shrink: 0; }
+.bar-track { flex: 1; height: 4px; background: var(--border-lt); border-radius: 999px; overflow: hidden; }
+/* Single calm teal bar — color only on low scores */
+.bar-fill { height: 100%; border-radius: 999px; background: var(--teal); transition: width 0.3s; }
+.bar-fill.low { background: var(--red); }
+.dim-val { font-size: 0.78rem; font-weight: 600; width: 14px; text-align: right; color: var(--text-dim); }
 .dim-val.low { color: var(--red); }
 
 /* ── REVIEW SECTION (card) ── */

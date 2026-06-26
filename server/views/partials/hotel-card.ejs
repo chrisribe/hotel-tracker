@@ -1,12 +1,11 @@
 <%
   const { hotel } = pageData;
-  const RATING_COLORS = { 1:'#C0392B', 2:'#D4622A', 3:'#E8A030', 4:'#7AB030', 5:'#1E7A48' };
-  function rc(v) { return v ? RATING_COLORS[v] : '#DDD8CE'; }
   function bp(v) { return v ? (v/5*100)+'%' : '0%'; }
-  const statusLabel = { considering:'🔵 Considering', booked:'✅ Booked', eliminated:'❌ Eliminated' };
-  const trustLabel  = { genuine:'✓ Genuine', warn:'⚠️ Some fake', suspicious:'🚩 High fake risk' };
+  const statusLabel = { considering:'Considering', booked:'Booked', eliminated:'Eliminated' };
+  const trustLabel  = { genuine:'✓ Genuine', warn:'⚠ Some fake', suspicious:'🚩 Suspicious' };
   const trustCls    = { genuine:'trust-ok', warn:'trust-warn', suspicious:'trust-sus' };
-  const DIMS = [['beach','🏖️ Beach'],['property','🏨 Property'],['food','🍽️ Food'],['pools','🏔️ Pools'],['location','📍 Location'],['value','💰 Value']];
+  // Text-only dim labels — no emojis, keeps cards clean
+  const DIMS = [['beach','Beach'],['property','Property'],['food','Food'],['pools','Pools'],['location','Location'],['value','Value']];
 %>
 <div class="card <%= hotel.status %>"
   data-hotel-id="<%= hotel.id %>"
@@ -50,7 +49,7 @@
         <div class="dim-row">
           <span class="dim-lbl"><%= lbl %></span>
           <div class="bar-track">
-            <div class="bar-fill" style="width:<%= bp(val) %>;background:<%= rc(val) %>"></div>
+            <div class="bar-fill <%= !val || val >= 3 ? '' : 'low' %>" style="width:<%= bp(val) %>"></div>
           </div>
           <span class="dim-val <%= val <= 2 && val ? 'low' : '' %>"><%= val || '–' %></span>
         </div>

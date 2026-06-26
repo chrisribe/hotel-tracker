@@ -31,20 +31,27 @@
       All (<%= hotels.length %>)
     </button>
     <button class="filter-pill" onclick="filterStatus(event, 'booked')">
-      ✅ Booked (<%= booked.length %>)
+      Booked (<%= booked.length %>)
     </button>
     <button class="filter-pill" onclick="filterStatus(event, 'considering')">
-      🔵 Considering (<%= considering.length %>)
+      Considering (<%= considering.length %>)
     </button>
     <button class="filter-pill" onclick="filterStatus(event, 'eliminated')">
-      ❌ Eliminated (<%= eliminated.length %>)
+      Eliminated (<%= eliminated.length %>)
     </button>
     <span class="spacer"></span>
+    <!-- Card size picker: S / M / L / XL -->
+    <div class="size-picker" title="Card size">
+      <button class="size-btn" data-size="sm" onclick="setCardSize('sm',this)" title="Small">S</button>
+      <button class="size-btn active" data-size="md" onclick="setCardSize('md',this)" title="Medium">M</button>
+      <button class="size-btn" data-size="lg" onclick="setCardSize('lg',this)" title="Large">L</button>
+      <button class="size-btn" data-size="xl" onclick="setCardSize('xl',this)" title="Wide">XL</button>
+    </div>
     <select onchange="sortCards(this.value)">
-      <option value="created">Sort: Added ↓</option>
-      <option value="beach">Sort: Beach ↓</option>
-      <option value="food">Sort: Food ↓</option>
-      <option value="value">Sort: Value ↓</option>
+      <option value="created">Added ↓</option>
+      <option value="beach">Beach ↓</option>
+      <option value="food">Food ↓</option>
+      <option value="value">Value ↓</option>
     </select>
   </div>
 
@@ -145,6 +152,28 @@ function sortCards(key) {
   });
   cards.forEach(c => grid.insertBefore(c, grid.querySelector('.card-add')));
 }
+
+// Card size picker
+function setCardSize(size, btn) {
+  const grid = document.getElementById('hotel-grid');
+  grid.classList.remove('size-sm','size-md','size-lg','size-xl');
+  grid.classList.add('size-' + size);
+  document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  localStorage.setItem('hotel-card-size', size);
+}
+
+// Restore saved size on load
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('hotel-card-size') || 'md';
+  const grid = document.getElementById('hotel-grid');
+  grid.classList.add('size-' + saved);
+  const btn = document.querySelector(`.size-btn[data-size="${saved}"]`);
+  if (btn) {
+    document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+});
 
 // Open rating sheet for a card
 function openRatingSheet(hotelId, hotelName, ratings) {
