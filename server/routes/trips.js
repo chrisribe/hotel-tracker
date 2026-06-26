@@ -25,6 +25,19 @@ router.post('/', async (req, res) => {
   res.redirect(`/trips/${trip.id}`);
 });
 
+// GET /trips/:id/compare — compare table view
+router.get('/:id/compare', async (req, res) => {
+  const pool = req.app.get('pool');
+  const TripsDAO_ = new TripsDAO(pool);
+  const HotelsDAO = require('../dao/HotelsDAO');
+  const [trip, hotels] = await Promise.all([
+    TripsDAO_.getById(req.params.id),
+    new HotelsDAO(pool).getByTrip(req.params.id),
+  ]);
+  if (!trip) return res.status(404).send('Trip not found');
+  res.respondWithTemplateOrJson({ trip, hotels }, 'compare-page');
+});
+
 // GET /trips/:id — trip dashboard
 router.get('/:id', async (req, res) => {
   const pool = req.app.get('pool');

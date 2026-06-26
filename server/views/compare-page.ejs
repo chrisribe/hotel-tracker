@@ -1,0 +1,203 @@
+<%
+  const { trip, hotels } = pageData;
+
+  // Overall rating = avg of all non-null dims
+  function avgRating(h) {
+    const dims = ['rating_beach','rating_property','rating_food','rating_pools','rating_location','rating_value'];
+    const vals = dims.map(d => h[d]).filter(v => v != null && v > 0);
+    if (!vals.length) return 0;
+    return (vals.reduce((a,b) => a+b, 0) / vals.length).toFixed(1);
+  }
+
+  // Star string 1-5
+  function stars(n) {
+    const f = Math.round(parseFloat(n));
+    return '★'.repeat(f) + '☆'.repeat(Math.max(0, 5-f));
+  }
+
+  const statusLabel = { considering:'Considering', booked:'Booked', eliminated:'Eliminated' };
+  const statusCls   = { considering:'badge-considering', booked:'badge-booked', eliminated:'badge-eliminated' };
+
+  const DIMS = [
+    ['rating_beach',    '🏖️ Beach'],
+    ['rating_property', '🏨 Property'],
+    ['rating_food',     '🍽️ Food'],
+    ['rating_pools',    '🏊 Pools'],
+    ['rating_location', '📍 Location'],
+    ['rating_value',    '💰 Value'],
+  ];
+%>
+
+<div class="cmp-page">
+
+  <div class="cmp-header">
+    <div>
+      <div class="trip-eyebrow">📊 Compare View</div>
+      <div class="trip-title"><%= trip.name %></div>
+      <div class="trip-meta">
+        <% if (trip.travel_start) { %>
+          <%= new Date(trip.travel_start).toLocaleDateString('en-CA', {month:'short',day:'numeric'}) %>
+          –
+          <%= new Date(trip.travel_end).toLocaleDateString('en-CA', {month:'short',day:'numeric',year:'numeric'}) %>
+          &nbsp;&middot;&nbsp;
+        <% } %>
+        <%= hotels.length %> hotel<%= hotels.length !== 1 ? 's' : '' %>
+        &nbsp;&middot;&nbsp;click a column header to sort
+      </div>
+    </div>
+    <a href="/trips/<%= trip.id %>" class="btn-compare">🃏 Card View</a>
+  </div>
+
+  <div class="table-wrap">
+    <table id="cmp-table">
+      <thead>
+        <tr>
+          <th class="col-name sorted" data-col="name" onclick="sortTable(this)">
+            Hotel <span class="sort-arrow">↓</span>
+          </th>
+          <th data-col="avg" onclick="sortTable(this)">
+            My Rating <span class="sort-arrow">↕</span>
+          </th>
+          <% DIMS.forEach(([dim, lbl]) => { %>
+            <th data-col="<%= dim %>" onclick="sortTable(this)">
+              <%= lbl %> <span class="sort-arrow">↕</span>
+            </th>
+          <% }); %>
+          <th data-col="price" onclick="sortTable(this)">
+            Price <span class="sort-arrow">↕</span>
+          </th>
+          <th data-col="status" onclick="sortTable(this)">
+            Status <span class="sort-arrow">↕</span>
+          </th>
+          <th>Links</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% hotels.forEach(hotel => {
+          const avg = avgRating(hotel);
+        %>
+        <tr class="<%= hotel.status %>"
+          data-name="<%= hotel.name.toLowerCase() %>"
+          data-avg="<%= avg %>"
+          data-status="<%= hotel.status %>"
+          <% DIMS.forEach(([dim]) => { %>
+            data-<%= dim %>="<%= hotel[dim] || 0 %>"
+          <% }); %>
+          data-price="<%= hotel.price_min || 0 %>">
+
+          <td>
+            <div class="cmp-name">
+              <a href="/hotels/<%= hotel.id %>" style="color:inherit;text-decoration:none">
+                <%= hotel.name %>
+                <% if (hotel.status === 'booked') { %> 🏆<% } %>
+              </a>
+            </div>
+            <% if (hotel.destination) { %>
+              <div class="cmp-dest">📍 <%= hotel.destination %></div>
+            <% } %>
+          </td>
+
+          <td>
+            <% if (avg > 0) { %>
+              <span class="cmp-stars"><%= stars(avg) %></span>
+              <span class="cmp-avg"><%= avg %></span>
+            <% } else { %>
+              <span class="no-data">—</span>
+            <% } %>
+          </td>
+
+          <% DIMS.forEach(([dim]) => { %>
+            <td>
+              <% const val = hotel[dim]; %>
+              <% if (val) { %>
+                <span class="dim-pip pip-<%= val %>"><%= val %></span>
+              <% } else { %>
+                <span class="no-data">—</span>
+              <% } %>
+            </td>
+          <% }); %>
+
+          <td>
+            <% if (hotel.price_display) { %>
+              <span class="cmp-price"><%= hotel.price_display %></span>
+            <% } else { %>
+              <span class="no-data">—</span>
+            <% } %>
+          </td>
+
+          <td>
+            <span class="badge <%= statusCls[hotel.status] %>">
+              <%= statusLabel[hotel.status] %>
+            </span>
+          </td>
+
+          <td>
+            <div class="links-cell">
+              <% (hotel.links||[]).forEach(l => {
+                const ic = {youtube:'🎥',hotel_site:'🌐',package:'✈️',review:'📝',other:'🔗'}[l.link_type] || '🔗';
+              %>
+                <a href="<%= l.url %>" class="link-chip" target="_blank" rel="noopener"
+                  title="<%= l.title || l.link_type %>"><%= ic %></a>
+              <% }); %>
+            </div>
+          </td>
+
+          <td>
+            <a href="/hotels/<%= hotel.id %>" class="action-btn" title="View details">›</a>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+
+    <div class="table-footer" id="table-footer">
+      <%= hotels.length %> hotels &middot; click a column to sort &middot; eliminated hotels faded out
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  let sortCol = 'name';
+  let sortDir = 1; // 1=asc, -1=desc
+
+  function sortTable(th) {
+    const col = th.dataset.col;
+    if (col === sortCol) { sortDir *= -1; }
+    else { sortCol = col; sortDir = -1; } // default desc
+
+    // Update header arrows
+    document.querySelectorAll('#cmp-table th').forEach(h => {
+      h.classList.remove('sorted');
+      const arrow = h.querySelector('.sort-arrow');
+      if (arrow) arrow.textContent = '↕';
+    });
+    th.classList.add('sorted');
+    th.querySelector('.sort-arrow').textContent = sortDir === -1 ? '↓' : '↑';
+
+    const tbody = document.querySelector('#cmp-table tbody');
+    const rows  = [...tbody.querySelectorAll('tr')];
+
+    rows.sort((a, b) => {
+      let va = a.dataset[col] || '';
+      let vb = b.dataset[col] || '';
+      const na = parseFloat(va);
+      const nb = parseFloat(vb);
+      if (!isNaN(na) && !isNaN(nb)) return (na - nb) * sortDir;
+      return va.localeCompare(vb) * sortDir;
+    });
+
+    rows.forEach(r => tbody.appendChild(r));
+
+    // Update footer text
+    const colLabel = th.textContent.trim().replace(/[↕↓↑]/g, '').trim();
+    document.getElementById('table-footer').textContent =
+      `<%= hotels.length %> hotels · Sorted by ${colLabel} · eliminated faded out`;
+  }
+
+  // expose for inline onclick
+  window.sortTable = sortTable;
+})();
+</script>

@@ -772,6 +772,139 @@ select {
 /* ── SITE FOOTER ── */
 .site-footer { text-align: center; padding: 1.5rem; font-size: 0.78rem; color: var(--text-dim); }
 
+/* ═══════════════════════════════════
+   COMPARE TABLE PAGE
+   ═══════════════════════════════════ */
+.cmp-page { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
+.cmp-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 2px solid var(--charcoal);
+  flex-wrap: wrap;
+}
+.table-wrap {
+  background: var(--surface);
+  border-radius: 16px;
+  border: 1.5px solid var(--border);
+  overflow: hidden;
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  min-width: 680px;
+}
+thead {
+  background: var(--bg);
+  border-bottom: 2px solid var(--border);
+}
+th {
+  padding: 11px 14px;
+  text-align: left;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.12s;
+}
+th:hover { color: var(--teal); }
+th .sort-arrow { margin-left: 3px; opacity: 0.5; font-size: 0.85em; }
+th.sorted { color: var(--teal); }
+th.sorted .sort-arrow { opacity: 1; }
+td {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--border-lt);
+  vertical-align: middle;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--teal-dim); }
+tr.eliminated td { opacity: 0.45; }
+tr.booked { background: rgba(25,122,111,0.03); }
+
+.col-name { width: 180px; }
+.cmp-name { font-weight: 600; font-size: 0.9rem; color: var(--charcoal); }
+.cmp-dest { font-size: 0.75rem; color: var(--text-dim); margin-top: 2px; }
+.cmp-stars { color: var(--amber); font-size: 0.88rem; }
+.cmp-avg { font-size: 0.75rem; color: var(--text-dim); margin-left: 4px; }
+.cmp-price { font-weight: 600; color: var(--teal); white-space: nowrap; }
+.no-data { color: var(--text-dim); opacity: 0.4; }
+
+/* Dim score pip */
+.dim-pip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px; height: 26px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fff;
+}
+.pip-1 { background: #C0392B; }
+.pip-2 { background: #D4622A; }
+.pip-3 { background: #E8A030; color: var(--charcoal); }
+.pip-4 { background: #7AB030; }
+.pip-5 { background: #1E7A48; }
+
+/* Compare badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+/* badge colours match status-badge but without the overlay-specific opacity */
+.badge.badge-booked      { background: var(--teal-dim2); color: var(--teal); }
+.badge.badge-considering { background: var(--amber-dim); color: #9A6200; }
+.badge.badge-eliminated  { background: var(--red-dim);   color: var(--red); }
+
+.links-cell { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+.link-chip {
+  font-size: 0.82rem;
+  padding: 3px 7px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  text-decoration: none;
+  transition: background 0.12s;
+}
+.link-chip:hover { background: var(--border); }
+.action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: 1.2rem;
+  font-weight: 600;
+  padding: 4px 6px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.12s;
+}
+.action-btn:hover { background: var(--teal-dim); color: var(--teal); }
+.table-footer {
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid var(--border-lt);
+  background: var(--bg);
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
 /* ── INLINE NEW-TRIP FORM ── */
 .new-trip-form {
   background: var(--surface);
