@@ -1,0 +1,263 @@
+<%
+  const { hotel } = pageData;
+  const RATING_COLORS = { 1:'#C0392B', 2:'#D4622A', 3:'#E8A030', 4:'#7AB030', 5:'#1E7A48' };
+  function ratingColor(v) { return v ? RATING_COLORS[v] : '#DDD8CE'; }
+  function barPct(v) { return v ? (v/5*100) + '%' : '0%'; }
+  const DIMS = [
+    ['beach',    '🏖️ Beach'],
+    ['property', '🏨 Property'],
+    ['food',     '🍽️ Food'],
+    ['pools',    '🏔️ Pools'],
+    ['location', '📍 Location'],
+    ['value',    '💰 Value'],
+  ];
+  const trustClass = { genuine:'trust-ok', warn:'trust-warn', suspicious:'trust-sus' };
+  const statusClass = { considering:'active-considering', booked:'active-booked', eliminated:'active-eliminated' };
+%>
+<nav>
+  <a href="/trips/<%= hotel.trip_id %>" class="nav-back">← Back</a>
+  <div class="nav-title"><%= hotel.name %></div>
+  <span></span>
+</nav>
+
+<div class="hero">
+  <% if (hotel.thumbnail_url) { %>
+    <div class="hero-img" style="background-image:url('<%= hotel.thumbnail_url %>')"></div>
+  <% } else { %>
+    <div class="hero-img grad-ocean"></div>
+  <% } %>
+  <div class="hero-content">
+    <div>
+      <div class="hero-name"><%= hotel.name %></div>
+      <% if (hotel.destination) { %><div class="hero-dest">📍 <%= hotel.destination %></div><% } %>
+      <div class="hero-status">
+        <% ['considering','booked','eliminated'].forEach(s => { %>
+          <button
+            class="status-toggle <%= hotel.status === s ? statusClass[s] : '' %>"
+            hx-patch="/hotels/<%= hotel.id %>/status"
+            hx-vals='<%= JSON.stringify({status: s}) %>'
+            hx-target="#status-bar"
+            hx-swap="innerHTML">
+            <%= s === 'considering' ? '🔵 Considering' : s === 'booked' ? '✅ Booked' : '❌ Eliminated' %>
+          </button>
+        <% }); %>
+      </div>
+    </div>
+    <% if (hotel.price_display) { %>
+      <div class="hero-price">
+        <div class="amount"><%= hotel.price_display %></div>
+        <div class="sub">all-inclusive pp</div>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- MY RATINGS -->
+  <div class="section-card">
+    <div class="section-head">
+      <span class="section-title">My Ratings</span>
+      <button class="section-action" onclick="openDetailRatingSheet()">&#x270F;&#xFE0F; Edit</button>
+    </div>
+    <div class="section-body">
+      <% DIMS.forEach(([dim, lbl]) => { %>
+        <% const val = hotel['rating_' + dim]; %>
+        <div class="dim-row">
+          <span class="dim-lbl"><%= lbl %></span>
+          <div class="bar-track"><div class="bar-fill" style="width:<%= barPct(val) %>;background:<%= ratingColor(val) %>"></div></div>
+          <span class="dim-val <%= val <= 2 ? 'low' : '' %>"><%= val || '–' %></span>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+
+  <!-- PROS / CONS -->
+  <div class="section-card">
+    <div class="section-head">
+      <span class="section-title">Pros &amp; Cons</span>
+      <button class="section-action" onclick="document.getElementById('pc-edit').classList.toggle('open')">
+        + Edit</button>
+    </div>
+    <div class="section-body">
+      <div class="pros-cons-grid">
+        <div class="pc-col pros">
+          <h4>✓ Pros</h4>
+          <% (hotel.pros || []).forEach(p => { %>
+            <div class="pc-item"><span class="dot-green">●</span><%= p %></div>
+          <% }); %>
+          <% if (!hotel.pros || hotel.pros.length === 0) { %>
+            <div class="pc-item" style="color:var(--text-dim);font-style:italic">None yet</div>
+          <% } %>
+        </div>
+        <div class="pc-col cons">
+          <h4>✗ Cons</h4>
+          <% (hotel.cons || []).forEach(c => { %>
+            <div class="pc-item"><span class="dot-red">●</span><%= c %></div>
+          <% }); %>
+          <% if (!hotel.cons || hotel.cons.length === 0) { %>
+            <div class="pc-item" style="color:var(--text-dim);font-style:italic">None yet</div>
+          <% } %>
+        </div>
+      </div>
+      <!-- Inline pro/con editor -->
+      <div id="pc-edit" style="display:none;margin-top:1rem">
+        <form hx-patch="/hotels/<%= hotel.id %>" hx-ext="json-enc" hx-on::after-request="window.location.reload()">
+          <textarea name="pros" class="notes-field" placeholder="Pros, one per line"
+            style="height:80px"><%= (hotel.pros||[]).join('\n') %></textarea>
+          <textarea name="cons" class="notes-field" placeholder="Cons, one per line"
+            style="height:80px;margin-top:0.5rem"><%= (hotel.cons||[]).join('\n') %></textarea>
+          <button type="submit" class="btn btn-primary" style="margin-top:0.5rem">Save</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTES -->
+  <div class="section-card">
+    <div class="section-head"><span class="section-title">Notes</span></div>
+    <div class="section-body">
+      <textarea class="notes-field" id="notes-field"
+        hx-patch="/hotels/<%= hotel.id %>"
+        hx-trigger="change delay:1s"
+        hx-vals="js:{notes: document.getElementById('notes-field').value}"
+        hx-swap="none"><%= hotel.notes || '' %></textarea>
+    </div>
+  </div>
+
+  <!-- PUBLIC REVIEWS -->
+  <% if (hotel.review_score || hotel.review_tags_praise?.length || hotel.review_tags_concerns?.length) { %>
+  <div class="section-card">
+    <div class="section-head">
+      <span class="section-title">Public Reviews</span>
+      <% if (hotel.review_scanned_at) { %>
+        <span class="scan-note">Scanned <%= new Date(hotel.review_scanned_at).toLocaleDateString() %></span>
+      <% } %>
+    </div>
+    <div class="section-body">
+      <div class="review-header-row">
+        <div class="pub-score">
+          <span class="score-big"><%= hotel.review_score %></span>
+          <div>
+            <div class="score-stars">⭐⭐⭐⭐⭐</div>
+            <div class="review-ct"><%= hotel.review_count?.toLocaleString() %> reviews</div>
+          </div>
+        </div>
+        <% if (hotel.review_trust) { %>
+          <span class="trust-pill <%= trustClass[hotel.review_trust] %>">
+            <%= hotel.review_trust === 'genuine' ? '✓ Genuine' : hotel.review_trust === 'warn' ? '⚠️ Some fake' : '🚩 High fake risk' %>
+          </span>
+        <% } %>
+      </div>
+      <% if (hotel.review_tags_praise?.length) { %>
+        <div class="section-title" style="margin-bottom:0.4rem">🟢 What people love</div>
+        <div class="tags">
+          <% hotel.review_tags_praise.forEach(t => { %>
+            <span class="tag tag-good"><%= t %></span>
+          <% }); %>
+        </div>
+      <% } %>
+      <% if (hotel.review_tags_concerns?.length) { %>
+        <div class="section-title" style="margin-bottom:0.4rem;margin-top:0.6rem">🔴 Recurring concerns</div>
+        <div class="tags">
+          <% hotel.review_tags_concerns.forEach(t => { %>
+            <span class="tag tag-bad"><%= t %></span>
+          <% }); %>
+        </div>
+      <% } %>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- LINKS -->
+  <div class="section-card">
+    <div class="section-head">
+      <span class="section-title">Links</span>
+      <button class="section-action" onclick="document.getElementById('add-link-form').classList.toggle('open')">+ Add</button>
+    </div>
+    <div class="section-body">
+      <div class="links-grid" id="links-grid">
+        <% (hotel.links || []).forEach(link => { %>
+          <%- include('./partials/link-row.ejs', { pageData: { link } }) %>
+        <% }); %>
+      </div>
+      <!-- Add link inline form -->
+      <div id="add-link-form" style="display:none;margin-top:0.75rem">
+        <form hx-post="/hotels/<%= hotel.id %>/links"
+          hx-target="#links-grid" hx-swap="beforeend"
+          hx-on::after-request="this.reset();document.getElementById('add-link-form').style.display='none'">
+          <select name="link_type" class="field" style="margin-bottom:0.5rem">
+            <option value="hotel_site">Hotel Site</option>
+            <option value="youtube">YouTube</option>
+            <option value="package">Package Link</option>
+            <option value="review">Review</option>
+            <option value="other">Other</option>
+          </select>
+          <input class="field" type="url" name="url" placeholder="URL" required />
+          <input class="field" type="text" name="title" placeholder="Label (optional)" />
+          <button type="submit" class="btn btn-primary" style="margin-top:0.5rem">Add Link</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-spacer"></div>
+</div>
+
+<!-- Rating sheet (reused pattern) -->
+<div class="overlay" id="detail-rating-overlay"
+  onclick="this.classList.remove('open'); document.getElementById('detail-rating-sheet').classList.remove('open')"></div>
+<div class="sheet" id="detail-rating-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title">Edit Ratings</div>
+    <div class="sheet-sub"><%= hotel.name %></div>
+  </div>
+  <div class="hint-bar"><span>Poor</span><span>Excellent</span></div>
+  <div class="sheet-dims">
+    <% DIMS.forEach(([dim, lbl]) => { %>
+      <div class="sheet-dim">
+        <span class="sdim-lbl"><%= lbl %></span>
+        <div class="pip-row">
+          <% [1,2,3,4,5].forEach(v => { %>
+            <div class="pip <%= hotel['rating_' + dim] == v ? 'sel' : '' %>"
+              data-dim="<%= dim %>" data-val="<%= v %>"
+              onclick="selectPip(this)"><%= v %></div>
+          <% }); %>
+        </div>
+      </div>
+    <% }); %>
+  </div>
+  <div class="sheet-foot">
+    <button class="btn-save" onclick="saveDetailRatings(<%= hotel.id %>)">Save Ratings</button>
+    <button class="btn-cancel"
+      onclick="document.getElementById('detail-rating-overlay').classList.remove('open'); document.getElementById('detail-rating-sheet').classList.remove('open')">Cancel</button>
+  </div>
+</div>
+
+<script>
+function openDetailRatingSheet() {
+  document.getElementById('detail-rating-overlay').classList.add('open');
+  document.getElementById('detail-rating-sheet').classList.add('open');
+}
+function selectPip(pip) {
+  const dim = pip.dataset.dim;
+  document.querySelectorAll(`.pip[data-dim="${dim}"]`).forEach(p => p.classList.remove('sel'));
+  pip.classList.add('sel');
+}
+async function saveDetailRatings(hotelId) {
+  const dims = ['beach','property','food','pools','location','value'];
+  const body = {};
+  dims.forEach(d => {
+    const s = document.querySelector(`#detail-rating-sheet .pip.sel[data-dim="${d}"]`);
+    if (s) body[`rating_${d}`] = parseInt(s.dataset.val);
+  });
+  const r = await fetch(`/hotels/${hotelId}/ratings`, {
+    method:'PATCH',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body),
+  });
+  if (r.ok) window.location.reload();
+}
+document.getElementById('pc-edit').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); });
+</script>

@@ -1,0 +1,20 @@
+<%
+  const { link } = pageData;
+  const icons = { youtube:'🎥', hotel_site:'🌐', package:'✈️', review:'📝', other:'🔗' };
+  const labels = { youtube:'YouTube', hotel_site:'Hotel Site', package:'Package Link', review:'Review', other:'Link' };
+%>
+<a href="<%= link.url %>" class="link-row" target="_blank" rel="noopener"
+  hx-swap-oob="beforeend:#links-grid">
+  <span class="link-icon"><%= icons[link.link_type] || '🔗' %></span>
+  <div class="link-body">
+    <div class="link-type"><%= labels[link.link_type] || link.link_type %></div>
+    <div class="link-label"><%= link.title || link.url %></div>
+  </div>
+  <span class="link-arrow">›</span>
+  <button class="link-del"
+    hx-delete="/hotels/-/links/<%= link.id %>"
+    hx-target="closest .link-row"
+    hx-swap="outerHTML"
+    onclick="event.preventDefault();event.stopPropagation()"
+    title="Remove link">&times;</button>
+</a>

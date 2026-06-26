@@ -1,0 +1,111 @@
+<%
+  const { hotel } = pageData;
+  const RATING_COLORS = { 1:'#C0392B', 2:'#D4622A', 3:'#E8A030', 4:'#7AB030', 5:'#1E7A48' };
+  function rc(v) { return v ? RATING_COLORS[v] : '#DDD8CE'; }
+  function bp(v) { return v ? (v/5*100)+'%' : '0%'; }
+  const statusLabel = { considering:'🔵 Considering', booked:'✅ Booked', eliminated:'❌ Eliminated' };
+  const trustLabel  = { genuine:'✓ Genuine', warn:'⚠️ Some fake', suspicious:'🚩 High fake risk' };
+  const trustCls    = { genuine:'trust-ok', warn:'trust-warn', suspicious:'trust-sus' };
+  const DIMS = [['beach','🏖️ Beach'],['property','🏨 Property'],['food','🍽️ Food'],['pools','🏔️ Pools'],['location','📍 Location'],['value','💰 Value']];
+%>
+<div class="card <%= hotel.status %>"
+  data-hotel-id="<%= hotel.id %>"
+  data-status="<%= hotel.status %>"
+  data-beach="<%= hotel.rating_beach || 0 %>"
+  data-food="<%= hotel.rating_food || 0 %>"
+  data-value="<%= hotel.rating_value || 0 %>"
+  data-created="<%= hotel.id %>">
+  <div class="card-band"></div>
+
+  <% if (hotel.thumbnail_url) { %>
+    <div class="card-img" style="background-image:url('<%= hotel.thumbnail_url %>');background-size:cover;background-position:center">
+      <span class="status-badge badge-<%= hotel.status %>"><%= statusLabel[hotel.status] %></span>
+    </div>
+  <% } else { %>
+    <div class="card-img grad-ocean">
+      <span class="status-badge badge-<%= hotel.status %>"><%= statusLabel[hotel.status] %></span>
+    </div>
+  <% } %>
+
+  <div class="card-body">
+    <div class="card-top">
+      <div>
+        <div class="hotel-name"><a href="/hotels/<%= hotel.id %>" style="color:inherit;text-decoration:none"><%= hotel.name %></a></div>
+        <% if (hotel.destination) { %><div class="hotel-dest">📍 <%= hotel.destination %></div><% } %>
+      </div>
+      <% if (hotel.price_display) { %>
+        <div class="price-block">
+          <div class="price"><%= hotel.price_display %></div>
+          <div class="price-sub">pp AI</div>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="sep"></div>
+
+    <div>
+      <div class="section-label">My Ratings</div>
+      <% DIMS.forEach(([dim, lbl]) => { %>
+        <% const val = hotel['rating_' + dim]; %>
+        <div class="dim-row">
+          <span class="dim-lbl"><%= lbl %></span>
+          <div class="bar-track">
+            <div class="bar-fill" style="width:<%= bp(val) %>;background:<%= rc(val) %>"></div>
+          </div>
+          <span class="dim-val <%= val <= 2 && val ? 'low' : '' %>"><%= val || '–' %></span>
+        </div>
+      <% }); %>
+    </div>
+
+    <% if (hotel.review_score || hotel.review_tags_praise?.length) { %>
+      <div class="sep"></div>
+      <div>
+        <div class="review-row">
+          <div class="pub-score">
+            <span class="score-num"><%= hotel.review_score %></span>
+            <span class="score-stars">⭐⭐⭐⭐⭐</span>
+            <span class="review-ct">&middot; <%= hotel.review_count?.toLocaleString() %></span>
+          </div>
+          <% if (hotel.review_trust) { %>
+            <span class="trust-pill <%= trustCls[hotel.review_trust] %>">
+              <%= trustLabel[hotel.review_trust] %>
+            </span>
+          <% } %>
+        </div>
+        <% if (hotel.review_tags_praise?.length || hotel.review_tags_concerns?.length) { %>
+          <div class="tags">
+            <% (hotel.review_tags_praise||[]).slice(0,2).forEach(t => { %>
+              <span class="tag tag-good"><%= t %></span>
+            <% }); %>
+            <% (hotel.review_tags_concerns||[]).slice(0,2).forEach(t => { %>
+              <span class="tag tag-bad"><%= t %></span>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+    <% } %>
+
+    <div class="card-foot">
+      <button class="btn-rate"
+        onclick='openRatingSheet(
+          "<%= hotel.id %>",
+          "<%= hotel.name.replace(/"/g, "&quot;") %>",
+          {
+            beach:    <%= hotel.rating_beach    || 0 %>,
+            property: <%= hotel.rating_property || 0 %>,
+            food:     <%= hotel.rating_food     || 0 %>,
+            pools:    <%= hotel.rating_pools    || 0 %>,
+            location: <%= hotel.rating_location || 0 %>,
+            value:    <%= hotel.rating_value    || 0 %>
+          }
+        )' title="Edit ratings">✏️</button>
+      <a href="/hotels/<%= hotel.id %>" class="lnk">📖</a>
+      <% (hotel.links||[]).filter(l => l.link_type==='youtube').slice(0,1).forEach(l => { %>
+        <a href="<%= l.url %>" class="lnk" target="_blank" rel="noopener">🎥</a>
+      <% }); %>
+      <% (hotel.links||[]).filter(l => l.link_type==='hotel_site').slice(0,1).forEach(l => { %>
+        <a href="<%= l.url %>" class="lnk" target="_blank" rel="noopener">🌐</a>
+      <% }); %>
+    </div>
+  </div>
+</div>

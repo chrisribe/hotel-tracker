@@ -1,0 +1,199 @@
+<%
+  const { trip, hotels } = pageData;
+  const byStatus = (s) => hotels.filter(h => h.status === s);
+  const considering = byStatus('considering');
+  const booked     = byStatus('booked');
+  const eliminated = byStatus('eliminated');
+%>
+<div class="page">
+
+  <div class="trip-header">
+    <div>
+      <div class="trip-eyebrow">🌴 Trip Planning</div>
+      <div class="trip-title"><%= trip.name %></div>
+      <div class="trip-meta">
+        <% if (trip.travel_start) { %>
+          <%= new Date(trip.travel_start).toLocaleDateString('en-CA', {month:'short',day:'numeric'}) %>
+          –
+          <%= new Date(trip.travel_end).toLocaleDateString('en-CA', {month:'short',day:'numeric',year:'numeric'}) %>
+          &nbsp;&middot;&nbsp;
+        <% } %>
+        <%= hotels.length %> hotel<%= hotels.length !== 1 ? 's' : '' %>
+        <% if (booked.length) { %> &middot; <%= booked.length %> booked<% } %>
+      </div>
+    </div>
+    <a href="#" class="btn-compare">&#x1F4CA; Compare</a>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <button class="filter-pill active" onclick="filterStatus(event, 'all')">
+      All (<%= hotels.length %>)
+    </button>
+    <button class="filter-pill" onclick="filterStatus(event, 'booked')">
+      ✅ Booked (<%= booked.length %>)
+    </button>
+    <button class="filter-pill" onclick="filterStatus(event, 'considering')">
+      🔵 Considering (<%= considering.length %>)
+    </button>
+    <button class="filter-pill" onclick="filterStatus(event, 'eliminated')">
+      ❌ Eliminated (<%= eliminated.length %>)
+    </button>
+    <span class="spacer"></span>
+    <select onchange="sortCards(this.value)">
+      <option value="created">Sort: Added ↓</option>
+      <option value="beach">Sort: Beach ↓</option>
+      <option value="food">Sort: Food ↓</option>
+      <option value="value">Sort: Value ↓</option>
+    </select>
+  </div>
+
+  <!-- Hotel grid -->
+  <div class="grid" id="hotel-grid">
+    <% hotels.forEach(hotel => { %>
+      <%- include('./partials/hotel-card.ejs', { pageData: { hotel } }) %>
+    <% }); %>
+
+    <!-- Add hotel card -->
+    <div class="card-add"
+      onclick="document.getElementById('add-hotel-modal').classList.add('open')">
+      <div class="plus">+</div>
+      <p>Add Hotel</p>
+      <small>Paste a name or URL</small>
+    </div>
+  </div>
+
+</div>
+
+<!-- Add hotel modal -->
+<div class="overlay" id="add-hotel-modal" onclick="this.classList.remove('open'); document.getElementById('add-hotel-sheet').classList.remove('open')">
+</div>
+<div class="sheet" id="add-hotel-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title">Add Hotel</div>
+    <div class="sheet-sub">Type a name to get started</div>
+  </div>
+  <form class="sheet-body"
+    hx-post="/hotels/trip/<%= trip.id %>"
+    hx-target="#hotel-grid"
+    hx-swap="beforeend"
+    hx-on::after-request="document.getElementById('add-hotel-modal').classList.remove('open'); document.getElementById('add-hotel-sheet').classList.remove('open'); this.reset();">
+    <div class="sheet-dims" style="padding:1rem 1.25rem;">
+      <input class="field" type="text" name="name" placeholder="Hotel name" required />
+      <input class="field" type="text" name="destination" placeholder="Destination (e.g. Punta Cana, DR)" />
+      <input class="field" type="text" name="price_display" placeholder="Price (e.g. $2,400 pp AI)" />
+    </div>
+    <div class="sheet-foot">
+      <button type="submit" class="btn-save">Add Hotel</button>
+      <button type="button" class="btn-cancel"
+        onclick="document.getElementById('add-hotel-modal').classList.remove('open'); document.getElementById('add-hotel-sheet').classList.remove('open')">Cancel</button>
+    </div>
+  </form>
+</div>
+
+<!-- Rating bottom sheet -->
+<div class="overlay" id="rating-overlay"
+  onclick="this.classList.remove('open'); document.getElementById('rating-sheet').classList.remove('open')">
+</div>
+<div class="sheet" id="rating-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title">Edit Ratings</div>
+    <div class="sheet-sub" id="rating-hotel-name"></div>
+  </div>
+  <div class="hint-bar"><span>Poor</span><span>Excellent</span></div>
+  <form id="rating-form" class="sheet-dims">
+    <input type="hidden" id="rating-hotel-id" name="hotel_id" />
+    <% [['beach','🏖️ Beach'],['property','🏨 Property'],['food','🍽️ Food'],['pools','🏔️ Pools'],['location','📍 Location'],['value','💰 Value']].forEach(([dim, lbl]) => { %>
+    <div class="sheet-dim">
+      <span class="sdim-lbl"><%= lbl %></span>
+      <div class="pip-row">
+        <% [1,2,3,4,5].forEach(v => { %>
+          <div class="pip" data-dim="<%= dim %>" data-val="<%= v %>" onclick="selectPip(this)"><%= v %></div>
+        <% }); %>
+      </div>
+    </div>
+    <% }); %>
+  </form>
+  <div class="sheet-foot">
+    <button class="btn-save" onclick="saveRatings()">Save Ratings</button>
+    <button class="btn-cancel"
+      onclick="document.getElementById('rating-overlay').classList.remove('open'); document.getElementById('rating-sheet').classList.remove('open')">
+      Cancel</button>
+  </div>
+</div>
+
+<script>
+// Filter cards by status
+function filterStatus(evt, status) {
+  document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+  evt.target.classList.add('active');
+  document.querySelectorAll('.card').forEach(c => {
+    c.style.display = (status === 'all' || c.dataset.status === status) ? '' : 'none';
+  });
+}
+
+// Sort cards
+function sortCards(key) {
+  const grid = document.getElementById('hotel-grid');
+  const cards = [...grid.querySelectorAll('.card')];
+  cards.sort((a, b) => {
+    const va = parseFloat(a.dataset[key] || 0);
+    const vb = parseFloat(b.dataset[key] || 0);
+    return vb - va;
+  });
+  cards.forEach(c => grid.insertBefore(c, grid.querySelector('.card-add')));
+}
+
+// Open rating sheet for a card
+function openRatingSheet(hotelId, hotelName, ratings) {
+  document.getElementById('rating-hotel-id').value = hotelId;
+  document.getElementById('rating-hotel-name').textContent = hotelName;
+  // Reset pips
+  document.querySelectorAll('.pip').forEach(p => p.classList.remove('sel'));
+  // Pre-select current values
+  Object.entries(ratings).forEach(([dim, val]) => {
+    if (val) {
+      const pip = document.querySelector(`.pip[data-dim="${dim}"][data-val="${val}"]`);
+      if (pip) pip.classList.add('sel');
+    }
+  });
+  document.getElementById('rating-overlay').classList.add('open');
+  document.getElementById('rating-sheet').classList.add('open');
+}
+
+function selectPip(pip) {
+  const dim = pip.dataset.dim;
+  document.querySelectorAll(`.pip[data-dim="${dim}"]`).forEach(p => p.classList.remove('sel'));
+  pip.classList.add('sel');
+}
+
+async function saveRatings() {
+  const hotelId = document.getElementById('rating-hotel-id').value;
+  const dims = ['beach','property','food','pools','location','value'];
+  const body = {};
+  dims.forEach(d => {
+    const sel = document.querySelector(`.pip.sel[data-dim="${d}"]`);
+    if (sel) body[`rating_${d}`] = sel.dataset.val;
+  });
+  const r = await fetch(`/hotels/${hotelId}/ratings`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (r.ok) window.location.reload();
+}
+
+// Open add modal + sheet together
+document.addEventListener('DOMContentLoaded', () => {
+  const modal = document.getElementById('add-hotel-modal');
+  const sheet = document.getElementById('add-hotel-sheet');
+  document.querySelectorAll('[data-open-add]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      modal.classList.add('open');
+      sheet.classList.add('open');
+    });
+  });
+});
+</script>

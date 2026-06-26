@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hotel Tracker — Paint Visualizer MVP</title>
+  <style>
+    :root {
+      --bg: #f4f0e8;
+      --surface: #ffffff;
+      --charcoal: #1e2228;
+      --teal: #197a6f;
+      --teal-lt: #22a090;
+      --border: #ddd8ce;
+      --muted: #6d7683;
+      --amber: #e8a030;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--charcoal);
+    }
+    .wrap {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 1rem;
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: 340px minmax(0, 1fr);
+    }
+    .panel {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 0.9rem;
+    }
+    .title {
+      margin: 0 0 0.25rem;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    .sub {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
+    .row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-top: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .btn {
+      border: 1.5px solid var(--border);
+      background: #fff;
+      color: var(--charcoal);
+      border-radius: 8px;
+      min-height: 44px;
+      padding: 0.48rem 0.68rem;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+    .btn:hover { border-color: var(--teal); color: var(--teal); }
+    .btn.active {
+      background: var(--teal);
+      border-color: var(--teal);
+      color: #fff;
+    }
+    .btn.primary {
+      background: var(--teal);
+      border-color: var(--teal);
+      color: #fff;
+    }
+    label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      display: block;
+      margin-top: 0.65rem;
+    }
+    input[type="range"], select {
+      width: 100%;
+      margin-top: 0.3rem;
+    }
+    .chip {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #fff;
+      flex-shrink: 0;
+    }
+    .color-label {
+      font-size: 0.8rem;
+      color: var(--charcoal);
+      font-weight: 600;
+      line-height: 1.2;
+    }
+    .palette {
+      margin-top: 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      max-height: 52vh;
+      overflow: auto;
+    }
+    .palette-item {
+      width: 100%;
+      border: 0;
+      border-bottom: 1px solid #f0ece4;
+      background: #fff;
+      text-align: left;
+      min-height: 44px;
+      padding: 0.5rem 0.55rem;
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr);
+      gap: 0.5rem;
+      align-items: center;
+      cursor: pointer;
+      color: inherit;
+    }
+    .palette-item:hover { background: #f8f6f2; }
+    .palette-swatch {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      border: 1px solid #d8d2c8;
+    }
+    .palette-meta {
+      min-width: 0;
+      font-size: 0.76rem;
+      line-height: 1.25;
+    }
+    .palette-meta strong {
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 0.79rem;
+    }
+    .palette-meta span { color: var(--muted); }
+
+    .canvas-stage {
+      display: none;
+      position: relative;
+      width: fit-content;
+      overflow: auto;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      background: #faf9f7;
+      max-width: none;
+    }
+    canvas {
+      display: block;
+      max-width: none;
+      height: auto;
+    }
+    #maskCanvas {
+      position: absolute;
+      inset: 0;
+      touch-action: none;
+      cursor: crosshair;
+      opacity: 0.56;
+      background: transparent;
+      z-index: 3;
+    }
+    #geometryCanvas {
+      position: absolute;
+      inset: 0;
+      touch-action: none;
+      cursor: crosshair;
+      background: transparent;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .quick-controls {
+      display: grid;
+      gap: 0.55rem;
+      margin-bottom: 0.7rem;
+      padding: 0.55rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+    }
+    .quick-grid {
+      display: grid;
+      gap: 0.45rem;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .quick-controls label {
+      margin-top: 0;
+      font-size: 0.74rem;
+    }
+    .hint {
+      font-size: 0.76rem;
+      color: var(--muted);
+      margin-top: 0.5rem;
+    }
+    .zone-guide {
+      margin-top: 0.65rem;
+      padding: 0.65rem;
+      border: 1px solid #c4dffc;
+      border-radius: 10px;
+      background: #eef6ff;
+      color: #1e3d63;
+      font-size: 0.8rem;
+      line-height: 1.35;
+    }
+    .zone-guide strong {
+      display: block;
+      margin-bottom: 0.2rem;
+      font-size: 0.82rem;
+    }
+    .zone-guide .dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #1495ff;
+      margin-right: 0.28rem;
+      vertical-align: middle;
+    }
+    .toast {
+      margin-top: 0.5rem;
+      font-size: 0.76rem;
+      color: #9a6200;
+      min-height: 1.1rem;
+    }
+    @media (max-width: 920px) {
+      .wrap { grid-template-columns: 1fr; }
+      .palette { max-height: 240px; }
+      .panel {
+        padding: 0.65rem;
+      }
+      aside.panel {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border-bottom-left-radius: 14px;
+        border-bottom-right-radius: 14px;
+      }
+      main.panel {
+        padding-top: 0.6rem;
+      }
+      .row {
+        gap: 0.4rem;
+      }
+      .btn {
+        padding: 0.62rem 0.68rem;
+        font-size: 0.84rem;
+      }
+      .palette {
+        max-height: 150px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <aside class="panel">
+      <h1 class="title">Paint Visualizer MVP</h1>
+      <p class="sub">1) Select picture → 2) Paint blue zone → 3) Pick color.</p>
+      <p id="workflowStatus" class="sub" style="margin-top:0.35rem;font-weight:700;color:#0f6b60;">1) Select picture  2) Paint blue zone  3) Pick color</p>
+
+      <div class="row">
+        <input id="uploadInput" type="file" accept="image/*" />
+      </div>
+
+      <div id="step1ToolRow" class="row">
+        <button id="paintButton" class="btn active" type="button">Paint zone</button>
+        <button id="eraseButton" class="btn" type="button">Erase</button>
+        <button id="clearButton" class="btn" type="button">Clear zone</button>
+      </div>
+      <div class="zone-guide">
+        <strong>How to draw zone</strong>
+        Use your finger like a brush. Paint the area you want to recolor.<br />
+        <span class="dot"></span><b>Blue = active zone</b> (only this area changes color).
+      </div>
+
+      <div class="row" style="display:none;">
+        <button id="wallZoneButton" class="btn" type="button">Wall zone</button>
+        <button id="noDrawZoneButton" class="btn" type="button">No-draw zone</button>
+        <button id="finishZoneButton" class="btn" type="button">Finish zone</button>
+        <button id="lockGeometryButton" class="btn" type="button">Lock geometry</button>
+        <button id="clearZonesButton" class="btn" type="button">Clear zones</button>
+      </div>
+      <div id="zoneIoRow" class="row" style="display:none;">
+        <button id="exportZonesButton" class="btn" type="button">Export zones</button>
+        <input id="importZonesInput" type="file" accept="application/json" />
+      </div>
+
+      <label id="brushGroup">Brush size <input id="brushInput" type="range" min="6" max="70" value="26" /></label>
+      <label id="opacityGroup" style="display:none;">Opacity <input id="opacityInput" type="range" min="10" max="100" value="88" /></label>
+      <label id="modeGroup" style="display:none;">
+        Blend mode
+        <select id="modeInput">
+          <option value="lab" selected>LAB (realistic)</option>
+          <option value="flat">Flat (strong)</option>
+        </select>
+      </label>
+      <label id="wallOnlyGroup" style="display:none;"><input id="wallOnlyInput" type="checkbox" checked /> Wall-only mask filter</label>
+      <label id="edgeLockGroup" style="display:none;"><input id="edgeLockInput" type="checkbox" checked /> Edge lock (stop at strong lines)</label>
+      <input id="toleranceInput" type="range" min="0" max="80" value="16" style="display:none;" />
+
+      <div id="colorSelectionRow" class="row" style="margin-top:0.8rem;align-items:flex-start;">
+        <div id="colorChip" class="chip"></div>
+        <div id="colorLabel" class="color-label">No color selected</div>
+      </div>
+
+      <div id="step2ActionsRow" class="row">
+        <button id="editMaskButton" class="btn" type="button" style="display:none;">Back</button>
+        <button id="exportButton" class="btn primary" type="button">Export PNG</button>
+      </div>
+
+      <label for="searchInput" id="searchLabel">Find SICO color (name/code)</label>
+      <input id="searchInput" type="text" placeholder="ex: Gratte-Ciel or 6170-21" />
+
+      <div id="paletteList" class="palette" aria-live="polite"></div>
+      <p class="hint">Only the blue zone changes color.</p>
+      <p class="hint" style="display:none;">Tip: turn OFF Wall-only for stronger effect on darker surfaces.</p>
+      <div id="toast" class="toast" aria-live="polite"></div>
+    </aside>
+
+    <main class="panel">
+      <p class="sub" style="margin-bottom:0.5rem;">Paint the zone directly on the photo (brush style, not polygon).</p>
+
+      <div class="quick-controls" style="display:none;">
+        <div class="quick-grid">
+          <button id="zoomOutButton" class="btn" type="button">− Zoom</button>
+          <button id="zoomInButton" class="btn" type="button">＋ Zoom</button>
+        </div>
+        <div class="quick-grid">
+          <button id="fitButton" class="btn" type="button">Fit</button>
+          <button id="resetViewButton" class="btn" type="button">100%</button>
+        </div>
+        <div class="quick-grid">
+          <label>Brush <input id="quickBrushInput" type="range" min="6" max="70" value="26" /></label>
+          <label>Opacity <input id="quickOpacityInput" type="range" min="10" max="100" value="88" /></label>
+        </div>
+        <label>Tolerance <input id="quickToleranceInput" type="range" min="0" max="80" value="16" /></label>
+      </div>
+
+      <div id="stage" class="canvas-stage">
+        <canvas id="previewCanvas"></canvas>
+        <canvas id="geometryCanvas"></canvas>
+        <canvas id="maskCanvas"></canvas>
+      </div>
+      <p class="hint">Mobile: drag one finger to paint blue zone.</p>
+    </main>
+  </div>
+
+  <script type="module">
+    import { PaintVisualizer } from './paint-visualizer.mjs';
+
+    const stage = document.getElementById('stage');
+    const previewCanvas = document.getElementById('previewCanvas');
+    const geometryCanvas = document.getElementById('geometryCanvas');
+    const maskCanvas = document.getElementById('maskCanvas');
+
+    const toastEl = document.getElementById('toast');
+    let toastTimer = null;
+    const toast = (msg) => {
+      toastEl.textContent = msg;
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toastEl.textContent = '';
+      }, 2200);
+    };
+
+    const visualizer = new PaintVisualizer({
+      stage,
+      previewCanvas,
+      geometryCanvas,
+      maskCanvas,
+      uploadInput: document.getElementById('uploadInput'),
+      autoFillButton: document.getElementById('autoFillButton'),
+      paintButton: document.getElementById('paintButton'),
+      eraseButton: document.getElementById('eraseButton'),
+      toleranceInput: document.getElementById('toleranceInput'),
+      quickToleranceInput: document.getElementById('quickToleranceInput'),
+      brushInput: document.getElementById('brushInput'),
+      quickBrushInput: document.getElementById('quickBrushInput'),
+      opacityInput: document.getElementById('opacityInput'),
+      quickOpacityInput: document.getElementById('quickOpacityInput'),
+      zoomInButton: document.getElementById('zoomInButton'),
+      zoomOutButton: document.getElementById('zoomOutButton'),
+      fitButton: document.getElementById('fitButton'),
+      resetViewButton: document.getElementById('resetViewButton'),
+      modeInput: document.getElementById('modeInput'),
+      wallOnlyInput: document.getElementById('wallOnlyInput'),
+      edgeLockInput: document.getElementById('edgeLockInput'),
+      clearButton: document.getElementById('clearButton'),
+      wallZoneButton: document.getElementById('wallZoneButton'),
+      noDrawZoneButton: document.getElementById('noDrawZoneButton'),
+      finishZoneButton: document.getElementById('finishZoneButton'),
+      lockGeometryButton: document.getElementById('lockGeometryButton'),
+      nextStepButton: document.getElementById('nextStepButton'),
+      editMaskButton: document.getElementById('editMaskButton'),
+      clearZonesButton: document.getElementById('clearZonesButton'),
+      exportZonesButton: document.getElementById('exportZonesButton'),
+      importZonesInput: document.getElementById('importZonesInput'),
+      workflowStatusEl: document.getElementById('workflowStatus'),
+      paletteListEl: document.getElementById('paletteList'),
+      searchInputEl: document.getElementById('searchInput'),
+      exportButton: document.getElementById('exportButton'),
+      colorChip: document.getElementById('colorChip'),
+      colorLabel: document.getElementById('colorLabel'),
+      step1ToolRow: document.getElementById('step1ToolRow'),
+      zoneIoRow: document.getElementById('zoneIoRow'),
+      toleranceGroup: document.getElementById('toleranceGroup'),
+      brushGroup: document.getElementById('brushGroup'),
+      opacityGroup: document.getElementById('opacityGroup'),
+      modeGroup: document.getElementById('modeGroup'),
+      wallOnlyGroup: document.getElementById('wallOnlyGroup'),
+      edgeLockGroup: document.getElementById('edgeLockGroup'),
+      colorSelectionRow: document.getElementById('colorSelectionRow'),
+      step2ActionsRow: document.getElementById('step2ActionsRow'),
+      searchLabel: document.getElementById('searchLabel'),
+      toast,
+    });
+
+    const paletteList = document.getElementById('paletteList');
+    const searchInput = document.getElementById('searchInput');
+    let allColors = [];
+
+    function renderList(items) {
+      paletteList.innerHTML = '';
+      if (!items.length) {
+        const empty = document.createElement('div');
+        empty.className = 'palette-meta';
+        empty.style.padding = '0.6rem';
+        empty.textContent = 'No colors match your search.';
+        paletteList.appendChild(empty);
+        return;
+      }
+
+      const frag = document.createDocumentFragment();
+      for (const c of items.slice(0, 200)) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'palette-item';
+        btn.innerHTML = `
+          <span class="palette-swatch" style="background:${c.hex}"></span>
+          <span class="palette-meta">
+            <strong>${c.code} · ${c.name}</strong>
+            <span>${c.hex.toUpperCase()}</span>
+          </span>
+        `;
+        btn.addEventListener('click', () => {
+          visualizer.setColor(c);
+          toast(`Selected ${c.code} ${c.name}`);
+        });
+        frag.appendChild(btn);
+      }
+      paletteList.appendChild(frag);
+    }
+
+    function filterList() {
+      const q = searchInput.value.trim().toLowerCase();
+      if (!q) return renderList(allColors);
+      const filtered = allColors.filter(c =>
+        c.code.toLowerCase().includes(q) ||
+        c.name.toLowerCase().includes(q) ||
+        String(c.name_fr || '').toLowerCase().includes(q)
+      );
+      renderList(filtered);
+    }
+
+    searchInput.addEventListener('input', filterList);
+
+    try {
+      const res = await fetch('./sico-colors.json');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      allColors = await res.json();
+      renderList(allColors);
+      toast(`Loaded ${allColors.length} SICO colors`);
+    } catch (err) {
+      toast(`Failed to load sico-colors.json: ${err.message}`);
+    }
+  </script>
+</body>
+</html>

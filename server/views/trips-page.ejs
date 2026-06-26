@@ -1,0 +1,37 @@
+<%
+  const { trips } = pageData;
+%>
+<div class="page">
+
+  <div class="page-header">
+    <div>
+      <div class="eyebrow">🌄 Your Trips</div>
+      <div class="page-title">All Trips</div>
+    </div>
+    <button class="btn btn-primary"
+      hx-get="/partials/new-trip-form"
+      hx-target="#new-trip-form"
+      hx-swap="innerHTML">+ New Trip</button>
+  </div>
+
+  <!-- Inline new-trip form slot -->
+  <div id="new-trip-form"></div>
+
+  <!-- Trip grid -->
+  <div class="grid" id="trip-list">
+    <% trips.forEach(trip => { %>
+      <%- include('./partials/trip-card.ejs', { pageData: { trip } }) %>
+    <% }); %>
+
+    <!-- Add-trip card -->
+    <div class="card-add"
+      hx-get="/partials/new-trip-form"
+      hx-target="#new-trip-form"
+      hx-swap="innerHTML">
+      <div class="plus">+</div>
+      <p>New trip</p>
+      <small>Punta Cana 2027, Vegas Aug…</small>
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <%
+    const titleMap = {
+      'trips-page':    'All Trips',
+      'dashboard-page': pageData.trip ? pageData.trip.name : 'Trip',
+      'hotel-detail':   pageData.hotel ? pageData.hotel.name : 'Hotel',
+    };
+    const derivedTitle = titleMap[template] || 'Hotel Tracker';
+  %>
+  <title><%= derivedTitle %> — HotelTracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/styles.css" />
+  <% if (typeof pageAssets !== 'undefined' && pageAssets.css) { pageAssets.css.forEach(f => { %>
+    <link rel="stylesheet" href="/static/css/<%= f %>" />
+  <% }); } %>
+  <script src="/static/js/htmx.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.body.addEventListener('htmx:beforeSwap', evt => {
+        if (evt.detail.xhr.status >= 400) {
+          evt.detail.shouldSwap = true;
+          evt.detail.isError = false;
+        }
+      });
+    });
+  </script>
+</head>
+<body>
+  <%- include('./header.ejs', { pageData }) %>
+  <main>
+    <%- include(template, { pageData }) %>
+  </main>
+</body>
+</html>

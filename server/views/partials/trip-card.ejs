@@ -1,0 +1,20 @@
+<%
+  const { trip } = pageData;
+  const dest = trip.destination || '';
+  const dtFmt = d => d ? new Date(d).toLocaleDateString('en-CA',{month:'short',day:'numeric'}) : null;
+  const dateStr = trip.travel_start ? `${dtFmt(trip.travel_start)}–${dtFmt(trip.travel_end)}` : null;
+%>
+<a href="/trips/<%= trip.id %>" class="trip-card">
+  <div class="trip-band <%= trip.booked_count > 0 ? 'band-booked' : '' %>"></div>
+  <div class="trip-body">
+    <div class="trip-eyebrow">🌴 <%= dest || 'Trip' %></div>
+    <div class="trip-name"><%= trip.name %></div>
+    <% if (dateStr) { %><div class="trip-dates"><%= dateStr %></div><% } %>
+    <div class="trip-stats">
+      <span><%= trip.hotel_count %> hotel<%= trip.hotel_count !== 1 ? 's' : '' %></span>
+      <% if (trip.booked_count) { %>
+        <span class="stat-booked">✅ <%= trip.booked_count %> booked</span>
+      <% } %>
+    </div>
+  </div>
+</a>
