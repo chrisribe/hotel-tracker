@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="/static/css/<%= f %>" />
   <% }); } %>
   <script src="/static/js/htmx.min.js"></script>
+  <script src="/static/js/htmx-json-enc.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       document.body.addEventListener('htmx:beforeSwap', evt => {

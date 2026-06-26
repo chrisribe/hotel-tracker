@@ -27,7 +27,15 @@ router.get('/:id', async (req, res) => {
 // PATCH /hotels/:id — inline update (HTMX)
 router.patch('/:id', async (req, res) => {
   const pool = req.app.get('pool');
-  const hotel = await new HotelsDAO(pool).patch(req.params.id, req.body);
+  const body = { ...req.body };
+  // Convert newline-delimited pros/cons strings → arrays
+  if (typeof body.pros === 'string') {
+    body.pros = body.pros.split('\n').map(s => s.trim()).filter(Boolean);
+  }
+  if (typeof body.cons === 'string') {
+    body.cons = body.cons.split('\n').map(s => s.trim()).filter(Boolean);
+  }
+  const hotel = await new HotelsDAO(pool).patch(req.params.id, body);
   res.json(hotel);
 });
 

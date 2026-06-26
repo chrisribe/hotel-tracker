@@ -118,7 +118,7 @@
     <div class="section-body">
       <textarea class="notes-field" id="notes-field"
         hx-patch="/hotels/<%= hotel.id %>"
-        hx-trigger="change delay:1s"
+        hx-trigger="keyup delay:1s"
         hx-vals="js:{notes: document.getElementById('notes-field').value}"
         hx-swap="none"><%= hotel.notes || '' %></textarea>
     </div>
