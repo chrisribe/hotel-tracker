@@ -6,7 +6,7 @@
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
 :root {
-  --bg:        #F9F9F7;
+  --bg:        #F4F0E8;
   --surface:   #FFFFFF;
   --charcoal:  #1E2228;
   --teal:      #197A6F;
@@ -275,7 +275,7 @@ select {
 .card {
   background: var(--surface);
   border-radius: 12px;
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -283,7 +283,7 @@ select {
   cursor: pointer;
 }
 .card:hover { box-shadow: 0 4px 20px rgba(30,34,40,0.09); transform: translateY(-2px); }
-.card-band { height: 4px; }
+.card-band { height: 8px; }
 .card.booked      .card-band { background: var(--teal); }
 .card.considering .card-band { background: var(--amber); }
 .card.eliminated  .card-band { background: var(--border); }
@@ -324,7 +324,7 @@ select {
 }
 .badge-booked      { background: rgba(25,122,111,0.88); color: #fff; }
 .badge-booked::before { background: #7AE0C8; }
-.badge-considering { background: rgba(40,42,48,0.7); color: rgba(255,255,255,0.9); }
+.badge-considering { background: rgba(232,160,48,0.88); color: #1E2228; }
 .badge-considering::before { background: var(--amber); }
 .badge-eliminated  { background: rgba(40,42,48,0.55); color: rgba(255,255,255,0.7); }
 .badge-eliminated::before { background: #888; }
@@ -361,8 +361,8 @@ select {
 }
 .dim-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }
 /* Strip emojis from labels in card view — text only, less visual noise */
-.dim-lbl { font-size: 0.8rem; color: var(--text-dim); width: 72px; flex-shrink: 0; }
-.bar-track { flex: 1; height: 4px; background: var(--border-lt); border-radius: 999px; overflow: hidden; }
+.dim-lbl { font-size: 0.8rem; color: var(--text-dim); width: 88px; flex-shrink: 0; }
+.bar-track { flex: 1; height: 5px; background: var(--bg); border-radius: 999px; overflow: hidden; }
 /* Single calm teal bar — color only on low scores */
 .bar-fill { height: 100%; border-radius: 999px; background: var(--teal); transition: width 0.3s; }
 .bar-fill.low { background: var(--red); }
@@ -903,6 +903,21 @@ tr.booked { background: rgba(25,122,111,0.03); }
   background: var(--bg);
   font-size: 0.78rem;
   color: var(--text-dim);
+}
+
+/* ── ACTION BAR (hotel detail) ── */
+.action-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--surface);
+  border-top: 1.5px solid var(--border);
+  padding: 0.85rem 1.5rem;
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+  max-width: 780px;
+  margin: 0 auto;
+  z-index: 4;
 }
 
 /* ── INLINE NEW-TRIP FORM ── */

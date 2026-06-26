@@ -76,8 +76,7 @@
   <div class="section-card">
     <div class="section-head">
       <span class="section-title">Pros &amp; Cons</span>
-      <button class="section-action" onclick="document.getElementById('pc-edit').classList.toggle('open')">
-        + Edit</button>
+      <button class="section-action" onclick="toggleEl('pc-edit')">+ Edit</button>
     </div>
     <div class="section-body">
       <div class="pros-cons-grid">
@@ -101,7 +100,7 @@
         </div>
       </div>
       <!-- Inline pro/con editor -->
-      <div id="pc-edit" style="display:none;margin-top:1rem">
+      <div id="pc-edit" class="pc-editor" style="margin-top:1rem;display:none">
         <form hx-patch="/hotels/<%= hotel.id %>" hx-ext="json-enc" hx-on::after-request="window.location.reload()">
           <textarea name="pros" class="notes-field" placeholder="Pros, one per line"
             style="height:80px"><%= (hotel.pros||[]).join('\n') %></textarea>
@@ -173,7 +172,7 @@
   <div class="section-card">
     <div class="section-head">
       <span class="section-title">Links</span>
-      <button class="section-action" onclick="document.getElementById('add-link-form').classList.toggle('open')">+ Add</button>
+      <button class="section-action" onclick="toggleEl('add-link-form')">+ Add</button>
     </div>
     <div class="section-body">
       <div class="links-grid" id="links-grid">
@@ -202,6 +201,12 @@
   </div>
 
   <div class="bottom-spacer"></div>
+</div>
+
+<!-- Fixed bottom action bar (matches mock) -->
+<div class="action-bar">
+  <a href="/trips/<%= hotel.trip_id %>" class="btn" style="background:transparent;color:var(--text-mid);border:1.5px solid var(--border)">← Back to trip</a>
+  <button class="btn btn-primary" onclick="openDetailRatingSheet()">✏️ Edit Ratings</button>
 </div>
 
 <!-- Rating sheet (reused pattern) -->
@@ -236,6 +241,10 @@
 </div>
 
 <script>
+function toggleEl(id) {
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? '' : 'none';
+}
 function openDetailRatingSheet() {
   document.getElementById('detail-rating-overlay').classList.add('open');
   document.getElementById('detail-rating-sheet').classList.add('open');
@@ -259,5 +268,5 @@ async function saveDetailRatings(hotelId) {
   });
   if (r.ok) window.location.reload();
 }
-document.getElementById('pc-edit').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); });
+document.getElementById('pc-edit').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.style.display = 'none'; });
 </script>
