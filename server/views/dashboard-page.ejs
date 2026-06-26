@@ -22,7 +22,13 @@
         <% if (booked.length) { %> &middot; <%= booked.length %> booked<% } %>
       </div>
     </div>
-    <a href="#" class="btn-compare">&#x1F4CA; Compare</a>
+    <div style="display:flex;gap:0.5rem;align-items:center;flex-shrink:0">
+      <button class="btn btn-primary"
+        onclick="document.getElementById('add-hotel-modal').classList.add('open'); document.getElementById('add-hotel-sheet').classList.add('open')">
+        + Add Hotel
+      </button>
+      <a href="#" class="btn-compare">&#x1F4CA; Compare</a>
+    </div>
   </div>
 
   <!-- Toolbar -->
@@ -63,7 +69,7 @@
 
     <!-- Add hotel card -->
     <div class="card-add"
-      onclick="document.getElementById('add-hotel-modal').classList.add('open')">
+      onclick="document.getElementById('add-hotel-modal').classList.add('open'); document.getElementById('add-hotel-sheet').classList.add('open')">
       <div class="plus">+</div>
       <p>Add Hotel</p>
       <small>Paste a name or URL</small>

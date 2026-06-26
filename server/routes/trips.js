@@ -9,14 +9,18 @@ router.get('/', async (req, res) => {
   res.respondWithTemplateOrJson({ trips }, 'trips-page');
 });
 
+// GET /trips/partials/new-trip-form — HTMX inline form
+router.get('/partials/new-trip-form', (req, res) => {
+  res.render('partials/new-trip-form', { pageData: {} });
+});
+
 // POST /trips — create trip
 router.post('/', async (req, res) => {
   const pool = req.app.get('pool');
   const trip = await new TripsDAO(pool).create(req.body);
   if (req.headers['hx-request']) {
-    // Re-render trip list partial
-    const trips = await new TripsDAO(pool).getAll();
-    return res.render('partials/trip-list', { pageData: { trips } });
+    // Return just the new trip card to append into #trip-list
+    return res.render('partials/trip-card', { pageData: { trip } });
   }
   res.redirect(`/trips/${trip.id}`);
 });

@@ -82,6 +82,13 @@ router.post('/:id/links', async (req, res) => {
   res.json(link);
 });
 
+// DELETE /hotels/links/:linkId — delete a link (no hotel ID needed)
+router.delete('/links/:linkId', async (req, res) => {
+  const pool = req.app.get('pool');
+  await new HotelLinksDAO(pool).deleteLink(req.params.linkId);
+  res.send('');
+});
+
 // DELETE /hotels/:id/links/:linkId
 router.delete('/:id/links/:linkId', async (req, res) => {
   const pool = req.app.get('pool');

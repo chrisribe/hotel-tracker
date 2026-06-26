@@ -1,0 +1,22 @@
+<!-- Inline new-trip form — slides in below the header, HTMX-powered -->
+<div class="new-trip-form" id="new-trip-form-inner">
+  <form
+    hx-post="/trips"
+    hx-target="#trip-list"
+    hx-swap="beforeend"
+    hx-on::after-request="document.getElementById('new-trip-form').innerHTML=''; this.reset()">
+    <div class="ntf-fields">
+      <input class="field" type="text" name="name"
+        placeholder="Trip name (e.g. Punta Cana 2027)" required autofocus />
+      <input class="field" type="text" name="destination"
+        placeholder="Destination (e.g. Punta Cana, DR)" />
+      <input class="field" type="date" name="travel_start" />
+      <input class="field" type="date" name="travel_end" />
+    </div>
+    <div class="ntf-actions">
+      <button type="submit" class="btn btn-primary">Create Trip</button>
+      <button type="button" class="btn btn-outline"
+        onclick="document.getElementById('new-trip-form').innerHTML=''">Cancel</button>
+    </div>
+  </form>
+</div>

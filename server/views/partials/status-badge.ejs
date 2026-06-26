@@ -1,0 +1,5 @@
+<%
+  const { hotel } = pageData;
+  const statusLabel = { considering:'Considering', booked:'Booked', eliminated:'Eliminated' };
+%>
+<span class="status-badge badge-<%= hotel.status %>"><%= statusLabel[hotel.status] %></span>

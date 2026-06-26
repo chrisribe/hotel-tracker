@@ -12,7 +12,7 @@
   </div>
   <span class="link-arrow">›</span>
   <button class="link-del"
-    hx-delete="/hotels/-/links/<%= link.id %>"
+    hx-delete="/hotels/links/<%= link.id %>"
     hx-target="closest .link-row"
     hx-swap="outerHTML"
     onclick="event.preventDefault();event.stopPropagation()"

@@ -771,3 +771,31 @@ select {
 
 /* ── SITE FOOTER ── */
 .site-footer { text-align: center; padding: 1.5rem; font-size: 0.78rem; color: var(--text-dim); }
+
+/* ── INLINE NEW-TRIP FORM ── */
+.new-trip-form {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+.ntf-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.85rem;
+}
+@media (max-width: 520px) {
+  .ntf-fields { grid-template-columns: 1fr; }
+}
+.ntf-actions { display: flex; gap: 0.5rem; }
+.btn-outline {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem; font-weight: 600;
+  padding: 7px 14px; border-radius: 7px;
+  border: 1.5px solid var(--border);
+  background: transparent; color: var(--text-mid);
+  cursor: pointer;
+}
+.btn-outline:hover { border-color: var(--text-mid); color: var(--text); }
