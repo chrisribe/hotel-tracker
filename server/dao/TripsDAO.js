@@ -5,7 +5,8 @@ class TripsDAO {
     const r = await this.pool.query(
       `SELECT t.*,
               COUNT(h.id)::int            AS hotel_count,
-              COUNT(CASE WHEN h.status='booked' THEN 1 END)::int AS booked_count
+              COUNT(CASE WHEN h.status='booked'      THEN 1 END)::int AS booked_count,
+              COUNT(CASE WHEN h.status='considering' THEN 1 END)::int AS considering_count
        FROM trips t
        LEFT JOIN hotels h ON h.trip_id = t.id
        GROUP BY t.id

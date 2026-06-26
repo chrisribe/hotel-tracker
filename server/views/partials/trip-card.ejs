@@ -1,20 +1,55 @@
 <%
   const { trip } = pageData;
-  const dest = trip.destination || '';
   const dtFmt = d => d ? new Date(d).toLocaleDateString('en-CA',{month:'short',day:'numeric'}) : null;
-  const dateStr = trip.travel_start ? `${dtFmt(trip.travel_start)}–${dtFmt(trip.travel_end)}` : null;
+  const dtFmtY = d => d ? new Date(d).toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'}) : null;
+  const now = new Date();
+  const start = trip.travel_start ? new Date(trip.travel_start) : null;
+  const end   = trip.travel_end   ? new Date(trip.travel_end)   : null;
+
+  // Trip phase: past / upcoming (all booked) / planning
+  let phase = 'planning';
+  if (end && end < now)              phase = 'past';
+  else if (trip.booked_count > 0 && trip.booked_count >= trip.hotel_count && trip.hotel_count > 0) phase = 'upcoming';
+
+  const bandCls  = { planning:'band-active', upcoming:'band-upcoming', past:'band-past' }[phase];
+  const badgeCls = { planning:'badge-active', upcoming:'badge-upcoming', past:'badge-past' }[phase];
+  const badgeTxt = { planning:'🔵 Planning', upcoming:'🟡 Coming up', past:'⬜ Past trip' }[phase];
+
+  const dateStr = start
+    ? `${dtFmt(start)}–${dtFmtY(end)}${trip.destination ? ' · ' + trip.destination : ''}`
+    : (trip.destination || '');
+
+  // Gradient fallback images by index (cycle through 4)
+  const gradients = ['grad-ocean','grad-jungle','grad-sunset','grad-sand'];
+  const gradClass = gradients[(trip.id - 1) % gradients.length];
 %>
-<a href="/trips/<%= trip.id %>" class="trip-card">
-  <div class="trip-band <%= trip.booked_count > 0 ? 'band-booked' : '' %>"></div>
-  <div class="trip-body">
-    <div class="trip-eyebrow">🌴 <%= dest || 'Trip' %></div>
-    <div class="trip-name"><%= trip.name %></div>
-    <% if (dateStr) { %><div class="trip-dates"><%= dateStr %></div><% } %>
-    <div class="trip-stats">
-      <span><%= trip.hotel_count %> hotel<%= trip.hotel_count !== 1 ? 's' : '' %></span>
-      <% if (trip.booked_count) { %>
-        <span class="stat-booked">✅ <%= trip.booked_count %> booked</span>
+<a href="/trips/<%= trip.id %>" class="trip-card <%= phase %>">
+  <div class="card-band <%= bandCls %>"></div>
+
+  <div class="trip-img <%= gradClass %>">
+    <span class="status-badge <%= badgeCls %>"><%= badgeTxt %></span>
+  </div>
+
+  <div class="card-body">
+    <div>
+      <div class="trip-name"><%= trip.name %></div>
+      <% if (dateStr) { %><div class="trip-dates"><%= dateStr %></div><% } %>
+    </div>
+
+    <div class="sep"></div>
+
+    <div class="stats">
+      <div class="stat">🏨 <strong><%= trip.hotel_count %></strong> hotel<%= trip.hotel_count !== 1 ? 's' : '' %></div>
+      <% if (trip.booked_count > 0) { %>
+        <div class="stat">✅ <strong><%= trip.booked_count %></strong> booked</div>
       <% } %>
+      <% if (trip.considering_count > 0) { %>
+        <div class="stat">🔵 <strong><%= trip.considering_count %></strong> considering</div>
+      <% } %>
+    </div>
+
+    <div class="card-foot">
+      <span class="arrow-lnk">Open →</span>
     </div>
   </div>
 </a>
