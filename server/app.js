@@ -14,6 +14,7 @@ async function createApp({ pool, config = {} }) {
     sessionSecret: process.env.SESSION_SECRET,
     cookieSecure: process.env.COOKIE_SECURE === 'true',
     trustProxy: process.env.TRUST_PROXY === '1',
+    apiToken: process.env.HOTEL_API_TOKEN || '',
     ...config,
   };
   let secret = settings.sessionSecret;
@@ -47,6 +48,8 @@ async function createApp({ pool, config = {} }) {
     cookie: { httpOnly: true, sameSite: 'lax', secure: settings.cookieSecure, maxAge: 7 * 24 * 60 * 60 * 1000 },
   }));
   app.use(express.json({ limit: '32kb', strict: true }));
+  // Agent API: bearer token, JSON in/out, mounted before cookie-based origin/CSRF checks.
+  app.use('/api/v1', require('./routes/api'));
   app.use(express.urlencoded({ extended: false, limit: '32kb', parameterLimit: 40 }));
   app.use(auth.sameOrigin);
   app.use(auth.identify);
