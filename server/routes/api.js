@@ -1,8 +1,9 @@
 // JSON API for agents (e.g. Hermes). Bearer-token only: no cookies, so no CSRF surface.
 // Every call acts as the trip organizer and goes through the same PlannerService validation as the web UI.
 const crypto = require('node:crypto');
-const router = require('express').Router();
-const { httpError } = require('../middleware/planner-auth');
+const express = require('express');
+const router = express.Router();
+const { httpError, attempt } = require('../middleware/planner-auth');
 const { PlannerService, tripValues } = require('../services/PlannerService');
 
 const service = req => new PlannerService(req.app.get('pool'));
@@ -18,13 +19,17 @@ router.use((req, res, next) => {
   const expected = req.app.get('plannerConfig').apiToken;
   if (!expected) return next(httpError(404, 'API disabled.'));
   const match = /^Bearer\s+(\S+)$/.exec(req.get('Authorization') || '');
-  if (!match || !safeEqual(match[1], expected)) {
-    res.set('WWW-Authenticate', 'Bearer');
-    return next(httpError(401, 'Invalid or missing API token.'));
-  }
-  req.viewer = { ...ORGANIZER };
-  next();
+  // Reuse the persistent login limiter: blocked IPs stay blocked even with a correct token.
+  attempt(req, 'api', 20, false).then(async () => {
+    if (!match || !safeEqual(match[1], expected)) {
+      await attempt(req, 'api', 20);
+      res.set('WWW-Authenticate', 'Bearer');
+      throw httpError(401, 'Invalid or missing API token.');
+    }
+    req.viewer = { ...ORGANIZER };
+  }).then(() => next(), next);
 });
+router.use(express.json({ limit: '32kb', strict: true }));
 
 // Run work inside the trip transaction as the organizer participant.
 function scoped(handler) {
@@ -57,6 +62,7 @@ router.get('/trips/:id', scoped(async (req, planner, context) => {
     members: board.members,
     ideas: board.items.map(ideaFields),
     selected_budget: board.budget,
+    selected_origin_budget: board.originBudget,
     missing_costs: board.missingCosts,
   };
 }));

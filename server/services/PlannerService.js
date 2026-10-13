@@ -24,6 +24,12 @@ function money(value, label) {
   return value.trim();
 }
 
+// "1,200" and "1,200.50" use thousands separators; "210,50" is a French decimal comma.
+function humanAmount(raw) {
+  if (/^\d+,\d{1,2}$/.test(raw)) return raw.replace(',', '.');
+  return raw.replace(/,/g, '');
+}
+
 // Accepts an API array of {origin,cost,currency} or form text, one "Origin: 854 CAD" per line.
 function originCosts(value) {
   if (value == null || value === '') return [];
@@ -32,7 +38,7 @@ function originCosts(value) {
     rows = value.split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => {
       const match = line.match(/^(.+?)\s*[:=]\s*([\d.,]+)\s*([A-Za-z]{3})?$/);
       if (!match) throw httpError(400, 'Write each departure cost as "Origin: amount CUR", for example "Montréal: 854 CAD".');
-      return { origin: match[1], cost: match[2].replace(',', '.'), currency: match[3] ? match[3].toUpperCase() : undefined };
+      return { origin: match[1], cost: humanAmount(match[2]), currency: match[3] ? match[3].toUpperCase() : undefined };
     });
   }
   if (!Array.isArray(rows) || rows.length > MAX_ORIGIN_COSTS) throw httpError(400, `Add at most ${MAX_ORIGIN_COSTS} departure costs.`);
@@ -296,9 +302,9 @@ class PlannerService {
       if (group.status === 'shortlisted') counts.shortlisted += group.count;
       if (['selected', 'booked'].includes(group.status)) counts.selected += group.count;
     }
-    const { budget, missingCosts } = await this.selectedBudget(context);
+    const { budget, originBudget, missingCosts } = await this.selectedBudget(context);
     const legacyHotelCount = await dao.hotels.countByTrip(trip.id);
-    return { trip, items, destinations, members: await this.members(context), counts, filters, budget, missingCosts, legacyHotelCount };
+    return { trip, items, destinations, members: await this.members(context), counts, filters, budget, originBudget, missingCosts, legacyHotelCount };
   }
 
   async compare(context, query) {
@@ -342,8 +348,9 @@ class PlannerService {
 
   async selectedBudget({ dao, trip }) {
     const budget = await dao.ideas.selectedTotals(trip.id);
+    const originBudget = await dao.ideas.selectedOriginTotals(trip.id);
     const missingCosts = await dao.ideas.countSelectedWithoutCost(trip.id);
-    return { budget, missingCosts };
+    return { budget, originBudget, missingCosts };
   }
 
   async writeIdea(context, body, existing = null) {

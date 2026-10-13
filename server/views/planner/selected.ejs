@@ -7,6 +7,7 @@
 <div class="plan-page">
   <section class="plan-summary" aria-labelledby="plan-estimate"><h2 id="plan-estimate">Cost estimate</h2><div class="plan-totals"><% data.budget.forEach(b => { %><div class="budget-line"><strong><%= h.money(b.total,b.currency) %></strong><span><%= b.currency %> <%= h.basis[b.cost_basis] %></span></div><% }) %></div>
     <% if (!data.budget.length) { %><p>No priced selections yet.</p><% } %>
+    <% if (data.originBudget && data.originBudget.length) { %><div class="origin-budget"><h3>By departure city</h3><% data.originBudget.forEach(b => { %><div class="budget-line"><strong><%= h.money(b.total,b.currency) %></strong><span>from <%= b.origin %> · <%= b.currency %> <%= h.basis[b.cost_basis] %></span></div><% }) %></div><% } %>
     <% if (data.missingCosts) { %><p class="missing-costs"><strong><%= data.missingCosts %> selected <%= data.missingCosts === 1 ? 'option needs' : 'options need' %> a quote.</strong> The estimate is incomplete.</p><% } %>
     <p class="fine-print">Stays, transport, and activities only. Currencies stay separate; totals are not per person.</p>
   </section>

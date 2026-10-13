@@ -47,9 +47,9 @@ async function createApp({ pool, config = {} }) {
     name: 'hotel.sid', secret, store: sessionStore, resave: false, saveUninitialized: false,
     cookie: { httpOnly: true, sameSite: 'lax', secure: settings.cookieSecure, maxAge: 7 * 24 * 60 * 60 * 1000 },
   }));
-  app.use(express.json({ limit: '32kb', strict: true }));
-  // Agent API: bearer token, JSON in/out, mounted before cookie-based origin/CSRF checks.
+  // Agent API: bearer token, JSON in/out, own body parser and error handler; before cookie-based origin/CSRF checks.
   app.use('/api/v1', require('./routes/api'));
+  app.use(express.json({ limit: '32kb', strict: true }));
   app.use(express.urlencoded({ extended: false, limit: '32kb', parameterLimit: 40 }));
   app.use(auth.sameOrigin);
   app.use(auth.identify);

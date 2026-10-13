@@ -112,7 +112,10 @@ test('agent workflow: trip, origins, per-origin flight quote, per-person villa, 
 
   const select = await api(`/trips/${tripId}/ideas/${v.id}`, { method: 'PATCH', body: { status: 'selected' } });
   assert.equal(select.status, 200);
+  assert.equal((await api(`/trips/${tripId}/ideas/${f.id}`, { method: 'PATCH', body: { status: 'selected' } })).status, 200);
   const after = await api(`/trips/${tripId}`);
+  assert.equal(after.json.missing_costs, 0);
+  assert.deepEqual(after.json.selected_origin_budget.map(b => [b.origin, b.currency, b.cost_basis, Number(b.total)]), [['Paris', 'EUR', 'per_person', 402]]);
   assert.deepEqual(after.json.selected_budget.map(b => [b.currency, b.cost_basis, Number(b.total)]), [['CAD', 'total', 7985]]);
 
   const detail = await api(`/trips/${tripId}/ideas/${v.id}`);
@@ -141,6 +144,8 @@ test('API validation errors are JSON 400s with clear messages', async () => {
   }
   const bad = await fetch(`${base}/api/v1/trips`, { method: 'POST', headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' }, body: '{nope' });
   assert.equal(bad.status, 400);
+  assert.match(bad.headers.get('content-type'), /application\/json/);
+  assert.deepEqual(await bad.json(), { error: 'Invalid JSON body.' });
   assert.equal((await api('/trips/999999')).status, 404);
 });
 
@@ -148,7 +153,19 @@ test('web form accepts the new cost fields and origin-cost text lines', async ()
   // Use the service directly through the form parser path (string inputs, as a browser sends them).
   const { ideaValues } = require('../services/PlannerService');
   const v = ideaValues({ kind: 'transport', title: 'Vols', cost_basis: 'per_person', price_kind: 'quoted', quoted_at: '2026-10-12',
-    origin_costs: 'Montréal: 854 CAD\nParis: 210,50 EUR\n' });
-  assert.deepEqual(v.origin_costs, [{ origin: 'Montréal', cost: '854', currency: 'CAD' }, { origin: 'Paris', cost: '210.50', currency: 'EUR' }]);
+    origin_costs: 'Montréal: 1,200 CAD\nParis: 210,50 EUR\nLyon: 1,200.50 EUR\n' });
+  assert.deepEqual(v.origin_costs, [{ origin: 'Montréal', cost: '1200', currency: 'CAD' },
+    { origin: 'Paris', cost: '210.50', currency: 'EUR' }, { origin: 'Lyon', cost: '1200.50', currency: 'EUR' }]);
   assert.throws(() => ideaValues({ kind: 'transport', title: 'Vols', origin_costs: 'Montréal 854' }), /Origin: amount CUR/);
+});
+
+test('failed API tokens are rate limited per IP, even when the correct token follows', async () => {
+  await pool.query('DELETE FROM planner_attempts');
+  for (let i = 0; i < 20; i++) assert.equal((await api('/trips', { token: 'bad' })).status, 401);
+  assert.equal((await api('/trips', { token: 'bad' })).status, 429);
+  const blocked = await api('/trips');
+  assert.equal(blocked.status, 429);
+  assert.match(blocked.json.error, /Too many attempts/);
+  await pool.query('DELETE FROM planner_attempts');
+  assert.equal((await api('/trips')).status, 200);
 });

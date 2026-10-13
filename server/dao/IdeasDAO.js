@@ -76,6 +76,15 @@ class IdeasDAO {
     return r.rows;
   }
 
+  // Departure-specific prices are reported per origin; they are not mixed into the shared totals.
+  async selectedOriginTotals(tripId) {
+    const r = await this.db.query(`SELECT oc.origin, oc.currency, i.cost_basis, SUM(oc.cost) AS total
+      FROM research_origin_costs oc JOIN research_items i ON i.id = oc.item_id
+      WHERE i.trip_id = $1 AND i.kind IN ('stay', 'transport', 'activity') AND i.status IN ('selected', 'booked')
+      GROUP BY oc.origin, oc.currency, i.cost_basis ORDER BY oc.origin, i.cost_basis, oc.currency`, [tripId]);
+    return r.rows;
+  }
+
   async countSelectedWithoutCost(tripId) {
     const r = await this.db.query(`SELECT COUNT(*)::int AS count FROM research_items
       WHERE trip_id = $1 AND kind IN ('stay', 'transport', 'activity') AND status IN ('selected', 'booked') AND cost IS NULL
