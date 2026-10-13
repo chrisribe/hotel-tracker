@@ -14,6 +14,37 @@ const { DEMO_TRIP, seedDemoIdeas } = require('./plannerDemo');
 const KINDS = ['destination', 'stay', 'transport', 'activity', 'link'];
 const STATUSES = ['considering', 'shortlisted', 'selected', 'booked', 'eliminated'];
 const CURRENCIES = ['CAD', 'USD', 'EUR', 'GBP'];
+const COST_BASES = ['total', 'per_person', 'per_day', 'per_person_per_day'];
+const PRICE_KINDS = ['quoted', 'estimate'];
+const MAX_ORIGIN_COSTS = 10;
+
+function money(value, label) {
+  if (typeof value === 'number' && Number.isFinite(value)) value = String(value);
+  if (typeof value !== 'string' || !/^\d{1,12}(\.\d{1,2})?$/.test(value.trim())) throw httpError(400, `${label} must be a non-negative amount with at most two decimal places.`);
+  return value.trim();
+}
+
+// Accepts an API array of {origin,cost,currency} or form text, one "Origin: 854 CAD" per line.
+function originCosts(value) {
+  if (value == null || value === '') return [];
+  let rows = value;
+  if (typeof value === 'string') {
+    rows = value.split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => {
+      const match = line.match(/^(.+?)\s*[:=]\s*([\d.,]+)\s*([A-Za-z]{3})?$/);
+      if (!match) throw httpError(400, 'Write each departure cost as "Origin: amount CUR", for example "Montréal: 854 CAD".');
+      return { origin: match[1], cost: match[2].replace(',', '.'), currency: match[3] ? match[3].toUpperCase() : undefined };
+    });
+  }
+  if (!Array.isArray(rows) || rows.length > MAX_ORIGIN_COSTS) throw httpError(400, `Add at most ${MAX_ORIGIN_COSTS} departure costs.`);
+  const seen = new Set();
+  return rows.map(row => {
+    if (!row || typeof row !== 'object') throw httpError(400, 'Invalid departure cost.');
+    const origin = text(row.origin, 'Departure origin', 80, true);
+    if (seen.has(origin.toLowerCase())) throw httpError(400, `Departure origin "${origin}" is listed twice.`);
+    seen.add(origin.toLowerCase());
+    return { origin, cost: money(row.cost, `Cost from ${origin}`), currency: choice(row.currency, CURRENCIES, 'currency', 'CAD') };
+  });
+}
 
 function text(value, label, max, required = false) {
   if (value == null) value = '';
@@ -97,7 +128,13 @@ function ideaValues(body) {
     destination_id: body.destination_id == null || body.destination_id === '' ? null : id(body.destination_id, 'destination'),
     cost: null,
     capacity: null,
+    cost_basis: choice(body.cost_basis, COST_BASES, 'cost basis', 'total'),
+    price_kind: choice(body.price_kind, PRICE_KINDS, 'price kind', 'estimate'),
+    quoted_at: date(body.quoted_at, 'quote date'),
+    origin_costs: originCosts(body.origin_costs),
   };
+  if (typeof body.cost === 'number') body = { ...body, cost: String(body.cost) };
+  if (typeof body.capacity === 'number') body = { ...body, capacity: String(body.capacity) };
   if (body.cost != null && body.cost !== '') {
     if (typeof body.cost !== 'string' || !/^\d{1,12}(\.\d{1,2})?$/.test(body.cost)) throw httpError(400, 'Cost must be a non-negative total quote with at most two decimal places.');
     values.cost = body.cost;
@@ -107,6 +144,7 @@ function ideaValues(body) {
     if (values.capacity > 100000) throw httpError(400, 'Capacity must be at most 100000.');
   }
   if (values.kind === 'destination' && values.destination_id) throw httpError(400, 'A destination cannot belong to another destination.');
+  if (values.quoted_at && values.price_kind !== 'quoted') throw httpError(400, 'A quote date only applies to quoted prices.');
   return values;
 }
 
@@ -230,6 +268,13 @@ class PlannerService {
     if (!member) throw httpError(404, 'Member not found.');
     if (member.is_organizer) throw httpError(403, 'The organizer cannot be removed.');
     await context.dao.participants.deactivate(context.trip.id, member.id);
+  }
+
+  async setMemberOrigin(context, memberId, origin) {
+    const value = text(origin, 'Departure origin', 80) || null;
+    const member = await context.dao.participants.setOrigin(context.trip.id, id(memberId, 'member'), value);
+    if (!member) throw httpError(404, 'Member not found.');
+    return member;
   }
 
   async board(context, query) {
@@ -412,4 +457,4 @@ class PlannerService {
   }
 }
 
-module.exports = { PlannerService, KINDS, STATUSES, CURRENCIES, text, id, choice, tripValues, ideaValues };
+module.exports = { PlannerService, KINDS, STATUSES, CURRENCIES, COST_BASES, PRICE_KINDS, date, text, id, choice, tripValues, ideaValues };

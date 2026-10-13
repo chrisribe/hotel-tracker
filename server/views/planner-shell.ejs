@@ -16,6 +16,7 @@
  const statuses = { considering: 'Exploring', shortlisted: 'Shortlisted', selected: 'Selected', booked: 'Booked', eliminated: 'Passed on' };
  const h = {
    kinds, singular, statuses,
+   basis: { total: 'total', per_person: 'per person', per_day: 'per day', per_person_per_day: 'per person per day' },
    money: (amount, currency = 'CAD') => new Intl.NumberFormat('en-CA', { style: 'currency', currency, maximumFractionDigits: 2 }).format(Number(amount)),
    date: value => value ? new Date(value).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : 'Dates open',
   initials: name => (name || '?').replace(/[()]/g, '').trim().split(/\s+/).slice(0, 2).map(s => s[0]).join('').toUpperCase(),

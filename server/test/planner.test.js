@@ -199,7 +199,7 @@ test('only selected cost-bearing quotes enter separate-currency budgets; filters
   for (const item of [destination, stay, missing, link]) assert.equal((await owner.post(`${item}/status`, { status: 'selected' })).status, 302);
   await owner.post(`${transport}/status`, { status: 'booked' });
   const board = (await owner.request(path)).page.data;
-  assert.deepEqual(board.budget, [{ currency: 'CAD', total: '1200.50' }, { currency: 'USD', total: '50.25' }]);
+  assert.deepEqual(board.budget, [{ currency: 'CAD', cost_basis: 'total', total: '1200.50' }, { currency: 'USD', cost_basis: 'total', total: '50.25' }]);
   assert.equal(board.missingCosts, 1);
   assert.equal(board.counts.all, 6);
   assert.equal(board.counts.shortlisted, 0);
@@ -545,18 +545,18 @@ test('selected plan and board share budgets through shortlist/select/book/desele
   assert.equal((await alice.request(`${path}?view=shortlisted`)).page.data.items.length, 3);
   for (const item of [a, stay, alternate, missing, link]) await owner.post(`${item}/status`, { status: 'selected' });
   await owner.post(`${transport}/status`, { status: 'booked' });
-  let plan = await check([{ currency: 'CAD', total: '100.00' }, { currency: 'EUR', total: '200.00' }, { currency: 'USD', total: '50.00' }], 1, 6);
+  let plan = await check([{ currency: 'CAD', cost_basis: 'total', total: '100.00' }, { currency: 'EUR', cost_basis: 'total', total: '200.00' }, { currency: 'USD', cost_basis: 'total', total: '50.00' }], 1, 6);
   assert.ok((await alice.request(path)).page.html.includes('Selected coast selected'));
   assert.ok(plan.selectionWarnings.some(message => message.includes('Other mountains')));
   assert.ok(plan.selectionWarnings.some(message => /multiple.*stay/i.test(message)));
   const returned = await owner.post(`${alternate}/status`, { status: 'shortlisted', returnTo: 'selected' });
   assert.equal(returned.location, `${path}/selected`);
   await owner.post(`${transport}/status`, { status: 'eliminated' });
-  await check([{ currency: 'CAD', total: '100.00' }], 1, 4);
+  await check([{ currency: 'CAD', cost_basis: 'total', total: '100.00' }], 1, 4);
   await owner.post(`${stay}/status`, { status: 'considering' });
   await check([], 1, 3);
   await owner.post(`${missing}/edit`, { kind: 'activity', title: 'Now quoted', cost: '0', currency: 'GBP' });
-  await check([{ currency: 'GBP', total: '0.00' }], 0, 3);
+  await check([{ currency: 'GBP', cost_basis: 'total', total: '0.00' }], 0, 3);
   await owner.post(`${missing}/delete`);
   plan = await check([], 0, 2);
   assert.deepEqual(plan.selectionWarnings, []);
@@ -735,11 +735,14 @@ test('legacy research URLs import once across concurrent boots; edited/deleted i
     await upgradePool.query("INSERT INTO research_comments(item_id,participant_id,body) VALUES($1,$2,'Legacy discussion')", [ids[0], participant]);
     const before = (await upgradePool.query('SELECT * FROM research_items ORDER BY id')).rows;
     await Promise.all([migrate(upgradePool), migrate(upgradePool)]);
-    assert.deepEqual((await upgradePool.query('SELECT * FROM research_items ORDER BY id')).rows, before);
+    // Later migrations add columns with defaults; every pre-existing value must be untouched.
+    const afterRows = (await upgradePool.query('SELECT * FROM research_items ORDER BY id')).rows;
+    assert.deepEqual(afterRows.map(row => Object.fromEntries(Object.keys(before[0]).map(key => [key, row[key]]))), before);
+    assert.ok(afterRows.every(row => row.cost_basis === 'total' && row.price_kind === 'estimate' && row.quoted_at === null));
     const imported = (await upgradePool.query('SELECT * FROM research_sources ORDER BY id')).rows;
     assert.equal(imported.length, 3);
     assert.ok(imported.every(source => source.label === 'Original source' && source.created_by === participant && source.takeaway === ''));
-    assert.equal((await upgradePool.query('SELECT COUNT(*)::int AS count FROM planner_migrations')).rows[0].count, 1);
+    assert.equal((await upgradePool.query('SELECT COUNT(*)::int AS count FROM planner_migrations')).rows[0].count, 2);
     upgradeApp = await createApp({ pool: upgradePool, config });
     upgradeServer = await new Promise(resolve => {
       const listening = upgradeApp.listen(0, '127.0.0.1', () => resolve(listening));
@@ -764,7 +767,8 @@ test('legacy research URLs import once across concurrent boots; edited/deleted i
     assert.equal(after[0].url, 'https://example.com/changed');
     assert.equal(after[0].takeaway, 'Keep my edit');
     assert.deepEqual(after[1], imported[2]);
-    assert.deepEqual((await upgradePool.query('SELECT * FROM research_items ORDER BY id')).rows, before);
+    const restarted = (await upgradePool.query('SELECT * FROM research_items ORDER BY id')).rows;
+    assert.deepEqual(restarted.map(row => Object.fromEntries(Object.keys(before[0]).map(key => [key, row[key]]))), before);
     assert.equal((await upgradePool.query('SELECT COUNT(*)::int AS count FROM research_votes')).rows[0].count, 1);
     assert.equal((await upgradePool.query('SELECT COUNT(*)::int AS count FROM research_comments')).rows[0].count, 1);
     await upgradePool.query("UPDATE research_items SET status='selected' WHERE id=$1", [ids[0]]);

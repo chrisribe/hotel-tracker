@@ -3,7 +3,10 @@
  const hasError = typeof error !== 'undefined' && Boolean(error);
  const hasValue = value => value != null && String(value) !== '';
  const detailsOpen = hasError || [v.location, v.destination_id, v.notes].some(hasValue);
- const quoteOpen = hasError || [v.cost, v.capacity].some(hasValue) || (hasValue(v.currency) && v.currency !== 'CAD');
+ const originText = Array.isArray(v.origin_costs) ? v.origin_costs.map(o => `${o.origin}: ${o.cost} ${o.currency}`).join('\n') : (v.origin_costs || '');
+ const quotedAt = v.quoted_at instanceof Date ? v.quoted_at.toISOString().slice(0, 10) : (v.quoted_at || '');
+ const quoteOpen = hasError || [v.cost, v.capacity, originText, quotedAt].some(hasValue) || (hasValue(v.currency) && v.currency !== 'CAD') ||
+   (hasValue(v.cost_basis) && v.cost_basis !== 'total') || v.price_kind === 'quoted';
 %>
 <a class="back-link" href="/plans/<%= trip.id %><%= editing ? '/ideas/' + data.item.id : '' %>"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg><%= editing ? 'Back to idea' : 'Back to research board' %></a>
 <div class="page-heading"><div><h1><%= editing ? 'Edit idea' : 'Add an idea' %></h1></div></div>
@@ -25,7 +28,15 @@
     <label for="idea-cost">Total quote<input id="idea-cost" type="number" name="cost" min="0" max="999999999999.99" step="0.01" placeholder="Not known yet" value="<%= v.cost == null ? '' : v.cost %>"></label>
     <label for="idea-currency">Currency<select id="idea-currency" name="currency"><% ['CAD','USD','EUR','GBP'].forEach(currency => { %><option value="<%= currency %>" <%= (v.currency || 'CAD') === currency ? 'selected' : '' %>><%= currency %></option><% }) %></select></label>
     <label for="idea-capacity">Capacity<input id="idea-capacity" type="number" name="capacity" min="1" max="100000" step="1" placeholder="People" value="<%= v.capacity == null ? '' : v.capacity %>"></label>
-  </div><p class="fine-print">Total for the stay, rental, or activity—not per night or person. Leave blank if unknown.</p></div></details>
+  </div>
+    <div class="form-row three">
+    <label for="idea-cost-basis">Price applies to<select id="idea-cost-basis" name="cost_basis"><% [['total','The whole group, total'],['per_person','Each person'],['per_day','Per day (whole group)'],['per_person_per_day','Each person, per day']].forEach(([value,label]) => { %><option value="<%= value %>" <%= (v.cost_basis || 'total') === value ? 'selected' : '' %>><%= label %></option><% }) %></select></label>
+    <label for="idea-price-kind">Price source<select id="idea-price-kind" name="price_kind"><% [['estimate','Estimate'],['quoted','Real quote seen']].forEach(([value,label]) => { %><option value="<%= value %>" <%= (v.price_kind || 'estimate') === value ? 'selected' : '' %>><%= label %></option><% }) %></select></label>
+    <label for="idea-quoted-at">Quote seen on<input id="idea-quoted-at" type="date" name="quoted_at" value="<%= quotedAt %>"></label>
+    </div>
+    <label for="idea-origin-costs">Price by departure city <span class="optional">Optional</span><textarea id="idea-origin-costs" name="origin_costs" rows="3" maxlength="2000" placeholder="Montréal: 854 CAD&#10;Paris: 210 EUR"><%= originText %></textarea></label>
+    <p class="fine-print">Use departure prices when each group pays a different fare, for example flights. One line per city: “City: amount CUR”. Prices aren’t live; record when you saw a real quote.</p>
+  </div></details>
   <p class="fine-print">Don’t include payment details, passports, or private booking documents.</p>
   <div class="form-actions"><button class="button primary"><%= editing ? 'Save changes' : 'Add idea' %></button><a class="button subtle" href="/plans/<%= trip.id %><%= editing ? '/ideas/' + data.item.id : '' %>">Cancel</a></div>
 </form>

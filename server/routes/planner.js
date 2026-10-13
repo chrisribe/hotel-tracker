@@ -186,6 +186,11 @@ router.post('/plans/:id/members/:memberId/remove', auth.authenticated, auth.orga
   return { redirect: `/plans/${context.trip.id}/share` };
 }));
 
+router.post('/plans/:id/members/:memberId/origin', auth.authenticated, auth.organizer, scoped(async (req, planner, context) => {
+  await planner.setMemberOrigin(context, req.params.memberId, req.body.origin);
+  return { redirect: `/plans/${context.trip.id}/share` };
+}));
+
 router.get('/join/:token', async (req, res) => {
   const trip = await service(req).inviteTrip(req.params.token);
   if (req.viewer.isOrganizer || (req.viewer.tripId === trip.id && req.viewer.participantId)) return res.redirect(`/plans/${trip.id}`);

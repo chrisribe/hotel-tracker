@@ -63,7 +63,15 @@ class TripsDAO {
     await this.pool.query("SELECT pg_advisory_xact_lock(hashtext(current_schema()), hashtext('hotel-tracker-demo'))");
   }
 
-  async update(id, { name, destination, travel_start, travel_end }) {
+  // description is optional so the legacy trips route keeps working unchanged.
+  async update(id, { name, destination, travel_start, travel_end, description }) {
+    if (description !== undefined) {
+      const r = await this.pool.query(
+        `UPDATE trips SET name=$1, destination=$2, travel_start=$3, travel_end=$4, description=$5
+         WHERE id=$6 RETURNING *`,
+        [name, destination || null, travel_start || null, travel_end || null, description || null, id]);
+      return r.rows[0];
+    }
     const r = await this.pool.query(
       `UPDATE trips SET name=$1, destination=$2, travel_start=$3, travel_end=$4
        WHERE id=$5 RETURNING *`,

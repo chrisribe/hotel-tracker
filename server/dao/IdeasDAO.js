@@ -9,7 +9,9 @@ const CARD_SELECT = `
     (SELECT COUNT(*)::int FROM research_images m WHERE m.item_id = i.id) AS image_count,
     CASE WHEN cover.id IS NULL THEN NULL
       ELSE json_build_object('id', cover.id, 'url', cover.url, 'caption', cover.caption, 'source_url', cover.source_url)
-    END AS cover_image
+    END AS cover_image,
+    COALESCE((SELECT json_agg(json_build_object('origin', oc.origin, 'cost', oc.cost, 'currency', oc.currency) ORDER BY oc.origin)
+      FROM research_origin_costs oc WHERE oc.item_id = i.id), '[]'::json) AS origin_costs
   FROM research_items i
   LEFT JOIN participants author ON author.id = i.created_by
   LEFT JOIN research_votes my_vote ON my_vote.item_id = i.id AND my_vote.participant_id = $2
@@ -68,32 +70,47 @@ class IdeasDAO {
 
   // Only selected/booked quotes for real expenses count toward the plan estimate.
   async selectedTotals(tripId) {
-    const r = await this.db.query(`SELECT currency, SUM(cost) AS total FROM research_items
+    const r = await this.db.query(`SELECT currency, cost_basis, SUM(cost) AS total FROM research_items
       WHERE trip_id = $1 AND kind IN ('stay', 'transport', 'activity') AND status IN ('selected', 'booked') AND cost IS NOT NULL
-      GROUP BY currency ORDER BY currency`, [tripId]);
+      GROUP BY currency, cost_basis ORDER BY cost_basis = 'total' DESC, cost_basis, currency`, [tripId]);
     return r.rows;
   }
 
   async countSelectedWithoutCost(tripId) {
     const r = await this.db.query(`SELECT COUNT(*)::int AS count FROM research_items
-      WHERE trip_id = $1 AND kind IN ('stay', 'transport', 'activity') AND status IN ('selected', 'booked') AND cost IS NULL`, [tripId]);
+      WHERE trip_id = $1 AND kind IN ('stay', 'transport', 'activity') AND status IN ('selected', 'booked') AND cost IS NULL
+      AND NOT EXISTS (SELECT 1 FROM research_origin_costs oc WHERE oc.item_id = research_items.id)`, [tripId]);
     return r.rows[0].count;
   }
 
   async create(tripId, participantId, v) {
     const r = await this.db.query(`INSERT INTO research_items
-      (trip_id, kind, title, location, notes, url, destination_id, cost, currency, capacity, created_by)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-    [tripId, v.kind, v.title, v.location, v.notes, v.url, v.destination_id, v.cost, v.currency, v.capacity, participantId]);
+      (trip_id, kind, title, location, notes, url, destination_id, cost, currency, capacity, created_by, cost_basis, price_kind, quoted_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+    [tripId, v.kind, v.title, v.location, v.notes, v.url, v.destination_id, v.cost, v.currency, v.capacity, participantId,
+      v.cost_basis, v.price_kind, v.quoted_at]);
+    await this.replaceOriginCosts(r.rows[0].id, v.origin_costs || []);
     return r.rows[0];
   }
 
   async update(tripId, id, v) {
     const r = await this.db.query(`UPDATE research_items SET kind = $1, title = $2, location = $3, notes = $4, url = $5,
-      destination_id = $6, cost = $7, currency = $8, capacity = $9, updated_at = NOW()
+      destination_id = $6, cost = $7, currency = $8, capacity = $9, cost_basis = $12, price_kind = $13, quoted_at = $14,
+      updated_at = NOW()
       WHERE id = $10 AND trip_id = $11 RETURNING *`,
-    [v.kind, v.title, v.location, v.notes, v.url, v.destination_id, v.cost, v.currency, v.capacity, id, tripId]);
+    [v.kind, v.title, v.location, v.notes, v.url, v.destination_id, v.cost, v.currency, v.capacity, id, tripId,
+      v.cost_basis, v.price_kind, v.quoted_at]);
+    if (r.rows[0]) await this.replaceOriginCosts(id, v.origin_costs || []);
     return r.rows[0];
+  }
+
+  // Departure-specific prices (e.g. flights from Montréal vs Paris) replace the whole set on every write.
+  async replaceOriginCosts(itemId, rows) {
+    await this.db.query('DELETE FROM research_origin_costs WHERE item_id = $1', [itemId]);
+    for (const row of rows) {
+      await this.db.query('INSERT INTO research_origin_costs (item_id, origin, cost, currency) VALUES ($1, $2, $3, $4)',
+        [itemId, row.origin, row.cost, row.currency]);
+    }
   }
 
   async setStatus(tripId, id, status) {

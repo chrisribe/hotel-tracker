@@ -17,7 +17,7 @@ class ParticipantsDAO {
   }
 
   async listActive(tripId) {
-    const r = await this.db.query('SELECT id, name, is_organizer FROM participants WHERE trip_id = $1 AND active ORDER BY is_organizer DESC, id', [tripId]);
+    const r = await this.db.query('SELECT id, name, is_organizer, origin FROM participants WHERE trip_id = $1 AND active ORDER BY is_organizer DESC, id', [tripId]);
     return r.rows;
   }
 
@@ -30,6 +30,12 @@ class ParticipantsDAO {
     const r = await this.db.query(`INSERT INTO participants (trip_id, name, is_organizer) VALUES ($1, $2, TRUE)
       ON CONFLICT (trip_id) WHERE is_organizer DO UPDATE SET active = TRUE, name = EXCLUDED.name RETURNING *`,
     [tripId, (name || 'Organizer').slice(0, 80)]);
+    return r.rows[0];
+  }
+
+  async setOrigin(tripId, id, origin) {
+    const r = await this.db.query('UPDATE participants SET origin = $1 WHERE id = $2 AND trip_id = $3 AND active RETURNING id, name, is_organizer, origin',
+      [origin, id, tripId]);
     return r.rows[0];
   }
 

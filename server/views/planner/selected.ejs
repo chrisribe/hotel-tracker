@@ -5,7 +5,7 @@
 <div class="empty-state"><h2>No selections yet</h2><p><%= viewer.isOrganizer ? 'Compare your options, then choose “Select for plan” when the group is ready.' : 'Compare your options. Your organizer can select the group’s choices.' %></p><a class="button primary" href="<%= base %>/compare">Compare options</a></div>
 <% } else { %>
 <div class="plan-page">
-  <section class="plan-summary" aria-labelledby="plan-estimate"><h2 id="plan-estimate">Cost estimate</h2><div class="plan-totals"><% data.budget.forEach(b => { %><div class="budget-line"><strong><%= h.money(b.total,b.currency) %></strong><span><%= b.currency %> total</span></div><% }) %></div>
+  <section class="plan-summary" aria-labelledby="plan-estimate"><h2 id="plan-estimate">Cost estimate</h2><div class="plan-totals"><% data.budget.forEach(b => { %><div class="budget-line"><strong><%= h.money(b.total,b.currency) %></strong><span><%= b.currency %> <%= h.basis[b.cost_basis] %></span></div><% }) %></div>
     <% if (!data.budget.length) { %><p>No priced selections yet.</p><% } %>
     <% if (data.missingCosts) { %><p class="missing-costs"><strong><%= data.missingCosts %> selected <%= data.missingCosts === 1 ? 'option needs' : 'options need' %> a quote.</strong> The estimate is incomplete.</p><% } %>
     <p class="fine-print">Stays, transport, and activities only. Currencies stay separate; totals are not per person.</p>
@@ -16,7 +16,7 @@
       <article class="selected-row">
         <% if (item.cover_image) { %><a href="<%= base %>/ideas/<%= item.id %>"><%- include('photo',{photo:item.cover_image,photoTitle:item.title,photoClass:'selected-photo'}) %></a><% } %>
         <div class="selected-row-main"><h3><a href="<%= base %>/ideas/<%= item.id %>"><%= item.title %></a></h3><% if (item.location || destination) { %><p><%= item.location || destination.title %></p><% } %><div class="selected-meta"><span class="badge <%= item.status %>"><%= h.statuses[item.status] %></span></div></div>
-        <div class="selected-row-cost"><% if (costBearing) { %><strong><%= item.cost !== null ? h.money(item.cost,item.currency) : 'Quote needed' %></strong><% if (item.cost !== null) { %><span class="fine-print"><%= item.currency %> total</span><% } %><% } %>
+        <div class="selected-row-cost"><% if (costBearing) { %><strong><%= item.cost !== null ? h.money(item.cost,item.currency) : 'Quote needed' %></strong><% if (item.cost !== null) { %><span class="fine-print"><%= item.currency %> <%= h.basis[item.cost_basis] %></span><% } %><% } %>
           <% if (viewer.isOrganizer) { %><form action="<%= base %>/ideas/<%= item.id %>/status" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="status" value="shortlisted"><input type="hidden" name="returnTo" value="selected"><button class="button subtle" <%- item.status === 'booked' ? 'data-booked-removal="true"' : '' %>>Return to shortlist<span class="sr-only">: <%= item.title %></span></button></form><% } %>
         </div>
       </article><% }) %>

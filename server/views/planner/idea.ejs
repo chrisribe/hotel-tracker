@@ -6,10 +6,12 @@
   <section class="idea-overview" aria-labelledby="about-idea">
     <h2 id="about-idea" class="sr-only">Overview</h2>
     <div class="idea-facts">
-      <% if (item.cost != null) { %><span><strong><%= h.money(item.cost,item.currency) %> <%= item.currency %></strong> estimated total</span><% } else if (['stay','transport','activity'].includes(item.kind)) { %><span>No quote yet</span><% } %>
+      <% if (item.cost != null) { %><span><strong><%= h.money(item.cost,item.currency) %> <%= item.currency %></strong> <%= h.basis[item.cost_basis] %> · <%= item.price_kind === 'quoted' ? 'real quote' : 'estimate' %></span><% } else if (['stay','transport','activity'].includes(item.kind)) { %><span>No quote yet</span><% } %>
       <% if (item.capacity) { %><span><svg class="icon small" aria-hidden="true"><use href="#i-people"/></svg>Room for <%= item.capacity %> people</span><% } %>
       <% if (destination) { %><a href="<%= base %>/ideas/<%= destination.id %>"><%= destination.title %></a><% } %>
     </div>
+    <% if (item.origin_costs && item.origin_costs.length) { %><ul class="origin-costs"><% item.origin_costs.forEach(o => { %><li>From <strong><%= o.origin %></strong>: <%= h.money(o.cost,o.currency) %> <%= o.currency %> <%= h.basis[item.cost_basis] %></li><% }) %></ul><% } %>
+    <% if (item.price_kind === 'quoted' && item.quoted_at) { %><p class="fine-print">Quote seen on <%= h.date(item.quoted_at) %>. Prices change; check again before booking.</p><% } %>
     <% if (item.cost != null) { %><p class="fine-print">Updated <%= h.date(item.updated_at) %>. Confirm fees and availability with the source.</p><% } %>
     <div class="idea-overview-actions">
       <form method="post" action="<%= path %>/vote"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button <%= item.voted ? 'interested' : 'secondary' %>" aria-pressed="<%= item.voted %>"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg><%= item.voted ? 'You’re interested' : 'I’m interested' %></button></form>

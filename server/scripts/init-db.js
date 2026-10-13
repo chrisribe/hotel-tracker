@@ -212,6 +212,24 @@ CREATE INDEX research_images_item ON research_images(item_id);
 CREATE UNIQUE INDEX research_images_one_cover ON research_images(item_id) WHERE is_cover;
 `;
 
+// Departure groups, cost basis and quote provenance (trip-planning iteration 3).
+const costModelSchema = `
+ALTER TABLE participants ADD COLUMN IF NOT EXISTS origin TEXT
+  CHECK (origin IS NULL OR char_length(btrim(origin)) BETWEEN 1 AND 80);
+ALTER TABLE research_items ADD COLUMN IF NOT EXISTS cost_basis TEXT NOT NULL DEFAULT 'total'
+  CHECK (cost_basis IN ('total','per_person','per_day','per_person_per_day'));
+ALTER TABLE research_items ADD COLUMN IF NOT EXISTS price_kind TEXT NOT NULL DEFAULT 'estimate'
+  CHECK (price_kind IN ('quoted','estimate'));
+ALTER TABLE research_items ADD COLUMN IF NOT EXISTS quoted_at DATE;
+CREATE TABLE IF NOT EXISTS research_origin_costs (
+  item_id INTEGER NOT NULL REFERENCES research_items(id) ON DELETE CASCADE,
+  origin TEXT NOT NULL CHECK (char_length(btrim(origin)) BETWEEN 1 AND 80),
+  cost NUMERIC(14,2) NOT NULL CHECK (cost >= 0),
+  currency TEXT NOT NULL DEFAULT 'CAD' CHECK (currency IN ('CAD','USD','EUR','GBP')),
+  PRIMARY KEY (item_id, origin)
+);
+`;
+
 // Shared by the one-time import and request validation; references only, never fetch or resolve DNS.
 function normalizeReferenceUrl(value, image = false) {
   if (typeof value !== 'string' || !/^https?:\/\//i.test(value) || value.length > 2048 || /[\s\u0000-\u001f\u007f\\]/u.test(value) || /^https?:\/\/[^/?#]*@/i.test(value)) throw new Error('Invalid URL');
@@ -264,6 +282,11 @@ async function migrate(pool) {
         await client.query("INSERT INTO research_sources(item_id,label,url,created_by) VALUES($1,'Original source',$2,$3)", [item.id, url, item.created_by]);
       }
       await client.query('INSERT INTO planner_migrations(version) VALUES($1)', [version]);
+    }
+    const costVersion = 'cost-model-v1';
+    if (!(await client.query('SELECT 1 FROM planner_migrations WHERE version=$1', [costVersion])).rowCount) {
+      await client.query(costModelSchema);
+      await client.query('INSERT INTO planner_migrations(version) VALUES($1)', [costVersion]);
     }
   });
 }
