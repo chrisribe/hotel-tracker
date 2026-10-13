@@ -1,0 +1,33 @@
+<% const item = data.item, base = '/plans/' + data.trip.id, path = base + '/ideas/' + item.id; const destination = data.destinations.find(d => d.id === item.destination_id); %>
+<a class="back-link" href="<%= base %>"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>Back to research board</a>
+<% if (data.trip.is_demo) { %><div class="demo-note"><span class="badge sample">Sample idea</span><span>Illustrative content—not a verified listing or current quote. Photos are references, not proof of the fictional property.</span></div><% } %>
+<div class="page-heading"><div><h1><%= item.title %></h1><div class="detail-meta"><span class="kind-label kind-<%= item.kind %>"><svg class="icon" aria-hidden="true"><use href="#i-<%= h.kindIcon(item.kind) %>"/></svg><%= h.singular[item.kind] %></span><span class="badge <%= item.status %>"><%= h.statuses[item.status] %></span><% if (item.location || destination) { %><span><%= item.location || destination.title %></span><% } %></div></div><% if (data.canEdit) { %><a class="button secondary" href="<%= path %>/edit">Edit idea</a><% } %></div>
+<div class="idea-detail">
+  <section class="idea-overview" aria-labelledby="about-idea">
+    <h2 id="about-idea" class="sr-only">Overview</h2>
+    <div class="idea-facts">
+      <% if (item.cost != null) { %><span><strong><%= h.money(item.cost,item.currency) %> <%= item.currency %></strong> estimated total</span><% } else if (['stay','transport','activity'].includes(item.kind)) { %><span>No quote yet</span><% } %>
+      <% if (item.capacity) { %><span><svg class="icon small" aria-hidden="true"><use href="#i-people"/></svg>Room for <%= item.capacity %> people</span><% } %>
+      <% if (destination) { %><a href="<%= base %>/ideas/<%= destination.id %>"><%= destination.title %></a><% } %>
+    </div>
+    <% if (item.cost != null) { %><p class="fine-print">Updated <%= h.date(item.updated_at) %>. Confirm fees and availability with the source.</p><% } %>
+    <div class="idea-overview-actions">
+      <form method="post" action="<%= path %>/vote"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button <%= item.voted ? 'interested' : 'secondary' %>" aria-pressed="<%= item.voted %>"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg><%= item.voted ? 'You’re interested' : 'I’m interested' %></button></form>
+      <span class="fine-print"><%= item.vote_count %> interested · not a selection</span>
+      <a class="text-link" href="<%= base %>/compare?kind=<%= item.kind %>"><svg class="icon small" aria-hidden="true"><use href="#i-compare"/></svg>Compare options</a>
+    </div>
+    <% if (viewer.isOrganizer) { %>
+    <form method="post" action="<%= path %>/status" class="idea-decision"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><label for="idea-status">Group decision<select id="idea-status" name="status" aria-describedby="idea-decision-hint"><% Object.entries(h.statuses).forEach(([status,label]) => { %><option value="<%= status %>" <%= item.status === status ? 'selected' : '' %>><%= label %></option><% }) %></select></label><button class="button secondary">Update decision</button></form>
+    <% } %>
+    <p class="fine-print" id="idea-decision-hint">Shortlisted: still comparing. Selected: in the <a href="<%= base %>/selected">selected plan</a>. Booked: reserved outside this app.</p>
+    <% if (item.notes) { %><div class="prose"><%= item.notes %></div><% } %>
+    <div class="idea-attribution"><span class="avatar small-avatar"><%= h.initials(item.author_name) %></span><span>Added by <strong><%= item.author_name || 'Organizer' %></strong> · <%= h.date(item.created_at) %></span></div>
+  </section>
+  <%- include('research-collection', {data,item,path,viewer,csrfToken,h}) %>
+  <section class="discussion" id="discussion" aria-labelledby="discussion-heading"><div class="section-heading"><h2 id="discussion-heading">Discussion <span class="count"><%= data.comments.length %></span></h2></div>
+    <% if (!data.comments.length) { %><p class="empty-discussion">No comments yet.</p><% } %>
+    <div class="comment-list"><% data.comments.forEach(comment => { %><article class="comment"><span class="avatar"><%= h.initials(comment.author_name) %></span><div><div class="comment-meta"><strong><%= comment.author_name %></strong><time datetime="<%= new Date(comment.created_at).toISOString() %>"><%= h.date(comment.created_at) %></time></div><p><%= comment.body %></p></div></article><% }) %></div>
+    <form method="post" action="<%= path %>/comments" class="stack-form comment-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><label for="comment">Add your thoughts<textarea id="comment" name="body" rows="3" maxlength="2000" required placeholder="I like this because…"></textarea></label><div class="form-actions"><button class="button primary">Post comment<svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg></button><span class="fine-print">Posting as <%= viewer.name %></span></div></form>
+  </section>
+  <% if (data.canEdit) { %><details class="danger-zone"><summary>Remove this idea</summary><p>This deletes the idea, its sources, image references, votes, and comments. Linked ideas are kept without this destination.</p><form method="post" action="<%= path %>/delete" data-confirm="Delete this idea and all its research? This cannot be undone."><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button danger">Delete idea</button></form></details><% } %>
+</div>

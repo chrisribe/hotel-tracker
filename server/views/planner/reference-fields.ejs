@@ -1,0 +1,26 @@
+<%
+ const fields = type === 'source' ? [
+   { key:'label', name:'label', label:'Source label', required:true, max:120, placeholder:'e.g. Rating site, travel blog, local advice' },
+   { key:'url', name:'url', label:'Source URL', type:'url', required:true, max:2048, placeholder:'https://…' },
+   { key:'takeaway', name:'takeaway', label:'Takeaway', multiline:true, max:2000, placeholder:'What did you learn?' }
+ ] : [
+   { key:'url', name:'url', label:'Direct image URL', type:'url', required:true, max:2048, placeholder:'https://example.com/photo.jpg', help:'An HTTPS image file, not a webpage.' },
+   { key:'caption', name:'caption', label:'Caption', max:300, placeholder:'What the photo shows; credit the photographer if known' },
+   { key:'credit', name:'source_url', label:'Image source page', type:'url', max:2048, placeholder:'https://…' }
+ ];
+ const problem = typeof validation !== 'undefined' && validation && validation.prefix === prefix ? validation : null;
+%>
+<% fields.forEach(field => {
+ const invalid = Boolean(problem && problem.field === field.key), fieldId = prefix + '-' + field.key;
+ const description = [invalid ? fieldId + '-error' : '', field.help ? prefix + '-hint' : ''].filter(Boolean).join(' ');
+%>
+<label for="<%= fieldId %>"><%= field.label %><% if (!field.required) { %> <span class="optional">Optional</span><% } %>
+  <% if (field.multiline) { %>
+  <textarea id="<%= fieldId %>" name="<%= field.name %>" rows="3" maxlength="<%= field.max %>" placeholder="<%= field.placeholder %>" aria-invalid="<%= invalid %>" aria-describedby="<%= description %>"><%= values[field.name] || '' %></textarea>
+  <% } else { %>
+  <input id="<%= fieldId %>" name="<%= field.name %>" type="<%= field.type || 'text' %>" <%= field.required ? 'required' : '' %> maxlength="<%= field.max %>" placeholder="<%= field.placeholder %>" value="<%= values[field.name] || '' %>" aria-invalid="<%= invalid %>" aria-describedby="<%= description %>">
+  <% } %>
+  <% if (invalid) { %><small id="<%= fieldId %>-error" class="field-error"><%= problem.message %></small><% } %>
+  <% if (field.help) { %><small id="<%= prefix %>-hint"><%= field.help %></small><% } %>
+</label>
+<% }) %>

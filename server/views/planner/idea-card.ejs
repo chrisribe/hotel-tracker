@@ -1,0 +1,19 @@
+<% const destination = destinations.find(d => d.id === item.destination_id); %>
+<article class="idea-card <%= item.status === 'eliminated' ? 'passed' : '' %>">
+  <% if (item.cover_image) { %>
+    <a class="card-photo-link" href="<%= base %>/ideas/<%= item.id %>#photos" aria-label="View photos for <%= item.title %>"><%- include('photo', { photo: item.cover_image, photoTitle: item.title, photoClass: 'card-photo' }) %></a>
+  <% } %>
+  <div class="idea-card-head"><span class="kind-label kind-<%= item.kind %>"><svg class="icon" aria-hidden="true"><use href="#i-<%= h.kindIcon(item.kind) %>"/></svg><%= h.singular[item.kind] %></span><span class="badge <%= item.status %>"><%= h.statuses[item.status] %></span></div>
+  <h3><a href="<%= base %>/ideas/<%= item.id %>"><%= item.title %></a></h3>
+  <% if (destination || item.location) { %><div class="location-line"><svg class="icon small" aria-hidden="true"><use href="#i-pin"/></svg><%= item.location || destination.title %></div><% } %>
+  <p class="idea-excerpt"><%= item.notes || 'A place to gather what you find. Add sources, photos, and your thoughts.' %></p>
+  <div class="collection-counts"><a href="<%= base %>/ideas/<%= item.id %>#sources"><svg class="icon small" aria-hidden="true"><use href="#i-link"/></svg><%= item.source_count %> <%= item.source_count === 1 ? 'source' : 'sources' %></a><a href="<%= base %>/ideas/<%= item.id %>#photos"><svg class="icon small" aria-hidden="true"><use href="#i-image"/></svg><%= item.image_count %> <%= item.image_count === 1 ? 'photo' : 'photos' %></a></div>
+  <div class="idea-details">
+    <% if (item.cost !== null) { %><span class="quote"><strong><%= h.money(item.cost,item.currency) %></strong><span><%= item.currency %> · total quote</span></span><% } else if (['stay','transport','activity'].includes(item.kind)) { %><span class="no-quote">Cost still to explore</span><% } %>
+    <% if (item.capacity) { %><span class="capacity"><svg class="icon small" aria-hidden="true"><use href="#i-people"/></svg>Fits <%= item.capacity %></span><% } %>
+  </div>
+  <footer class="idea-card-footer"><span class="contributor"><span class="avatar small-avatar"><%= h.initials(item.author_name) %></span><span><%= item.author_name || 'Organizer' %></span></span><div class="social-actions">
+    <form method="post" action="<%= base %>/ideas/<%= item.id %>/vote"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="returnTo" value="board"><button class="social-button <%= item.voted ? 'voted' : '' %>" aria-label="<%= item.voted ? 'Remove interest in' : 'Interested in' %> <%= item.title %>" aria-pressed="<%= item.voted %>"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg><%= item.vote_count %></button></form>
+    <a class="social-button" href="<%= base %>/ideas/<%= item.id %>#discussion" aria-label="<%= item.comment_count %> comments on <%= item.title %>"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg><%= item.comment_count %></a>
+  </div></footer>
+</article>

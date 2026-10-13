@@ -59,6 +59,11 @@ class HotelsDAO {
   async delete(id) {
     await this.pool.query('DELETE FROM hotels WHERE id=$1', [id]);
   }
+
+  async countByTrip(tripId) {
+    const r = await this.pool.query('SELECT COUNT(*)::int AS count FROM hotels WHERE trip_id=$1', [tripId]);
+    return r.rows[0].count;
+  }
 }
 
 module.exports = HotelsDAO;

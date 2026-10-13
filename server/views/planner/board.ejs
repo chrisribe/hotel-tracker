@@ -1,0 +1,30 @@
+<%
+ const trip = data.trip, filters = data.filters, base = '/plans/' + trip.id;
+ const filteredUrl = changes => base + '?' + new URLSearchParams({ ...filters, ...changes }).toString();
+ const selectedDestinations = data.destinations.filter(d => ['selected','booked'].includes(d.status));
+ const hasFilters = filters.q || filters.destination || filters.kind !== 'all' || filters.view !== 'all';
+%>
+<% if (trip.is_demo) { %><div class="demo-note"><span class="badge sample">Sample trip</span><span>Fictional ideas and quotes—not live offers.</span></div><% } %>
+<div class="page-heading"><div><h1><%= trip.name %></h1><% if (trip.description) { %><p><%= trip.description %></p><% } %></div><div class="heading-actions"><% if (viewer.isOrganizer) { %><a class="button subtle" href="<%= base %>/share">People & invites</a><% } %><a class="button primary" href="<%= base %>/ideas/new"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Add idea</a></div></div>
+<div class="trip-context">
+  <span><svg class="icon small" aria-hidden="true"><use href="#i-calendar"/></svg><%= trip.travel_start ? h.date(trip.travel_start) + (trip.travel_end ? ' – ' + h.date(trip.travel_end) : '') : 'Dates open' %></span>
+  <span><svg class="icon small" aria-hidden="true"><use href="#i-pin"/></svg><% if (selectedDestinations.length) { %><a href="<%= base %>/selected"><%= selectedDestinations.length === 1 ? selectedDestinations[0].title + ' selected' : selectedDestinations.length + ' destinations selected' %></a><% } else { %><%= trip.destination || 'Destination undecided' %><% } %></span>
+  <details class="crew-disclosure"><summary><%= data.members.length %> <%= data.members.length === 1 ? 'person' : 'people' %></summary><ul><% data.members.forEach(member => { %><li><%= member.name %><%= member.is_organizer ? ' · organizer' : '' %></li><% }) %></ul></details>
+</div>
+<section class="research research-board" aria-labelledby="research-title">
+  <div class="section-heading"><h2 id="research-title">Research</h2><a class="button secondary" href="<%= base %>/compare?kind=<%= filters.kind === 'all' ? 'destination' : filters.kind %>"><svg class="icon small" aria-hidden="true"><use href="#i-compare"/></svg>Compare</a></div>
+  <nav class="category-tabs" aria-label="Research categories"><% Object.entries(h.kinds).forEach(([key,label]) => { %><a class="category-tab <%= filters.kind === key ? 'selected' : '' %>" href="<%= filteredUrl({kind:key}) %>" <%- filters.kind === key ? 'aria-current="page"' : '' %>><%= label %></a><% }) %></nav>
+  <details class="board-filters" <%= filters.q || filters.destination || filters.view !== 'all' ? 'open' : '' %>><summary>Search & filter<% if (filters.q || filters.destination || filters.view !== 'all') { %><span class="fine-print">Filters applied</span><% } %></summary>
+    <form class="simple-filter-form" method="get" action="<%= base %>" role="search"><input type="hidden" name="kind" value="<%= filters.kind %>">
+      <label for="search">Search<input type="search" id="search" name="q" placeholder="Name, place, or note" maxlength="200" value="<%= filters.q %>"></label>
+      <label for="destination-filter">Destination<select id="destination-filter" name="destination"><option value="">All destinations</option><% data.destinations.forEach(d => { %><option value="<%= d.id %>" <%= String(d.id) === filters.destination ? 'selected' : '' %>><%= d.title %></option><% }) %></select></label>
+      <label for="view-filter">Status<select id="view-filter" name="view"><option value="all" <%= filters.view === 'all' ? 'selected' : '' %>>All statuses</option><option value="shortlisted" <%= filters.view === 'shortlisted' ? 'selected' : '' %>>Shortlisted</option><option value="selected" <%= filters.view === 'selected' ? 'selected' : '' %>>Selected or booked</option></select></label>
+      <button class="button secondary">Apply filters</button>
+    </form>
+  </details>
+  <% if (hasFilters) { %><div class="filter-summary"><span><%= data.items.length %> <%= data.items.length === 1 ? 'idea' : 'ideas' %></span><a href="<%= base %>">Clear filters</a></div><% } %>
+  <% if (!data.items.length) { %>
+    <div class="empty-state"><h3><%= data.counts.all ? 'No matching ideas' : 'Start with an idea' %></h3><p><%= data.counts.all ? 'Try another category or clear your filters.' : 'Add a destination, place to stay, or anything worth exploring. Keep its sources and photos in the same card.' %></p><% if (data.counts.all) { %><a class="button secondary" href="<%= base %>">Show all ideas</a><% } else { %><a class="button primary" href="<%= base %>/ideas/new">Add idea</a><% } %></div>
+  <% } else { %><div class="idea-grid"><% data.items.forEach(item => { %><%- include('idea-card', {item,base,destinations:data.destinations,h,csrfToken}) %><% }) %></div><% } %>
+  <% if (viewer.isOrganizer && data.legacyHotelCount) { %><a class="text-link legacy-research-link" href="/trips/<%= trip.id %>">Earlier hotel shortlist (<%= data.legacyHotelCount %>)<svg class="icon small" aria-hidden="true"><use href="#i-arrow"/></svg></a><% } %>
+</section>

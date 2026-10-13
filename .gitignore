@@ -2,3 +2,11 @@ server/.env
 server/node_modules/
 docker-compose.override.yml
 *.log
+
+# Local design/browser tooling output, not application source.
+.playwright-mcp/
+.impeccable/review/
+.impeccable/config.local.json
+.impeccable/hook.cache.json
+.impeccable/hook.pending.json
+.github/skills/impeccable/scripts/bin/
