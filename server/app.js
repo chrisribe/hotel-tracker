@@ -5,6 +5,7 @@ const session = require('express-session');
 const PgSession = require('connect-pg-simple')(session);
 const { migrate } = require('./scripts/init-db');
 const auth = require('./middleware/planner-auth');
+const { ExchangeRates } = require('./services/ExchangeRates');
 
 async function createApp({ pool, config = {} }) {
   await migrate(pool);
@@ -30,6 +31,9 @@ async function createApp({ pool, config = {} }) {
   app.disable('x-powered-by');
   if (settings.trustProxy) app.set('trust proxy', 1);
   app.set('pool', pool);
+  const rates = new ExchangeRates(pool);
+  await rates.load();
+  app.set('rates', rates);
   app.set('plannerConfig', settings);
   app.set('sessionSecret', secret);
   app.set('view engine', 'ejs');

@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const auth = require('../middleware/planner-auth');
-const { PlannerService } = require('../services/PlannerService');
+const { PlannerService, CURRENCIES, choice } = require('../services/PlannerService');
 const service = req => new PlannerService(req.app.get('pool'));
 
 // All planner mutations (including unknown paths) require the same CSRF defense.
@@ -48,11 +48,19 @@ router.post('/plans/demo', auth.authenticated, auth.organizer, async (req, res) 
   res.redirect(`/plans/${trip.id}`);
 });
 
+// Each person picks the currency prices are shown in (session-scoped); defaults to the trip's.
+function displayMoney(req, trip) {
+  const rates = req.app.get('rates');
+  const currency = CURRENCIES.includes(req.session?.displayCurrency) ? req.session.displayCurrency : trip.currency;
+  return { currency, travelers: trip.travelers, date: rates.current?.date || null, convert: (amount, from) => rates.convert(amount, from, currency) };
+}
+
 function scoped(handler) {
   return async (req, res) => {
     const planner = service(req);
     const result = await planner.withTrip(req.params.id, req.viewer, async context => {
       req.viewer = { ...req.viewer, tripId: context.trip.id, participantId: context.participant.id };
+      context.money = res.locals.money = displayMoney(req, context.trip);
       return handler(req, planner, context);
     });
     if (result.redirect) return res.redirect(result.redirect);
@@ -74,7 +82,7 @@ router.get('/plans/:id/selected', auth.authenticated, scoped(async (req, planner
 
 router.get('/plans/:id/ideas/new', auth.authenticated, scoped(async (req, planner, context) => ({
   view: 'idea-form', data: { trip: context.trip, item: null, destinations: await planner.destinations(context),
-    formAction: `/plans/${context.trip.id}/ideas`, values: {} },
+    formAction: `/plans/${context.trip.id}/ideas`, values: { kind: req.query.kind, destination_id: req.query.destination } },
 })));
 
 router.post('/plans/:id/ideas', auth.authenticated, scoped(async (req, planner, context) => {
@@ -154,7 +162,12 @@ router.post('/plans/:id/ideas/:itemId/edit', auth.authenticated, scoped(async (r
 
 router.post('/plans/:id/ideas/:itemId/vote', auth.authenticated, scoped(async (req, planner, context) => {
   const item = await planner.vote(context, req.params.itemId);
-  return { redirect: req.body.returnTo === 'board' ? `/plans/${context.trip.id}` : `/plans/${context.trip.id}/ideas/${item.id}` };
+  const base = `/plans/${context.trip.id}`;
+  const returnTo = String(req.body.returnTo || '');
+  if (returnTo === 'board') return { redirect: `${base}#idea-${item.id}` };
+  // A destination page lists its options; voting on one returns there.
+  if (/^[1-9]\d{0,9}$/.test(returnTo)) return { redirect: `${base}/ideas/${returnTo}#idea-${item.id}` };
+  return { redirect: `${base}/ideas/${item.id}` };
 }));
 
 router.post('/plans/:id/ideas/:itemId/comments', auth.authenticated, scoped(async (req, planner, context) => {
@@ -162,8 +175,8 @@ router.post('/plans/:id/ideas/:itemId/comments', auth.authenticated, scoped(asyn
   return { redirect: `/plans/${context.trip.id}/ideas/${item.id}` };
 }));
 
-router.post('/plans/:id/ideas/:itemId/status', auth.authenticated, auth.organizer, scoped(async (req, planner, context) => {
-  const item = await planner.updateStatus(context, req.params.itemId, req.body.status);
+router.post('/plans/:id/ideas/:itemId/status', auth.authenticated, scoped(async (req, planner, context) => {
+  const item = await planner.updateStatus(context, req.viewer, req.params.itemId, req.body.status);
   return { redirect: req.body.returnTo === 'selected' ? `/plans/${context.trip.id}/selected` : `/plans/${context.trip.id}/ideas/${item.id}` };
 }));
 
@@ -175,6 +188,17 @@ router.post('/plans/:id/ideas/:itemId/delete', auth.authenticated, scoped(async 
 router.get('/plans/:id/share', auth.authenticated, auth.organizer, scoped(async (req, planner, context) => ({
   view: 'share', data: { trip: context.trip, invitePath: await planner.invite(context), members: await planner.members(context) },
 })));
+
+router.post('/plans/:id/display-currency', auth.authenticated, scoped(async (req, planner, context) => {
+  req.session.displayCurrency = choice(req.body.currency, CURRENCIES, 'currency', context.trip.currency);
+  return { redirect: `/plans/${context.trip.id}` };
+}));
+
+// Group size used to show a rough per-person share of each total quote.
+router.post('/plans/:id/travelers', auth.authenticated, auth.organizer, scoped(async (req, planner, context) => {
+  await planner.updateTrip(context, { travelers: req.body.travelers });
+  return { redirect: `/plans/${context.trip.id}/share` };
+}));
 
 router.post('/plans/:id/invite/rotate', auth.authenticated, auth.organizer, scoped(async (req, planner, context) => {
   await planner.invite(context, true);

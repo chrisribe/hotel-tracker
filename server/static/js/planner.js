@@ -30,6 +30,11 @@ document.querySelectorAll('[data-copy]').forEach(button => {
   });
 });
 
+document.querySelectorAll('select[data-autosubmit]').forEach(select => {
+  select.form.querySelector('[data-autosubmit-fallback]')?.setAttribute('hidden', '');
+  select.addEventListener('change', () => select.form.requestSubmit());
+});
+
 document.querySelectorAll('form[method="post"]').forEach(form => {
   form.addEventListener('submit', event => {
     const confirmation = form.dataset.confirm || (event.submitter?.dataset.bookedRemoval ? 'Return this booked option to the shortlist? This changes the plan only; it does not cancel a reservation.' : '');

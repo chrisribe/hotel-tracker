@@ -11,12 +11,28 @@
 </head>
 <body>
 <%
- const kinds = { all: 'All ideas', destination: 'Destinations', stay: 'Places to stay', transport: 'Getting around', activity: 'Things to do', link: 'Useful links' };
+ const kinds = { all: 'By destination', destination: 'Destinations', stay: 'Places to stay', transport: 'Getting around', activity: 'Things to do', link: 'Useful links' };
+ const plural = { stay: 'Stays', transport: 'Transport', activity: 'Activities' };
  const singular = { destination: 'Destination', stay: 'Place to stay', transport: 'Transport', activity: 'Activity', link: 'Useful link' };
  const statuses = { considering: 'Exploring', shortlisted: 'Shortlisted', selected: 'Selected', booked: 'Booked', eliminated: 'Passed on' };
+ const fmtMoney = (amount, currency = 'CAD') => new Intl.NumberFormat('en-CA', { style: 'currency', currency, minimumFractionDigits: Number(amount) % 1 ? 2 : 0, maximumFractionDigits: 2 }).format(Number(amount));
+ const display = locals.money;
+ const travelers = display && display.travelers;
  const h = {
-   kinds, singular, statuses,
-   money: (amount, currency = 'CAD') => new Intl.NumberFormat('en-CA', { style: 'currency', currency, maximumFractionDigits: 2 }).format(Number(amount)),
+   kinds, singular, plural, statuses,
+   money: fmtMoney,
+   display,
+   travelers,
+   // Rough share of a group total: total ÷ trip travelers, whole units. Empty when the group size is unset.
+   // "+" marks a lower bound when part of the total still has no quote.
+   each: (amount, currency, incomplete = false) => travelers ? '≈ ' + fmtMoney(Math.round(Number(amount) / travelers), currency) + (incomplete ? '+' : '') + ' / person' : '',
+   // A quote in the viewer's display currency: converted (≈, whole units) when a rate is known.
+   price: (amount, currency) => {
+     const converted = display && currency !== display.currency ? display.convert(Number(amount), currency) : null;
+     if (converted == null) return { text: fmtMoney(amount, currency), currency, converted: false, title: '', each: h.each(amount, currency) };
+     return { text: '≈ ' + fmtMoney(Math.round(converted), display.currency), currency: display.currency, converted: true, each: h.each(converted, display.currency),
+       title: `Quoted ${fmtMoney(amount, currency)} ${currency} · ECB rate of ${h.date(display.date)}` };
+   },
    date: value => value ? new Date(value).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : 'Dates open',
   initials: name => (name || '?').replace(/[()]/g, '').trim().split(/\s+/).slice(0, 2).map(s => s[0]).join('').toUpperCase(),
    host: url => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } },

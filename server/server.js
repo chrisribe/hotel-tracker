@@ -19,6 +19,7 @@ async function startServer() {
   }
 
   const app = await createApp({ pool });
+  app.get('rates').start();
   const port = process.env.PORT || 3000;
   return app.listen(port, () => console.log(`Hotel Tracker running on http://localhost:${port}`));
 }

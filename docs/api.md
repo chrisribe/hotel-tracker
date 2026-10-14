@@ -13,18 +13,19 @@ Every request sends `Authorization: Bearer <token>`. Bodies are JSON (max 32 KB)
 - **Attribution:** the first write to a trip adds a **Hermes** member; its ideas, sources, images and comments are credited to it. Reads never add it. Removing Hermes on the trip's Share page blocks its writes there.
 - **Rate limit:** 20 failed tokens per IP per 15 minutes, then `429` (even with the right token). Successful calls are not counted.
 - **Errors:** `{ "error": "message", "field"?: "url" }` with `400`, `401`, `403`, `404`, `413`, `429` or `500`.
+- **Strict bodies:** a field not listed for the endpoint is rejected with `400 { "error": "Unknown field \"x\". Allowed: …", "field": "x" }` and nothing is saved. The body must be a JSON object.
 
 ## Endpoints
 
 | Method | Path | Body | Returns |
 | --- | --- | --- | --- |
 | GET | `/api/v1/trips` | | `{ trips }` |
-| POST | `/api/v1/trips` | `name`, `description`, `travel_start`, `travel_end` | `201 { trip }` |
+| POST | `/api/v1/trips` | `name`, `description`, `destination`, `travel_start`, `travel_end`, `currency`, `travelers` | `201 { trip }` |
 | GET | `/api/v1/trips/:id` | | `{ trip, members, destinations, ideas, budget, missing_costs }` |
-| PATCH | `/api/v1/trips/:id` | any trip fields | `{ trip }` |
+| PATCH | `/api/v1/trips/:id` | any of the trip fields above | `{ trip }` |
 | POST | `/api/v1/trips/:id/ideas` | idea fields, optional `source_label`, `takeaway` (with `url`) | `201 { idea, comments }` |
 | GET | `/api/v1/trips/:id/ideas/:ideaId` | | `{ idea, comments }` |
-| PATCH | `/api/v1/trips/:id/ideas/:ideaId` | any idea fields, `status` | `{ idea, comments }` |
+| PATCH | `/api/v1/trips/:id/ideas/:ideaId` | any idea fields, `status` (not `source_label`/`takeaway`) | `{ idea, comments }` |
 | DELETE | `/api/v1/trips/:id/ideas/:ideaId` | | `{ deleted: true }` |
 | POST | `/api/v1/trips/:id/ideas/:ideaId/sources` | `label`, `url`, `takeaway` | `201 { idea, comments }` |
 | POST | `/api/v1/trips/:id/ideas/:ideaId/images` | `url` (public HTTPS), `caption`, `source_url` | `201 { idea, comments }` |
@@ -35,10 +36,17 @@ Every request sends `Authorization: Bearer <token>`. Bodies are JSON (max 32 KB)
 - `kind`: `destination`, `stay`, `transport`, `activity` or `link`. Defaults to `link`.
 - `title`: required.
 - `location`, `notes`, `url`.
+- `notes` are read by the whole group, so write them for people, not as a research log:
+  - **First line:** one sentence on why go (or why this place), e.g. `Volcanic lakes, hot springs and whale watching, without the beach crowds.` It is shown large as the intro.
+  - **Then:** short paragraphs on what to know (season, trade-offs, who it suits), with blank lines between them.
+  - Don't repeat what the app already shows: `cost`, `capacity`, `location`, sources and options are displayed separately. Budget extras the app can't compute (food, car, insurance) are fine.
+  - Use the language the group uses.
 - `destination_id`: the id of a destination idea on the same trip.
 - `cost`: the total quote, as a number or a string with up to 2 decimals (`7985` or `"7985.50"`). It is returned as a string (`"7985.00"`).
-- `currency`: `CAD` (default), `USD`, `EUR` or `GBP`.
+- `currency`: `CAD`, `USD`, `EUR` or `GBP`. Defaults to the trip's `currency` (itself `CAD` by default). Amounts are never converted; `budget` lists the trip currency first.
 - `capacity`: number of people.
+
+**Per person:** set the trip's `travelers` (1–100, or `null`). Each idea then returns `per_person` = `cost` ÷ `travelers` (a number rounded to the cent, `null` if either is missing), and each `budget` line gets `per_person` too. It is a rough share for the group, not a stored price: always send the **total** as `cost`.
 
 **`status`:** `considering`, `shortlisted`, `selected`, `booked` or `eliminated`.
 

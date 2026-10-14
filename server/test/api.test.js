@@ -92,6 +92,7 @@ test('an agent researches a trip end to end with its own attribution', async () 
   const ideaPath = `/trips/${tripId}/ideas/${stay.json.idea.id}`;
   assert.equal(stay.json.idea.author, 'Hermes');
   assert.equal(stay.json.idea.cost, '7985.00');
+  assert.equal(stay.json.idea.per_person, null);
   assert.equal(stay.json.idea.capacity, 8);
   assert.equal(stay.json.idea.sources[0].takeaway, 'Sleeps eight');
   assert.equal(Object.hasOwn(stay.json.idea, 'voted'), false);
@@ -107,10 +108,15 @@ test('an agent researches a trip end to end with its own attribution', async () 
   assert.deepEqual([updated.json.idea.cost, updated.json.idea.status, updated.json.idea.title, updated.json.idea.capacity, updated.json.idea.url],
     ['8100.50', 'selected', 'Beach house', 8, 'https://example.com/house']);
 
+  // Per-person is an estimate: total ÷ the trip's travelers.
+  assert.equal((await api(`/trips/${tripId}`, { method: 'PATCH', body: { travelers: 8 } })).json.trip.travelers, 8);
+  assert.equal((await api(ideaPath)).json.idea.per_person, 1012.56);
+  assert.equal((await api(`/trips/${tripId}`, { method: 'PATCH', body: { travelers: 0 } })).status, 400);
+
   board = await api(`/trips/${tripId}`);
   assert.equal(board.json.ideas.length, 2);
   assert.deepEqual(board.json.members.map(m => [m.name, m.is_agent]), [['test-organizer', false], ['Hermes', true]]);
-  assert.deepEqual(board.json.budget, [{ currency: 'CAD', total: '8100.50' }]);
+  assert.deepEqual(board.json.budget, [{ currency: 'CAD', total: '8100.50', per_person: 1012.56 }]);
   assert.equal(board.json.missing_costs, 0);
   assert.deepEqual((await api('/trips')).json.trips.map(t => t.name), ['Coast week']);
 
@@ -147,4 +153,30 @@ test('API validation errors are JSON', async () => {
   assert.deepEqual((await api('/trips/abc')).json, { error: 'Invalid trip.' });
   assert.deepEqual((await api('/trips/999999')).json, { error: 'Trip not found.' });
   assert.deepEqual((await api('/nope')).json, { error: 'Not found.' });
+});
+
+test('API rejects unknown fields instead of dropping them', async () => {
+  const tripId = (await api('/trips', { method: 'POST', body: { name: 'Strict trip' } })).json.trip.id;
+  const ideas = `/trips/${tripId}/ideas`;
+  const idea = (await api(ideas, { method: 'POST', body: { title: 'Villa' } })).json.idea;
+  const cases = [
+    ['/trips', 'POST', { name: 'X', budget: 100 }, 'budget'],
+    [`/trips/${tripId}`, 'PATCH', { status: 'selected' }, 'status'],
+    [ideas, 'POST', { title: 'Flight', cost_basis: 'per_person' }, 'cost_basis'],
+    [ideas, 'POST', { title: 'Flight', status: 'selected' }, 'status'],
+    [`${ideas}/${idea.id}`, 'PATCH', { origin_costs: { YUL: 900 } }, 'origin_costs'],
+    [`${ideas}/${idea.id}`, 'PATCH', { takeaway: 'ignored on edit' }, 'takeaway'],
+    [`${ideas}/${idea.id}/sources`, 'POST', { label: 'L', url: 'https://example.com', note: 'x' }, 'note'],
+    [`${ideas}/${idea.id}/images`, 'POST', { url: 'https://example.com/a.jpg', alt: 'x' }, 'alt'],
+    [`${ideas}/${idea.id}/comments`, 'POST', { body: 'Hi', author: 'Bob' }, 'author'],
+  ];
+  for (const [path, method, body, field] of cases) {
+    const response = await api(path, { method, body });
+    assert.equal(response.status, 400, `${method} ${path} ${field}`);
+    assert.equal(response.json.field, field);
+    assert.match(response.json.error, new RegExp(`^Unknown field "${field}"\\. Allowed: `));
+  }
+  assert.deepEqual((await api(ideas, { method: 'POST', raw: '[]' })).json, { error: 'Body must be a JSON object.' });
+  // Nothing was written by the rejected requests.
+  assert.deepEqual((await api(`/trips/${tripId}`)).json.ideas.map(i => i.title), ['Villa']);
 });

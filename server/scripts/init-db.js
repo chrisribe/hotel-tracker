@@ -6,9 +6,12 @@ CREATE TABLE IF NOT EXISTS trips (
   destination TEXT,
   travel_start DATE,
   travel_end DATE,
+  currency TEXT NOT NULL DEFAULT 'CAD' CHECK (currency IN ('CAD','USD','EUR','GBP')),
   is_demo BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'CAD' CHECK (currency IN ('CAD','USD','EUR','GBP'));
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS travelers INTEGER CHECK (travelers BETWEEN 1 AND 100);
 CREATE UNIQUE INDEX IF NOT EXISTS one_demo_trip ON trips(is_demo) WHERE is_demo;
 
 CREATE TABLE IF NOT EXISTS participants (

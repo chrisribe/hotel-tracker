@@ -3,7 +3,8 @@
  const hasError = typeof error !== 'undefined' && Boolean(error);
  const hasValue = value => value != null && String(value) !== '';
  const detailsOpen = hasError || [v.location, v.destination_id, v.notes].some(hasValue);
- const quoteOpen = hasError || [v.cost, v.capacity].some(hasValue) || (hasValue(v.currency) && v.currency !== 'CAD');
+ const tripCurrency = trip.currency || 'CAD';
+ const quoteOpen = hasError || [v.cost, v.capacity].some(hasValue) || (hasValue(v.currency) && v.currency !== tripCurrency);
 %>
 <a class="back-link" href="/plans/<%= trip.id %><%= editing ? '/ideas/' + data.item.id : '' %>"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg><%= editing ? 'Back to idea' : 'Back to research board' %></a>
 <div class="page-heading"><div><h1><%= editing ? 'Edit idea' : 'Add an idea' %></h1></div></div>
@@ -23,7 +24,7 @@
   </div></details>
   <details class="editor-disclosure" <%= quoteOpen ? 'open' : '' %>><summary>Quote & capacity <span class="optional">Optional</span></summary><div class="stack-form"><div class="form-row three">
     <label for="idea-cost">Total quote<input id="idea-cost" type="number" name="cost" min="0" max="999999999999.99" step="0.01" placeholder="Not known yet" value="<%= v.cost == null ? '' : v.cost %>"></label>
-    <label for="idea-currency">Currency<select id="idea-currency" name="currency"><% ['CAD','USD','EUR','GBP'].forEach(currency => { %><option value="<%= currency %>" <%= (v.currency || 'CAD') === currency ? 'selected' : '' %>><%= currency %></option><% }) %></select></label>
+    <label for="idea-currency">Currency<select id="idea-currency" name="currency"><% ['CAD','USD','EUR','GBP'].forEach(currency => { %><option value="<%= currency %>" <%= (v.currency || tripCurrency) === currency ? 'selected' : '' %>><%= currency %></option><% }) %></select></label>
     <label for="idea-capacity">Capacity<input id="idea-capacity" type="number" name="capacity" min="1" max="100000" step="1" placeholder="People" value="<%= v.capacity == null ? '' : v.capacity %>"></label>
   </div><p class="fine-print">Total for the stay, rental, or activity—not per night or person. Leave blank if unknown.</p></div></details>
   <p class="fine-print">Don’t include payment details, passports, or private booking documents.</p>

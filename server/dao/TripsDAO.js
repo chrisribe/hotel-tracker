@@ -1,11 +1,11 @@
 class TripsDAO {
   constructor(pool) { this.pool = pool; }
 
-  async create({ name, description, destination, travel_start, travel_end }) {
+  async create({ name, description, destination, travel_start, travel_end, currency, travelers }) {
     const r = await this.pool.query(
-      `INSERT INTO trips (name, description, destination, travel_start, travel_end)
-       VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-      [name, description ?? null, destination || null, travel_start || null, travel_end || null]
+      `INSERT INTO trips (name, description, destination, travel_start, travel_end, currency, travelers)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [name, description ?? null, destination || null, travel_start || null, travel_end || null, currency, travelers ?? null]
     );
     return r.rows[0];
   }
@@ -24,10 +24,10 @@ class TripsDAO {
     return r.rows;
   }
 
-  async update(id, { name, description, destination, travel_start, travel_end }) {
+  async update(id, { name, description, destination, travel_start, travel_end, currency, travelers }) {
     const r = await this.pool.query(
-      `UPDATE trips SET name=$1, description=$2, destination=$3, travel_start=$4, travel_end=$5 WHERE id=$6 RETURNING *`,
-      [name, description ?? null, destination || null, travel_start || null, travel_end || null, id]
+      `UPDATE trips SET name=$1, description=$2, destination=$3, travel_start=$4, travel_end=$5, currency=$6, travelers=$7 WHERE id=$8 RETURNING *`,
+      [name, description ?? null, destination || null, travel_start || null, travel_end || null, currency, travelers ?? null, id]
     );
     return r.rows[0];
   }

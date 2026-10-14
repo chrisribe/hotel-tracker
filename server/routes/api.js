@@ -1,6 +1,6 @@
 const express = require('express');
 const auth = require('../middleware/planner-auth');
-const { PlannerService, dateText } = require('../services/PlannerService');
+const { PlannerService, TRIP_FIELDS, IDEA_FIELDS, dateText, perPerson } = require('../services/PlannerService');
 
 const AGENT_NAME = 'Hermes';
 const FAILED_TOKEN_LIMIT = 20;
@@ -19,7 +19,7 @@ router.get('/trips', async (req, res) => {
   res.json({ trips: trips.map(tripJson) });
 });
 
-router.post('/trips', async (req, res) => {
+router.post('/trips', onlyFields(TRIP_FIELDS), async (req, res) => {
   // Trips belong to the organizer, not the assistant.
   const organizer = { ...req.viewer, name: req.app.get('plannerConfig').adminUser };
   const trip = await service(req).create(req.body, organizer);
@@ -32,20 +32,20 @@ router.get('/trips/:id', inTrip(async (req, planner, ctx) => {
     trip: tripJson(board.trip),
     members: board.members,
     destinations: board.destinations,
-    ideas: board.items.map(ideaJson),
-    budget: board.budget,
+    ideas: board.items.map(idea => ideaJson(idea, board.trip)),
+    budget: board.budget.map(b => ({ ...b, per_person: perPerson(b.total, board.trip.travelers) })),
     missing_costs: board.missingCosts,
   };
 }));
 
-router.patch('/trips/:id', inTrip(async (req, planner, ctx) => {
+router.patch('/trips/:id', onlyFields(TRIP_FIELDS), inTrip(async (req, planner, ctx) => {
   const trip = await planner.updateTrip(ctx, req.body);
   return { trip: tripJson(trip) };
 }));
 
 // ── Ideas ────────────────────────────────────────────────────────────
 
-router.post('/trips/:id/ideas', inTrip(async (req, planner, ctx) => {
+router.post('/trips/:id/ideas', onlyFields([...IDEA_FIELDS, 'source_label', 'takeaway']), inTrip(async (req, planner, ctx) => {
   const item = await planner.writeIdea(ctx, req.body);
   return showIdea(req, planner, ctx, item.id);
 }, 201));
@@ -53,7 +53,7 @@ router.post('/trips/:id/ideas', inTrip(async (req, planner, ctx) => {
 router.get('/trips/:id/ideas/:itemId', inTrip((req, planner, ctx) =>
   showIdea(req, planner, ctx, req.params.itemId)));
 
-router.patch('/trips/:id/ideas/:itemId', inTrip(async (req, planner, ctx) => {
+router.patch('/trips/:id/ideas/:itemId', onlyFields([...IDEA_FIELDS, 'status']), inTrip(async (req, planner, ctx) => {
   const item = await planner.patchIdea(ctx, req.viewer, req.params.itemId, req.body);
   return showIdea(req, planner, ctx, item.id);
 }));
@@ -65,15 +65,16 @@ router.delete('/trips/:id/ideas/:itemId', inTrip(async (req, planner, ctx) => {
 
 // ── Sources, images, comments ────────────────────────────────────────
 
+const REFERENCE_FIELDS = { sources: ['label', 'url', 'takeaway'], images: ['url', 'caption', 'source_url'] };
 for (const collection of ['sources', 'images']) {
-  router.post(`/trips/:id/ideas/:itemId/${collection}`, inTrip(async (req, planner, ctx) => {
+  router.post(`/trips/:id/ideas/:itemId/${collection}`, onlyFields(REFERENCE_FIELDS[collection]), inTrip(async (req, planner, ctx) => {
     const item = await planner.item(ctx, req.params.itemId);
     await planner.mutateReference(ctx, item, collection, 'add', null, req.body);
     return showIdea(req, planner, ctx, item.id);
   }, 201));
 }
 
-router.post('/trips/:id/ideas/:itemId/comments', inTrip(async (req, planner, ctx) => {
+router.post('/trips/:id/ideas/:itemId/comments', onlyFields(['body']), inTrip(async (req, planner, ctx) => {
   const item = await planner.addComment(ctx, req.params.itemId, req.body.body);
   return showIdea(req, planner, ctx, item.id);
 }, 201));
@@ -102,6 +103,21 @@ async function requireToken(req, res, next) {
   next();
 }
 
+// Rejects bodies that are not a JSON object or carry fields the endpoint would silently drop.
+function onlyFields(allowed) {
+  return (req, res, next) => {
+    const body = req.body;
+    if (body === null || typeof body !== 'object' || Array.isArray(body)) throw auth.httpError(400, 'Body must be a JSON object.');
+    const unknown = Object.keys(body).find(key => !allowed.includes(key));
+    if (unknown) {
+      const error = auth.httpError(400, `Unknown field "${unknown}". Allowed: ${allowed.join(', ')}.`);
+      error.field = unknown;
+      throw error;
+    }
+    next();
+  };
+}
+
 // Runs the handler inside the trip's transaction and sends what it returns as JSON.
 function inTrip(handler, status = 200) {
   return async (req, res) => {
@@ -113,15 +129,16 @@ function inTrip(handler, status = 200) {
 
 async function showIdea(req, planner, ctx, itemId) {
   const { item, comments } = await planner.ideaDetail(ctx, req.viewer, itemId);
-  return { idea: ideaJson(item), comments };
+  return { idea: ideaJson(item, ctx.trip), comments };
 }
 
 function tripJson(trip) {
   return { ...trip, travel_start: dateText(trip.travel_start), travel_end: dateText(trip.travel_end) };
 }
 
-function ideaJson({ author_name, voted, ...idea }) {
-  return { ...idea, author: author_name };
+// per_person is an estimate: total cost ÷ the trip's travelers (null if either is unknown).
+function ideaJson({ author_name, voted, ...idea }, trip) {
+  return { ...idea, author: author_name, per_person: perPerson(idea.cost, trip.travelers) };
 }
 
 // Express needs all four parameters to treat this as an error handler.

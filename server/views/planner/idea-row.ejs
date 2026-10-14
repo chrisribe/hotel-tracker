@@ -1,0 +1,14 @@
+<% const priced = ['stay','transport','activity'].includes(item.kind); %>
+<li class="idea-row <%= item.status === 'eliminated' ? 'passed' : '' %>" id="idea-<%= item.id %>">
+  <span class="row-icon kind-<%= item.kind %>" title="<%= h.singular[item.kind] %>"><svg class="icon" aria-hidden="true"><use href="#i-<%= h.kindIcon(item.kind) %>"/></svg><span class="sr-only"><%= h.singular[item.kind] %>:</span></span>
+  <div class="row-main">
+    <a class="row-title" href="<%= base %>/ideas/<%= item.id %>"><%= item.title %></a>
+    <span class="row-meta"><%= h.singular[item.kind] %><% if (item.location) { %> · <%= item.location %><% } %> · <%= item.author_name || 'Organizer' %><% if (item.source_count) { %> · <%= item.source_count %> <%= item.source_count === 1 ? 'source' : 'sources' %><% } %></span>
+  </div>
+  <span class="row-cost"><% if (item.cost != null) { const p = h.price(item.cost, item.currency); %><strong title="<%= p.title %>"><%= p.text %></strong><small><%= p.currency %><% if (item.capacity) { %> · fits <%= item.capacity %><% } %></small><% } else if (priced) { %><span class="no-quote">No quote yet</span><% if (item.capacity) { %><small>fits <%= item.capacity %></small><% } %><% } %></span>
+  <span class="badge <%= item.status %>"><%= h.statuses[item.status] %></span>
+  <span class="row-social">
+    <form method="post" action="<%= base %>/ideas/<%= item.id %>/vote"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="returnTo" value="<%= typeof returnTo !== 'undefined' ? returnTo : 'board' %>"><button class="social-button <%= item.voted ? 'voted' : '' %>" aria-label="<%= item.voted ? 'Remove interest in' : 'Interested in' %> <%= item.title %>" aria-pressed="<%= item.voted %>"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg><%= item.vote_count %></button></form>
+    <a class="social-button" href="<%= base %>/ideas/<%= item.id %>#discussion" aria-label="<%= item.comment_count %> comments on <%= item.title %>"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg><%= item.comment_count %></a>
+  </span>
+</li>

@@ -4,6 +4,13 @@ const { randomBytes } = require('node:crypto');
 const { Pool } = require('pg');
 const { createApp } = require('../app');
 const { migrate } = require('../scripts/init-db');
+const { parseEcb } = require('../services/ExchangeRates');
+
+test('parses ECB daily reference rates and rejects incomplete feeds', () => {
+  const xml = `<Cube><Cube time='2026-10-13'><Cube currency='USD' rate='1.1'/><Cube currency='GBP' rate='0.85'/><Cube currency='CAD' rate='1.5'/></Cube></Cube>`;
+  assert.deepEqual(parseEcb(xml), { date: '2026-10-13', rates: { EUR: 1, USD: 1.1, GBP: 0.85, CAD: 1.5 } });
+  assert.throws(() => parseEcb(xml.replace(/<Cube currency='CAD'[^>]*>/, '')));
+});
 
 // Only the randomly named schema is created/dropped; never reset the application schema.
 const schemaName = `planner_test_${randomBytes(8).toString('hex')}`;
@@ -163,6 +170,12 @@ test('authors edit/delete their own ideas, votes toggle uniquely, and comments r
   assert.equal((await bob.post(`${item}/edit`, { title: 'Stolen', kind: 'stay' })).status, 403);
   assert.equal((await bob.post(`${item}/delete`)).status, 403);
   assert.equal((await bob.post(`${item}/status`, { status: 'booked' })).status, 403);
+  assert.equal((await bob.post(`${item}/status`, { status: 'shortlisted' })).status, 302);
+  assert.equal((await bob.request(item)).page.data.item.status, 'shortlisted');
+  assert.equal((await bob.post(`${item}/status`, { status: 'considering' })).status, 302);
+  await owner.post(`${item}/status`, { status: 'selected' });
+  assert.equal((await bob.post(`${item}/status`, { status: 'shortlisted' })).status, 403);
+  await owner.post(`${item}/status`, { status: 'considering' });
   assert.equal((await alice.request(`${item}/edit`)).page.data.formAction, `${item}/edit`);
   assert.equal((await alice.post(`${item}/edit`, { title: 'Edited', kind: 'activity', currency: 'EUR', status: 'booked' })).status, 302);
   assert.equal((await alice.request(item)).page.data.item.status, 'considering');
@@ -185,6 +198,39 @@ test('authors edit/delete their own ideas, votes toggle uniquely, and comments r
   assert.equal((await owner.request(item)).status, 404);
 });
 
+test('board groups options under destinations; roll-ups never sum alternatives', async () => {
+  const { owner, alice, path } = await group();
+  const azores = await idea(owner, path, { kind: 'destination', title: 'Azores' });
+  const azoresId = Number(azores.split('/').at(-1));
+  await idea(owner, path, { kind: 'destination', title: 'Martinique' });
+  const prefill = (await alice.request(`${path}/ideas/new?kind=transport&destination=${azoresId}`)).page.data.values;
+  assert.deepEqual(prefill, { kind: 'transport', destination_id: String(azoresId) });
+  await idea(alice, path, { title: 'Cheap rental', destination_id: azoresId, cost: '6000' });
+  await idea(alice, path, { title: 'Nice rental', destination_id: azoresId, cost: '8000' });
+  const flight = await idea(alice, path, { kind: 'transport', title: 'Flight', destination_id: azoresId, cost: '1985' });
+  await idea(alice, path, { kind: 'activity', title: 'Whale watching', destination_id: azoresId });
+  const passed = await idea(alice, path, { title: 'Passed rental', destination_id: azoresId, cost: '100' });
+  await owner.post(`${passed}/status`, { status: 'eliminated' });
+  await idea(alice, path, { kind: 'link', title: 'Visa rules' });
+
+  const { groups } = (await alice.request(path)).page.data;
+  assert.deepEqual(groups.destinations.map(g => [g.destination.title, g.options.length]), [['Azores', 5], ['Martinique', 0]]);
+  const { rollup } = groups.destinations[0];
+  assert.deepEqual(rollup.estimates, [{ currency: 'CAD', total: 7985, kinds: ['stay', 'transport'], converted: false }]);
+  assert.deepEqual(rollup.ranges.map(r => [r.kind, r.min, r.max, r.count]), [['stay', 6000, 8000, 2], ['transport', 1985, 1985, 1]]);
+  assert.equal(rollup.missing, 1);
+  assert.deepEqual(groups.unlinked.map(item => item.title), ['Visa rules']);
+  assert.equal((await alice.request(`${path}?kind=stay`)).page.data.groups, null);
+
+  const detail = (await alice.request(azores)).page.data;
+  assert.equal(detail.options.length, 5);
+  assert.equal(detail.rollup.estimates[0].total, 7985);
+  assert.equal((await alice.request(flight)).page.data.options, null);
+  const flightId = flight.split('/').at(-1);
+  assert.equal((await alice.post(`${flight}/vote`, { returnTo: String(azoresId) })).location, `${azores}#idea-${flightId}`);
+  assert.equal((await alice.post(`${flight}/vote`, { returnTo: 'https://evil.example' })).location, flight);
+});
+
 test('only selected cost-bearing quotes enter separate-currency budgets; filters and destinations are trip-scoped', async () => {
   const { owner, alice, path } = await group();
   const destination = await idea(owner, path, { kind: 'destination', title: 'Option A', cost: '99999' });
@@ -198,6 +244,33 @@ test('only selected cost-bearing quotes enter separate-currency budgets; filters
   await owner.post(`${transport}/status`, { status: 'booked' });
   const board = (await owner.request(path)).page.data;
   assert.deepEqual(board.budget, [{ currency: 'CAD', total: '1200.50' }, { currency: 'USD', total: '50.25' }]);
+  // Display currency is per person (session). Without rates nothing converts; the chosen currency lists first.
+  assert.equal((await alice.post(`${path}/display-currency`, { currency: 'BTC' })).status, 400);
+  assert.equal((await alice.post(`${path}/display-currency`, { currency: 'USD' })).location, path);
+  assert.deepEqual((await alice.request(path)).page.data.budget.map(b => b.currency), ['USD', 'CAD']);
+  assert.deepEqual((await owner.request(path)).page.data.budget.map(b => b.currency), ['CAD', 'USD']);
+  // With ECB rates, quotes convert into the viewer's currency (display only).
+  app.get('rates').current = { date: '2026-10-13', rates: { EUR: 1, CAD: 1.5, USD: 1.1, GBP: 0.85 } };
+  await alice.post(`${path}/display-currency`, { currency: 'EUR' });
+  const euro = (await alice.request(path)).page.data;
+  assert.equal(euro.budget.length, 1);
+  assert.equal(euro.budget[0].currency, 'EUR');
+  assert.equal(euro.budget[0].converted, true);
+  assert.equal(euro.budget[0].total, (1200.5 / 1.5 + 50.25 / 1.1).toFixed(2));
+  app.get('rates').current = null;
+  assert.equal((await alice.request(path)).page.data.budget.length, 2);
+  // Organizer sets the group size; every viewer sees total ÷ travelers as a rough share.
+  assert.equal((await alice.post(`${path}/travelers`, { travelers: '4' })).status, 403);
+  assert.equal((await owner.post(`${path}/travelers`, { travelers: '4' })).location, `${path}/share`);
+  const split = (await alice.request(path)).page.html;
+  assert.ok(split.includes('≈ $300+ / person'), 'stay-only estimate is a lower bound per person');
+  assert.ok((await alice.request(`${path}/selected`)).page.html.includes('≈ $300+ / person'), 'an unquoted selection makes the share a lower bound');
+  await owner.post(`${path}/travelers`, { travelers: '' });
+  assert.ok(!(await alice.request(path)).page.html.includes('/ person'));
+  // Trip currency is the default for new quotes.
+  const usdTrip = (await owner.post('/plans', { name: 'US trip', currency: 'USD' })).location;
+  const usdDefault = await idea(owner, usdTrip, { kind: 'activity', title: 'Defaults to trip currency', cost: '10' });
+  assert.equal((await owner.request(usdDefault)).page.data.item.currency, 'USD');
   assert.equal(board.missingCosts, 1);
   assert.equal(board.counts.all, 6);
   assert.equal(board.counts.shortlisted, 0);

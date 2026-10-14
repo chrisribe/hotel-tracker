@@ -13,7 +13,7 @@ const { DEMO_TRIP, seedDemoIdeas } = require('./plannerDemo');
 const KINDS = ['destination', 'stay', 'transport', 'activity', 'link'];
 const STATUSES = ['considering', 'shortlisted', 'selected', 'booked', 'eliminated'];
 const CURRENCIES = ['CAD', 'USD', 'EUR', 'GBP'];
-const TRIP_FIELDS = ['name', 'description', 'destination', 'travel_start', 'travel_end'];
+const TRIP_FIELDS = ['name', 'description', 'destination', 'travel_start', 'travel_end', 'currency', 'travelers'];
 const IDEA_FIELDS = ['kind', 'title', 'location', 'notes', 'url', 'destination_id', 'cost', 'currency', 'capacity'];
 
 const pick = (body, fields) => Object.fromEntries(fields.filter(field => Object.hasOwn(body, field)).map(field => [field, body[field]]));
@@ -21,6 +21,65 @@ const pick = (body, fields) => Object.fromEntries(fields.filter(field => Object.
 // pg parses DATE as local midnight; format back without a timezone shift.
 const pad = n => String(n).padStart(2, '0');
 const dateText = value => value instanceof Date ? `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}` : value;
+
+const PRICED_KINDS = ['stay', 'transport', 'activity'];
+const KIND_ORDER = ['stay', 'transport', 'activity', 'link', 'destination'];
+const STATUS_ORDER = ['booked', 'selected', 'shortlisted', 'considering', 'eliminated'];
+const byStatus = (a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status);
+const sortOptions = items => [...items].sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind) || byStatus(a, b));
+// Rows in the display currency come first.
+const tripCurrencyFirst = (rows, currency) => [...rows].sort((a, b) => (b.currency === currency) - (a.currency === currency));
+// money = { currency, convert(amount, from) }: the viewer's display currency. Without a known rate
+// an amount stays in its quoted currency, so totals are never mixed silently.
+const moneyFor = context => context.money || { currency: context.trip.currency, convert: () => null };
+function inDisplay(amount, currency, money) {
+  const converted = currency === money.currency ? null : money.convert(Number(amount), currency);
+  return converted == null ? { amount: Number(amount), currency, converted: false } : { amount: converted, currency: money.currency, converted: true };
+}
+
+// What a destination's options add up to. Options are alternatives, so never sum them all:
+// show a price range per kind, and a "from" estimate of the cheapest stay + transport.
+function rollup(options, money) {
+  const active = options.filter(option => option.status !== 'eliminated' && PRICED_KINDS.includes(option.kind));
+  const ranges = new Map();
+  for (const option of active.filter(o => o.cost != null)) {
+    const value = inDisplay(option.cost, option.currency, money);
+    const key = `${option.kind}:${value.currency}`;
+    const range = ranges.get(key) || { kind: option.kind, currency: value.currency, min: Infinity, max: -Infinity, count: 0, converted: false };
+    range.min = Math.min(range.min, value.amount);
+    range.max = Math.max(range.max, value.amount);
+    range.count += 1;
+    range.converted ||= value.converted;
+    ranges.set(key, range);
+  }
+  const estimates = new Map();
+  for (const range of ranges.values()) {
+    if (range.kind === 'activity') continue;
+    const estimate = estimates.get(range.currency) || { currency: range.currency, total: 0, kinds: [], converted: false };
+    estimate.total += range.min;
+    estimate.kinds.push(range.kind);
+    estimate.converted ||= range.converted;
+    estimates.set(range.currency, estimate);
+  }
+  return {
+    ranges: [...ranges.values()].sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind)),
+    estimates: tripCurrencyFirst([...estimates.values()], money.currency),
+    missing: active.filter(option => option.cost == null).length,
+    count: options.length,
+    currency: money.currency,
+  };
+}
+
+// Board default: each destination with the options linked to it, then everything else.
+function destinationGroups(items, destinations, money) {
+  const groups = destinations.map(meta => {
+    const destination = items.find(item => item.id === meta.id);
+    const options = sortOptions(items.filter(item => item.destination_id === meta.id));
+    return { destination: destination || meta, matched: Boolean(destination), options, rollup: rollup(options, money) };
+  }).filter(group => group.matched || group.options.length);
+  groups.sort((a, b) => byStatus(a.destination, b.destination));
+  return { destinations: groups, unlinked: sortOptions(items.filter(item => item.kind !== 'destination' && !item.destination_id)) };
+}
 
 function text(value, label, max, required = false) {
   if (value == null) value = '';
@@ -52,6 +111,19 @@ function date(value, label) {
   return normalized;
 }
 
+// Group size used to split total quotes per person. Blank = not decided.
+function travelers(value) {
+  if (value == null || value === '') return null;
+  const count = id(value, 'number of travelers');
+  if (count > 100) throw httpError(400, 'Number of travelers must be between 1 and 100.');
+  return count;
+}
+
+// Total quote divided by the trip's travelers, to the cent; null when either is unknown.
+function perPerson(cost, count) {
+  return cost == null || !count ? null : Math.round(Number(cost) * 100 / count) / 100;
+}
+
 function tripValues(body) {
   const values = {
     name: text(body.name, 'Trip name', 120, true),
@@ -59,6 +131,8 @@ function tripValues(body) {
     destination: text(body.destination, 'Destination', 200),
     travel_start: date(body.travel_start, 'start date'),
     travel_end: date(body.travel_end, 'end date'),
+    currency: choice(body.currency, CURRENCIES, 'currency', 'CAD'),
+    travelers: travelers(body.travelers),
   };
   if (values.travel_start && values.travel_end && values.travel_start > values.travel_end) throw httpError(400, 'End date must be on or after the start date.');
   return values;
@@ -93,14 +167,14 @@ function imageValues(body) {
     source_url: referenceField('credit', () => referenceUrl(body.source_url, 'Image source URL')) || null };
 }
 
-function ideaValues(body) {
+function ideaValues(body, defaultCurrency = 'CAD') {
   const values = {
     kind: choice(body.kind, KINDS, 'idea kind', 'link'),
     title: text(body.title, 'Title', 160, true),
     location: text(body.location, 'Location', 200),
     notes: text(body.notes, 'Notes', 10000),
     url: referenceUrl(body.url, 'URL'),
-    currency: choice(body.currency, CURRENCIES, 'currency', 'CAD'),
+    currency: choice(body.currency, CURRENCIES, 'currency', defaultCurrency),
     destination_id: body.destination_id == null || body.destination_id === '' ? null : id(body.destination_id, 'destination'),
     cost: null,
     capacity: null,
@@ -203,15 +277,24 @@ class PlannerService {
   async ideaDetail(context, viewer, itemId) {
     const item = await this.item(context, itemId);
     await this.attachReferences(context, [item]);
+    let options = null;
+    if (item.kind === 'destination') options = await this.destinationOptions(context, item);
     return {
       trip: context.trip,
       item,
+      options,
+      rollup: options && rollup(options, moneyFor(context)),
       comments: await context.dao.comments.listForIdea(item.id),
       sourceValues: {},
       imageValues: {},
       canEdit: this.canEdit(viewer, context, item),
       destinations: await this.destinations(context),
     };
+  }
+
+  async destinationOptions(context, destination) {
+    const linked = await context.dao.ideas.list(context.trip.id, context.participant.id, { kind: 'all', destination: destination.id, q: '', view: 'all' });
+    return sortOptions(linked.filter(option => option.id !== destination.id));
   }
 
   async vote(context, itemId) {
@@ -226,10 +309,13 @@ class PlannerService {
     return item;
   }
 
-  async updateStatus(context, itemId, status) {
+  // Members may only move ideas between considering and shortlisted; decisions stay with the organizer.
+  async updateStatus(context, viewer, itemId, status) {
     const item = await this.item(context, itemId);
     const value = choice(status, STATUSES, 'status', null);
     if (!value) throw httpError(400, 'Choose a status.');
+    const open = ['considering', 'shortlisted'];
+    if (!viewer.isOrganizer && !(open.includes(item.status) && open.includes(value))) throw httpError(403, 'Only the organizer can make this decision.');
     await context.dao.ideas.setStatus(context.trip.id, item.id, value);
     return item;
   }
@@ -245,7 +331,7 @@ class PlannerService {
     this.ensureCanEdit(viewer, context, item);
     const changes = pick(body, IDEA_FIELDS);
     if (Object.keys(changes).length) await this.writeIdea(context, { ...pick(item, IDEA_FIELDS), ...changes }, item);
-    if (Object.hasOwn(body, 'status')) await this.updateStatus(context, item.id, body.status);
+    if (Object.hasOwn(body, 'status')) await this.updateStatus(context, viewer, item.id, body.status);
     return item;
   }
 
@@ -274,15 +360,15 @@ class PlannerService {
     if (filters.destination && !destinations.some(d => d.id === Number(filters.destination))) throw httpError(400, 'Destination must belong to this trip.');
     const items = await dao.ideas.list(trip.id, participant.id, filters);
     const counts = { all: 0, destination: 0, stay: 0, transport: 0, activity: 0, link: 0, shortlisted: 0, selected: 0 };
-    const groups = await dao.ideas.countByKindAndStatus(trip.id);
-    for (const group of groups) {
+    for (const group of await dao.ideas.countByKindAndStatus(trip.id)) {
       counts.all += group.count;
       counts[group.kind] += group.count;
       if (group.status === 'shortlisted') counts.shortlisted += group.count;
       if (['selected', 'booked'].includes(group.status)) counts.selected += group.count;
     }
     const { budget, missingCosts } = await this.selectedBudget(context);
-    return { trip, items, destinations, members: await this.members(context), counts, filters, budget, missingCosts };
+    const groups = filters.kind === 'all' ? destinationGroups(items, destinations, moneyFor(context)) : null;
+    return { trip, items, groups, destinations, members: await this.members(context), counts, filters, budget, missingCosts };
   }
 
   async compare(context, query) {
@@ -324,15 +410,22 @@ class PlannerService {
     return { trip: context.trip, items, ...await this.selectedBudget(context), destinations, selectionWarnings };
   }
 
-  async selectedBudget({ dao, trip }) {
-    const budget = await dao.ideas.selectedTotals(trip.id);
+  async selectedBudget(context) {
+    const { dao, trip } = context;
+    const money = moneyFor(context);
+    const rows = await dao.ideas.selectedTotals(trip.id);
+    const values = rows.map(row => inDisplay(row.total, row.currency, money));
+    // One converted total when every currency has a rate; otherwise separate lines per currency.
+    const budget = values.some(v => v.converted) && values.every(v => v.currency === money.currency)
+      ? [{ currency: money.currency, total: values.reduce((sum, v) => sum + v.amount, 0).toFixed(2), converted: true, parts: rows }]
+      : tripCurrencyFirst(rows, money.currency);
     const missingCosts = await dao.ideas.countSelectedWithoutCost(trip.id);
     return { budget, missingCosts };
   }
 
   async writeIdea(context, body, existing = null) {
     const { dao, trip, participant } = context;
-    const v = ideaValues(body);
+    const v = ideaValues(body, trip.currency);
     if (!existing && !v.url && (body.source_label || body.takeaway)) {
       throw httpError(400, 'Add a first source URL to save its label and takeaway, or clear those fields.');
     }
@@ -441,4 +534,4 @@ class PlannerService {
   }
 }
 
-module.exports = { PlannerService, KINDS, STATUSES, CURRENCIES, text, id, choice, tripValues, ideaValues, dateText };
+module.exports = { PlannerService, KINDS, STATUSES, CURRENCIES, TRIP_FIELDS, IDEA_FIELDS, text, id, choice, tripValues, ideaValues, dateText, perPerson };

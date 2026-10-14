@@ -3,27 +3,69 @@
  const filteredUrl = changes => base + '?' + new URLSearchParams({ ...filters, ...changes }).toString();
  const selectedDestinations = data.destinations.filter(d => ['selected','booked'].includes(d.status));
  const hasFilters = filters.q || filters.destination || filters.kind !== 'all' || filters.view !== 'all';
+ const narrowed = filters.destination || filters.view !== 'all';
+ const rowArgs = { base, h, csrfToken };
 %>
 <% if (trip.is_demo) { %><div class="demo-note"><span class="badge sample">Sample trip</span><span>Fictional ideas and quotes—not live offers.</span></div><% } %>
-<div class="page-heading"><div><h1><%= trip.name %></h1><% if (trip.description) { %><p><%= trip.description %></p><% } %></div><div class="heading-actions"><% if (viewer.isOrganizer) { %><a class="button subtle" href="<%= base %>/share">People & invites</a><% } %><a class="button primary" href="<%= base %>/ideas/new"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Add idea</a></div></div>
-<div class="trip-context">
-  <span><svg class="icon small" aria-hidden="true"><use href="#i-calendar"/></svg><%= trip.travel_start ? h.date(trip.travel_start) + (trip.travel_end ? ' – ' + h.date(trip.travel_end) : '') : 'Dates open' %></span>
-  <span><svg class="icon small" aria-hidden="true"><use href="#i-pin"/></svg><% if (selectedDestinations.length) { %><a href="<%= base %>/selected"><%= selectedDestinations.length === 1 ? selectedDestinations[0].title + ' selected' : selectedDestinations.length + ' destinations selected' %></a><% } else { %><%= trip.destination || 'Destination undecided' %><% } %></span>
-  <details class="crew-disclosure"><summary><%= data.members.length %> <%= data.members.length === 1 ? 'person' : 'people' %></summary><ul><% data.members.forEach(member => { %><li><%= member.name %><%= member.is_organizer ? ' · organizer' : member.is_agent ? ' · assistant' : '' %></li><% }) %></ul></details>
-</div>
+<header class="board-header">
+  <div class="board-title">
+    <h1><%= trip.name %></h1>
+    <div class="trip-context">
+      <span><svg class="icon small" aria-hidden="true"><use href="#i-calendar"/></svg><%= trip.travel_start ? h.date(trip.travel_start) + (trip.travel_end ? ' – ' + h.date(trip.travel_end) : '') : 'Dates open' %></span>
+      <span><svg class="icon small" aria-hidden="true"><use href="#i-pin"/></svg><% if (selectedDestinations.length) { %><a href="<%= base %>/selected"><%= selectedDestinations.length === 1 ? selectedDestinations[0].title + ' selected' : selectedDestinations.length + ' destinations selected' %></a><% } else { %><%= trip.destination || 'Destination undecided' %><% } %></span>
+      <details class="crew-disclosure"><summary><svg class="icon small" aria-hidden="true"><use href="#i-people"/></svg><%= data.members.length %> joined</summary><ul><% data.members.forEach(member => { %><li><%= member.name %><%= member.is_organizer ? ' · organizer' : member.is_agent ? ' · assistant' : '' %></li><% }) %></ul></details>
+      <% const shown = h.display ? h.display.currency : trip.currency; %><form class="currency-switch" method="post" action="<%= base %>/display-currency"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><label for="display-currency">Prices in</label><select id="display-currency" name="currency" data-autosubmit aria-describedby="rate-note"><% ['CAD','EUR','USD','GBP'].forEach(currency => { %><option value="<%= currency %>" <%= shown === currency ? 'selected' : '' %>><%= currency %></option><% }) %></select><button class="button subtle small" data-autosubmit-fallback>Show</button><span class="rate-note" id="rate-note"><%= h.display && h.display.date ? '≈ ECB rate, ' + h.date(h.display.date) : 'As quoted' %></span></form>
+      <% if (trip.travelers) { %><span><%= trip.travelers %> travelers</span><% } %>
+    </div>
+    <% if (trip.description) { %><p class="board-description"><%= trip.description %></p><% } %>
+  </div>
+  <div class="heading-actions"><a class="button subtle" href="<%= base %>/compare?kind=<%= filters.kind === 'all' ? 'destination' : filters.kind %>"><svg class="icon small" aria-hidden="true"><use href="#i-compare"/></svg>Compare</a><% if (viewer.isOrganizer) { %><a class="button subtle" href="<%= base %>/share">People & invites</a><% } %><a class="button primary" href="<%= base %>/ideas/new"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Add idea</a></div>
+</header>
 <section class="research research-board" aria-labelledby="research-title">
-  <div class="section-heading"><h2 id="research-title">Research</h2><a class="button secondary" href="<%= base %>/compare?kind=<%= filters.kind === 'all' ? 'destination' : filters.kind %>"><svg class="icon small" aria-hidden="true"><use href="#i-compare"/></svg>Compare</a></div>
-  <nav class="category-tabs" aria-label="Research categories"><% Object.entries(h.kinds).forEach(([key,label]) => { %><a class="category-tab <%= filters.kind === key ? 'selected' : '' %>" href="<%= filteredUrl({kind:key}) %>" <%- filters.kind === key ? 'aria-current="page"' : '' %>><%= label %></a><% }) %></nav>
-  <details class="board-filters" <%= filters.q || filters.destination || filters.view !== 'all' ? 'open' : '' %>><summary>Search & filter<% if (filters.q || filters.destination || filters.view !== 'all') { %><span class="fine-print">Filters applied</span><% } %></summary>
-    <form class="simple-filter-form" method="get" action="<%= base %>" role="search"><input type="hidden" name="kind" value="<%= filters.kind %>">
-      <label for="search">Search<input type="search" id="search" name="q" placeholder="Name, place, or note" maxlength="200" value="<%= filters.q %>"></label>
-      <label for="destination-filter">Destination<select id="destination-filter" name="destination"><option value="">All destinations</option><% data.destinations.forEach(d => { %><option value="<%= d.id %>" <%= String(d.id) === filters.destination ? 'selected' : '' %>><%= d.title %></option><% }) %></select></label>
-      <label for="view-filter">Status<select id="view-filter" name="view"><option value="all" <%= filters.view === 'all' ? 'selected' : '' %>>All statuses</option><option value="shortlisted" <%= filters.view === 'shortlisted' ? 'selected' : '' %>>Shortlisted</option><option value="selected" <%= filters.view === 'selected' ? 'selected' : '' %>>Selected or booked</option></select></label>
-      <button class="button secondary">Apply filters</button>
+  <h2 id="research-title" class="sr-only">Research</h2>
+  <div class="board-toolbar">
+    <nav class="category-tabs" aria-label="Research views"><% Object.entries(h.kinds).forEach(([key,label]) => { %><a class="category-tab <%= filters.kind === key ? 'selected' : '' %>" href="<%= filteredUrl({kind:key}) %>" <%- filters.kind === key ? 'aria-current="page"' : '' %>><%= label %><% if (key !== 'all') { %> <span><%= data.counts[key] %></span><% } %></a><% }) %></nav>
+    <form class="board-search" method="get" action="<%= base %>" role="search"><input type="hidden" name="kind" value="<%= filters.kind %>">
+      <label for="search" class="sr-only">Search ideas</label><input type="search" id="search" name="q" placeholder="Search ideas" maxlength="200" value="<%= filters.q %>">
+      <details class="board-filters"><summary>Filters<% if (narrowed) { %> <span class="filter-dot">on</span><% } %></summary>
+        <div class="filter-panel">
+          <label for="destination-filter">Destination<select id="destination-filter" name="destination"><option value="">All destinations</option><% data.destinations.forEach(d => { %><option value="<%= d.id %>" <%= String(d.id) === filters.destination ? 'selected' : '' %>><%= d.title %></option><% }) %></select></label>
+          <label for="view-filter">Status<select id="view-filter" name="view"><option value="all" <%= filters.view === 'all' ? 'selected' : '' %>>All statuses</option><option value="shortlisted" <%= filters.view === 'shortlisted' ? 'selected' : '' %>>Shortlisted</option><option value="selected" <%= filters.view === 'selected' ? 'selected' : '' %>>Selected or booked</option></select></label>
+          <button class="button secondary">Apply filters</button>
+        </div>
+      </details>
+      <button class="button secondary">Search</button>
     </form>
-  </details>
-  <% if (hasFilters) { %><div class="filter-summary"><span><%= data.items.length %> <%= data.items.length === 1 ? 'idea' : 'ideas' %></span><a href="<%= base %>">Clear filters</a></div><% } %>
+  </div>
+  <% if (hasFilters && (filters.q || narrowed)) { %><div class="filter-summary"><span><%= data.items.length %> matching <%= data.items.length === 1 ? 'idea' : 'ideas' %></span><a href="<%= filteredUrl({q:'', destination:'', view:'all'}) %>">Clear filters</a></div><% } %>
   <% if (!data.items.length) { %>
-    <div class="empty-state"><h3><%= data.counts.all ? 'No matching ideas' : 'Start with an idea' %></h3><p><%= data.counts.all ? 'Try another category or clear your filters.' : 'Add a destination, place to stay, or anything worth exploring. Keep its sources and photos in the same card.' %></p><% if (data.counts.all) { %><a class="button secondary" href="<%= base %>">Show all ideas</a><% } else { %><a class="button primary" href="<%= base %>/ideas/new">Add idea</a><% } %></div>
+    <div class="empty-state"><h3><%= data.counts.all ? 'No matching ideas' : 'Start with a destination' %></h3><p><%= data.counts.all ? 'Try another view or clear your filters.' : 'Add the places you are considering. Stays, transport and activities then group under each one, so the options are easy to weigh.' %></p><% if (data.counts.all) { %><a class="button secondary" href="<%= base %>">Show everything</a><% } else { %><a class="button primary" href="<%= base %>/ideas/new?kind=destination">Add a destination</a><% } %></div>
+  <% } else if (data.groups) { %>
+    <div class="destination-list">
+    <% data.groups.destinations.forEach(group => { const d = group.destination; %>
+      <section class="destination-group <%= d.status === 'eliminated' ? 'passed' : '' %>" id="idea-<%= d.id %>" aria-labelledby="dest-<%= d.id %>">
+        <header class="destination-head">
+          <% if (d.cover_image) { %><a class="destination-thumb" href="<%= base %>/ideas/<%= d.id %>" tabindex="-1" aria-hidden="true"><img src="<%= d.cover_image.url %>" alt="" loading="lazy" referrerpolicy="no-referrer"></a><% } else { %><span class="destination-thumb empty" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg></span><% } %>
+          <div class="destination-name">
+            <h3 id="dest-<%= d.id %>"><a href="<%= base %>/ideas/<%= d.id %>"><%= d.title %></a></h3>
+            <div class="destination-meta"><span class="badge <%= d.status %>"><%= h.statuses[d.status] %></span><% if (group.matched && d.location) { %><span><%= d.location %></span><% } %><span><%= group.options.length %> <%= group.options.length === 1 ? 'option' : 'options' %></span><% if (!group.matched) { %><span class="fine-print">Destination itself doesn’t match the filters</span><% } %></div>
+          </div>
+          <%- include('rollup', { rollup: group.rollup, h }) %>
+          <div class="destination-actions">
+            <% if (group.matched) { %><form method="post" action="<%= base %>/ideas/<%= d.id %>/vote"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="returnTo" value="board"><button class="social-button <%= d.voted ? 'voted' : '' %>" aria-label="<%= d.voted ? 'Remove interest in' : 'Interested in' %> <%= d.title %>" aria-pressed="<%= d.voted %>"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg><%= d.vote_count %></button></form><a class="social-button" href="<%= base %>/ideas/<%= d.id %>#discussion" aria-label="<%= d.comment_count %> comments on <%= d.title %>"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg><%= d.comment_count %></a><% } %>
+            <a class="button subtle small" href="<%= base %>/ideas/new?kind=stay&amp;destination=<%= d.id %>"><svg class="icon small" aria-hidden="true"><use href="#i-plus"/></svg>Add option<span class="sr-only"> for <%= d.title %></span></a>
+          </div>
+        </header>
+        <% if (group.options.length) { %><ul class="option-list" aria-label="Options for <%= d.title %>"><% group.options.forEach(item => { %><%- include('idea-row', { item, ...rowArgs }) %><% }) %></ul>
+        <% } else { %><p class="option-empty">No stays, transport or activities linked yet.</p><% } %>
+      </section>
+    <% }) %>
+    <% if (data.groups.unlinked.length) { %>
+      <section class="destination-group unlinked" aria-labelledby="dest-none">
+        <header class="destination-head"><span class="destination-thumb empty" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-link"/></svg></span><div class="destination-name"><h3 id="dest-none">Not tied to a destination</h3><div class="destination-meta"><span>Link an idea to a destination when you edit it, so it counts toward that place.</span></div></div></header>
+        <ul class="option-list" aria-label="Ideas not tied to a destination"><% data.groups.unlinked.forEach(item => { %><%- include('idea-row', { item, ...rowArgs }) %><% }) %></ul>
+      </section>
+    <% } %>
+    </div>
   <% } else { %><div class="idea-grid"><% data.items.forEach(item => { %><%- include('idea-card', {item,base,destinations:data.destinations,h,csrfToken}) %><% }) %></div><% } %>
 </section>
