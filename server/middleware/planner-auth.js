@@ -1,4 +1,6 @@
 const { randomBytes, createHash, createHmac, timingSafeEqual } = require('node:crypto');
+const ParticipantsDAO = require('../dao/ParticipantsDAO');
+const AttemptsDAO = require('../dao/AttemptsDAO');
 
 const digest = value => createHash('sha256').update(String(value)).digest();
 const tokenHash = value => digest(value).toString('hex');
@@ -54,11 +56,10 @@ async function identify(req, res, next) {
   if (req.session.isOrganizer === true) {
     req.viewer = { ...req.viewer, isOrganizer: true, name: req.app.get('plannerConfig').adminUser };
   } else if (req.session.participantId) {
-    const { rows } = await req.app.get('pool').query(
-      'SELECT * FROM participants WHERE id=$1 AND trip_id=$2 AND active=TRUE AND is_organizer=FALSE',
-      [req.session.participantId, req.session.tripId]);
-    if (rows[0]) {
-      req.viewer = { isOrganizer: false, name: rows[0].name, participantId: rows[0].id, tripId: rows[0].trip_id };
+    const participant = await new ParticipantsDAO(req.app.get('pool'))
+      .findActiveGuest(req.session.tripId, req.session.participantId);
+    if (participant) {
+      req.viewer = { isOrganizer: false, name: participant.name, participantId: participant.id, tripId: participant.trip_id };
     } else req.membershipRevoked = true;
   }
   next();
@@ -82,19 +83,9 @@ function credentialsMatch(user, password, config) {
   return Boolean(config.adminUser && config.adminPass && userMatches && passwordMatches);
 }
 
-async function attempt(req, scope, limit, consume = true) {
-  const pool = req.app.get('pool');
+async function attempt(req, scope, limit) {
   const key = createHmac('sha256', req.app.get('sessionSecret')).update(`${scope}:${req.ip}`).digest('hex');
-  if (!consume) {
-    const { rows } = await pool.query('SELECT attempts FROM planner_attempts WHERE key=$1 AND expires_at>NOW()', [key]);
-    if (rows[0]?.attempts >= limit) throw httpError(429, 'Too many attempts. Try again in 15 minutes.');
-    return;
-  }
-  await pool.query('DELETE FROM planner_attempts WHERE expires_at <= NOW()');
-  const { rows } = await pool.query(`
-    INSERT INTO planner_attempts(key,attempts,expires_at) VALUES($1,1,NOW()+INTERVAL '15 minutes')
-    ON CONFLICT(key) DO UPDATE SET attempts=planner_attempts.attempts+1 RETURNING attempts`, [key]);
-  if (rows[0].attempts > limit) throw httpError(429, 'Too many attempts. Try again in 15 minutes.');
+  if (await new AttemptsDAO(req.app.get('pool')).increment(key) > limit) throw httpError(429, 'Too many attempts. Try again in 15 minutes.');
 }
 
 function regenerate(req) {
@@ -109,24 +100,5 @@ function saveSession(req) {
   return new Promise((resolve, reject) => req.session.save(error => error ? reject(error) : resolve()));
 }
 
-async function legacyAuth(req, res, next) {
-  if (req.viewer.isOrganizer) return next();
-  if (req.session.participantId) throw httpError(403, 'Legacy hotels and trips are organizer-only.');
-  const header = req.get('authorization');
-  if (header?.startsWith('Basic ')) {
-    // Basic credentials accompany every legacy request; only failures consume attempts.
-    await attempt(req, 'legacy-login', 30, false);
-    const credentials = Buffer.from(header.slice(6), 'base64').toString('utf8');
-    const separator = credentials.indexOf(':');
-    if (separator >= 0 && credentialsMatch(credentials.slice(0, separator), credentials.slice(separator + 1), req.app.get('plannerConfig'))) {
-      return next();
-    }
-    await attempt(req, 'legacy-login', 30);
-    res.set('WWW-Authenticate', 'Basic realm="HotelTracker"');
-    throw httpError(401, 'Organizer credentials are required.');
-  }
-  return res.redirect('/login');
-}
-
 module.exports = { render, httpError, sameOrigin, csrfProtection, identify, authenticated, organizer,
-  credentialsMatch, attempt, regenerate, saveSession, legacyAuth, randomToken, tokenHash };
+  credentialsMatch, attempt, regenerate, saveSession, randomToken, tokenHash };

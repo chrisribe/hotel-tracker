@@ -1,6 +1,0 @@
-<%
-  const { trips } = pageData;
-%>
-<% trips.forEach(trip => { %>
-  <%- include('./trip-card.ejs', { pageData: { trip } }) %>
-<% }); %>

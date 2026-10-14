@@ -20,7 +20,7 @@ Participants join using a private invite link and a display name, not individual
 
 ## Capabilities and Constraints
 
-- Preserve the existing Express/EJS/PostgreSQL application, Docker Compose deployment, and existing hotel data.
+- Express/EJS/PostgreSQL application with Docker Compose deployment. Greenfield: no legacy data or routes to preserve.
 - Destination and travel dates may remain undecided while research accumulates.
 - Accommodation includes hotels and vacation rentals; rental cars also belong in the research.
 - Private trip membership must be checked on every read and write.
@@ -45,7 +45,6 @@ Participants join using a private invite link and a display name, not individual
 
 **Source & Image Handling:**
 - Source pages accept HTTP(S); image references require HTTPS and reject obvious localhost/private IP literals, without DNS verification. No server-side proxying, upload endpoints, or image fetching. External image hosts receive viewers' IP and can block/expire references. Image referrer policy is `no-referrer`.
-- Valid legacy research-item URLs are imported into source collections once, preserving attribution. Edited/deleted imports are not recreated on restart. Existing hotel records remain intact in their original tables and views.
 
 **Comparison & Selection:**
 - Compare 2–4 same-kind same-trip options via `/plans/:id/compare` (e.g., hotels, rental agencies, tours).

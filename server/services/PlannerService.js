@@ -1,7 +1,6 @@
 const { transaction, normalizeReferenceUrl } = require('../scripts/init-db');
 const { httpError, randomToken, tokenHash } = require('../middleware/planner-auth');
 const TripsDAO = require('../dao/TripsDAO');
-const HotelsDAO = require('../dao/HotelsDAO');
 const ParticipantsDAO = require('../dao/ParticipantsDAO');
 const InvitesDAO = require('../dao/InvitesDAO');
 const IdeasDAO = require('../dao/IdeasDAO');
@@ -113,7 +112,7 @@ function ideaValues(body) {
 // Every DAO in one transaction shares the same client.
 function daos(db) {
   return {
-    trips: new TripsDAO(db), hotels: new HotelsDAO(db), participants: new ParticipantsDAO(db), invites: new InvitesDAO(db),
+    trips: new TripsDAO(db), participants: new ParticipantsDAO(db), invites: new InvitesDAO(db),
     ideas: new IdeasDAO(db), sources: new SourcesDAO(db), images: new ImagesDAO(db), comments: new CommentsDAO(db), votes: new VotesDAO(db),
   };
 }
@@ -252,8 +251,7 @@ class PlannerService {
       if (['selected', 'booked'].includes(group.status)) counts.selected += group.count;
     }
     const { budget, missingCosts } = await this.selectedBudget(context);
-    const legacyHotelCount = await dao.hotels.countByTrip(trip.id);
-    return { trip, items, destinations, members: await this.members(context), counts, filters, budget, missingCosts, legacyHotelCount };
+    return { trip, items, destinations, members: await this.members(context), counts, filters, budget, missingCosts };
   }
 
   async compare(context, query) {

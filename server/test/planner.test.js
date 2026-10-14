@@ -117,8 +117,6 @@ test('organizer creates trips, invite joins are scoped, and guests contribute wi
   assert.equal((await guest.request(invite)).location, boardPath);
   assert.equal((await guest.request('/plans')).page.data.trips.length, 1);
   assert.equal((await guest.request(second.location)).status, 404);
-  assert.equal((await guest.request('/trips')).status, 403);
-  assert.equal((await guest.request('/hotels/1')).status, 403);
   assert.equal((await guest.request(`${boardPath}/share`)).status, 403);
   assert.equal((await outsider.request(boardPath)).location, '/login');
   await guest.request(`${boardPath}/ideas/new`);
@@ -312,54 +310,6 @@ test('demo is explicit, fictional, and concurrent/idempotent; GET pages do not c
   assert.deepEqual((await pool.query('SELECT row_to_json(p) AS member FROM participants p ORDER BY id')).rows, before);
   assert.deepEqual((await pool.query('SELECT * FROM trip_invites ORDER BY trip_id')).rows, inviteBefore);
   assert.equal((await owner.request('/plans')).page.data.trips.filter(t => t.is_demo).length, 1);
-});
-
-test('legacy data/routes survive migrations, basic auth remains organizer-only, and async legacy errors are caught', async () => {
-  const owner = browser();
-  await owner.login();
-  await owner.request('/plans');
-  const legacy = await owner.post('/trips', { name: 'Preserved legacy trip', destination: 'Legacy place' });
-  assert.equal(legacy.status, 302);
-  const tripId = legacy.location.split('/').at(-1);
-  await owner.post(`/hotels/trip/${tripId}`, { name: 'Preserved legacy hotel' });
-  await migrate(pool);
-  const legacyPage = await owner.request(legacy.location, { headers: { Accept: 'application/json' } });
-  assert.equal(legacyPage.page.trip.name, 'Preserved legacy trip');
-  assert.equal(legacyPage.page.hotels[0].name, 'Preserved legacy hotel');
-  const planner = (await owner.request(`/plans/${tripId}`)).page.data;
-  assert.equal(planner.legacyHotelCount, 1);
-  assert.deepEqual(planner.items, []);
-  assert.match((await owner.request(`/plans/${tripId}/share`)).page.data.invitePath, /^\/join\/[a-f0-9]{64}$/);
-  const legacyClient = browser();
-  const basic = 'Basic ' + Buffer.from(`${config.adminUser}:${config.adminPass}`).toString('base64');
-  assert.equal((await legacyClient.request('/trips', { headers: { Authorization: basic, Accept: 'application/json' } })).status, 200);
-  for (let n = 0; n < 31; n++) {
-    assert.equal((await legacyClient.request('/trips', { headers: { Authorization: basic, Accept: 'application/json' } })).status, 200);
-  }
-  assert.equal((await legacyClient.request('/plans', { headers: { Authorization: basic } })).location, '/login');
-  assert.equal((await legacyClient.request('/trips', { headers: { Authorization: 'Basic ' + Buffer.from('wrong:wrong').toString('base64') } })).status, 401);
-  const broken = await owner.request('/hotels/not-an-integer');
-  assert.equal(broken.status, 500);
-  assert.equal(broken.page.view, 'error');
-  assert.equal(broken.page.data.message, 'Something went wrong. Please try again.');
-  assert.doesNotMatch(broken.text, /invalid input syntax|\.js:\d|SELECT.*FROM/i);
-  assert.equal((await owner.request('/plans')).status, 200);
-  // Verify the original schema can be upgraded without altering preexisting rows.
-  const upgradeSchema = `${schemaName}_upgrade`;
-  await adminPool.query(`CREATE SCHEMA ${upgradeSchema}`);
-  const upgradePool = new Pool({ connectionString, options: `-c search_path=${upgradeSchema}` });
-  try {
-    await upgradePool.query(require('../scripts/init-db').schema);
-    await upgradePool.query("INSERT INTO trips(name) VALUES('Old trip'); INSERT INTO hotels(trip_id,name) VALUES(1,'Old hotel')");
-    await Promise.all([migrate(upgradePool), migrate(upgradePool)]);
-    assert.equal((await upgradePool.query('SELECT name FROM hotels')).rows[0].name, 'Old hotel');
-    assert.equal((await upgradePool.query('SELECT name,is_demo FROM trips')).rows[0].is_demo, false);
-    assert.equal((await upgradePool.query('SELECT COUNT(*)::int AS count FROM participants')).rows[0].count, 1);
-    assert.equal((await upgradePool.query('SELECT COUNT(*)::int AS count FROM trip_invites')).rows[0].count, 1);
-  } finally {
-    await upgradePool.end();
-    await adminPool.query(`DROP SCHEMA ${upgradeSchema} CASCADE`);
-  }
 });
 
 test('secure cookies require explicit HTTPS and proxy trust, and env-style session secrets are supported', async () => {
@@ -714,67 +664,6 @@ test('collection limits hold under concurrent requests and cover replacement is 
   // Leave live collection rows in place to exercise FK cascades, including a cover.
   await owner.post(`${item}/delete`);
   for (const table of ['research_sources', 'research_images']) assert.equal((await pool.query(`SELECT COUNT(*)::int AS count FROM ${table} WHERE item_id=$1`, [detail.id])).rows[0].count, 0);
-});
-
-test('legacy research URLs import once across concurrent boots; edited/deleted imports and original data survive restart', async () => {
-  const upgradeSchema = `${schemaName}_research_upgrade`;
-  await adminPool.query(`CREATE SCHEMA ${upgradeSchema}`);
-  const upgradePool = new Pool({ connectionString, options: `-c search_path=${upgradeSchema}`, max: 8 });
-  let upgradeApp, upgradeServer;
-  try {
-    const { schema, plannerSchema } = require('../scripts/init-db');
-    await upgradePool.query(schema);
-    await upgradePool.query(plannerSchema.replace("'shortlisted','selected','booked'", "'shortlisted','booked'"));
-    const trip = (await upgradePool.query("INSERT INTO trips(name) VALUES('Legacy research') RETURNING id")).rows[0].id;
-    const participant = (await upgradePool.query('SELECT id FROM participants WHERE trip_id=$1', [trip])).rows[0].id;
-    const legacyUrls = ['https://example.com/delete', 'http://example.com/edit', 'https://example.com/keep', 'javascript:alert(1)', ''];
-    const ids = [];
-    for (const url of legacyUrls) ids.push((await upgradePool.query(`INSERT INTO research_items(trip_id,kind,title,url,created_by,status)
-      VALUES($1,'stay','Legacy option',$2,$3,'shortlisted') RETURNING id`, [trip, url, participant])).rows[0].id);
-    await upgradePool.query('INSERT INTO research_votes(item_id,participant_id) VALUES($1,$2)', [ids[0], participant]);
-    await upgradePool.query("INSERT INTO research_comments(item_id,participant_id,body) VALUES($1,$2,'Legacy discussion')", [ids[0], participant]);
-    const before = (await upgradePool.query('SELECT * FROM research_items ORDER BY id')).rows;
-    await Promise.all([migrate(upgradePool), migrate(upgradePool)]);
-    assert.deepEqual((await upgradePool.query('SELECT * FROM research_items ORDER BY id')).rows, before);
-    const imported = (await upgradePool.query('SELECT * FROM research_sources ORDER BY id')).rows;
-    assert.equal(imported.length, 3);
-    assert.ok(imported.every(source => source.label === 'Original source' && source.created_by === participant && source.takeaway === ''));
-    assert.equal((await upgradePool.query('SELECT COUNT(*)::int AS count FROM planner_migrations')).rows[0].count, 1);
-    upgradeApp = await createApp({ pool: upgradePool, config });
-    upgradeServer = await new Promise(resolve => {
-      const listening = upgradeApp.listen(0, '127.0.0.1', () => resolve(listening));
-    });
-    const owner = browser(`http://127.0.0.1:${upgradeServer.address().port}`);
-    // This app renders ordinary HTML, so collect its CSRF token rather than the JSON test wrapper.
-    const login = await owner.request('/login');
-    const csrf = login.text.match(/name="_csrf" value="([a-f0-9]+)"/)[1];
-    assert.equal((await owner.post('/login', { username: config.adminUser, password: config.adminPass, _csrf: csrf })).status, 302);
-    const detail = await owner.request(`/plans/${trip}/ideas/${ids[0]}`);
-    const authenticatedCsrf = detail.text.match(/name="_csrf" value="([a-f0-9]+)"/)[1];
-    assert.equal((await owner.post(`/plans/${trip}/ideas/${ids[0]}/sources/${imported[0].id}/delete`, { _csrf: authenticatedCsrf })).status, 302);
-    assert.equal((await owner.post(`/plans/${trip}/ideas/${ids[1]}/sources/${imported[1].id}/edit`, { _csrf: authenticatedCsrf, label: 'Edited import', url: 'https://example.com/changed', takeaway: 'Keep my edit' })).status, 302);
-    await new Promise(resolve => upgradeServer.close(resolve));
-    upgradeServer = null;
-    upgradeApp.get('sessionStore').close();
-    upgradeApp = await createApp({ pool: upgradePool, config });
-    await Promise.all([migrate(upgradePool), migrate(upgradePool)]);
-    const after = (await upgradePool.query('SELECT * FROM research_sources ORDER BY id')).rows;
-    assert.equal(after.length, 2);
-    assert.equal(after[0].label, 'Edited import');
-    assert.equal(after[0].url, 'https://example.com/changed');
-    assert.equal(after[0].takeaway, 'Keep my edit');
-    assert.deepEqual(after[1], imported[2]);
-    assert.deepEqual((await upgradePool.query('SELECT * FROM research_items ORDER BY id')).rows, before);
-    assert.equal((await upgradePool.query('SELECT COUNT(*)::int AS count FROM research_votes')).rows[0].count, 1);
-    assert.equal((await upgradePool.query('SELECT COUNT(*)::int AS count FROM research_comments')).rows[0].count, 1);
-    await upgradePool.query("UPDATE research_items SET status='selected' WHERE id=$1", [ids[0]]);
-    await assert.rejects(upgradePool.query("UPDATE research_items SET status='invalid' WHERE id=$1", [ids[0]]), /check constraint/);
-  } finally {
-    if (upgradeServer) await new Promise(resolve => upgradeServer.close(resolve));
-    upgradeApp?.get('sessionStore').close();
-    await upgradePool.end();
-    await adminPool.query(`DROP SCHEMA ${upgradeSchema} CASCADE`);
-  }
 });
 
 test('login and invite join attempts are bounded in PostgreSQL, including after a restart', async () => {

@@ -26,5 +26,4 @@
   <% if (!data.items.length) { %>
     <div class="empty-state"><h3><%= data.counts.all ? 'No matching ideas' : 'Start with an idea' %></h3><p><%= data.counts.all ? 'Try another category or clear your filters.' : 'Add a destination, place to stay, or anything worth exploring. Keep its sources and photos in the same card.' %></p><% if (data.counts.all) { %><a class="button secondary" href="<%= base %>">Show all ideas</a><% } else { %><a class="button primary" href="<%= base %>/ideas/new">Add idea</a><% } %></div>
   <% } else { %><div class="idea-grid"><% data.items.forEach(item => { %><%- include('idea-card', {item,base,destinations:data.destinations,h,csrfToken}) %><% }) %></div><% } %>
-  <% if (viewer.isOrganizer && data.legacyHotelCount) { %><a class="text-link legacy-research-link" href="/trips/<%= trip.id %>">Earlier hotel shortlist (<%= data.legacyHotelCount %>)<svg class="icon small" aria-hidden="true"><use href="#i-arrow"/></svg></a><% } %>
 </section>

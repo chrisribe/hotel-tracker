@@ -11,6 +11,11 @@ class ParticipantsDAO {
     return r.rows[0];
   }
 
+  async findActiveGuest(tripId, id) {
+    const r = await this.db.query('SELECT * FROM participants WHERE id = $1 AND trip_id = $2 AND active AND NOT is_organizer', [id, tripId]);
+    return r.rows[0];
+  }
+
   async findOrganizer(tripId) {
     const r = await this.db.query('SELECT * FROM participants WHERE trip_id = $1 AND is_organizer AND active', [tripId]);
     return r.rows[0];

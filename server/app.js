@@ -52,9 +52,6 @@ async function createApp({ pool, config = {} }) {
   app.use(auth.identify);
   app.get('/', (req, res) => res.redirect('/plans'));
   app.use(require('./routes/planner'));
-  app.use(require('./middleware/responseHandler'));
-  app.use('/trips', auth.legacyAuth, require('./routes/trips'));
-  app.use('/hotels', auth.legacyAuth, require('./routes/hotels'));
   app.use((req, res, next) => next(auth.httpError(404, 'Page not found.')));
   app.use((error, req, res, next) => {
     if (res.headersSent) return next(error);

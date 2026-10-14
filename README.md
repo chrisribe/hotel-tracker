@@ -2,7 +2,7 @@
 
 A private group-trip research workspace: collect destinations, places to stay, rental cars, activities, and useful links before deciding where to go.
 
-**Stack:** Express 4, EJS, PostgreSQL, Docker Compose. The new planner uses native HTML forms with progressive JavaScript. The original hotel shortlist retains HTMX.
+**Stack:** Express 4, EJS, PostgreSQL, Docker Compose. Native HTML forms with progressive JavaScript.
 
 ## Run with Docker Compose
 
@@ -19,7 +19,6 @@ Organizer credentials default to **admin / changeme** for local development. Set
 - Share a private invite link. A companion enters a name; their PostgreSQL-backed browser session remembers membership for up to seven days.
 - Members add ideas, edit/delete their own ideas, vote, and comment. Organizers manage selections, invitations, and access.
 - Selected stays, transport, and activities form an estimated total per currency. Unknown quotes are reported separately. This is not a settlement ledger; it does not convert currencies or divide costs by travelers.
-- Existing trips and hotel records are preserved. An organizer-only link on each populated board opens its original hotel shortlist. Original `/trips` and `/hotels` routes also remain available.
 
 ## Simple workflow
 
@@ -39,7 +38,6 @@ The board header holds people/invite controls. Optional idea details stay collap
 
 **Source & Image Handling:**
 - Source pages accept HTTP or HTTPS. Image references require HTTPS and reject obvious localhost/private IP literals; hostnames are not DNS-verified. No server-side fetching, proxy, or upload endpoints. External image hosts see viewers' IP and can block/expire references; images use `referrerpolicy="no-referrer"`.
-- Legacy source URLs are backfilled once during first-run data migration and not recreated on restart. Legacy data and hotel records remain intact.
 
 **Comparison & Selection:**
 - Compare 2–4 same-kind same-trip options via `/plans/:id/compare` (e.g., multiple hotels, rental cars, or tour operators for the same trip).
@@ -49,7 +47,7 @@ The board header holds people/invite controls. Optional idea details stay collap
 - No booking automation—organizer decision is recorded; actual reservations remain external.
 
 **Testing & Operations:**
-- Twenty database-backed integration tests cover migrations, sessions, permissions, invite revocation, comparison views, source/image lifecycle, simplified forms, and legacy routes, using real EJS rendering.
+- Eighteen database-backed integration tests cover schema setup, sessions, permissions, invite revocation, comparison views, source/image lifecycle, and simplified forms, using real EJS rendering.
 
 ## Sharing and privacy
 
@@ -63,7 +61,7 @@ A guest session currently belongs to one trip. Sign out before joining a differe
 
 ## Verification
 
-Run `npm test` from `server` while the Compose database is running. Tests use a unique temporary PostgreSQL schema and remove it afterward; they never clear the application schema. Set `TEST_DATABASE_URL` to use another test database. The suite covers migrations, persistent sessions, guest scoping, CSRF/origin checks, input validation, author permissions, votes/comments, selections, invite revocation, legacy routes, and real EJS rendering.
+Run `npm test` from `server` while the Compose database is running. Tests use a unique temporary PostgreSQL schema and remove it afterward; they never clear the application schema. Set `TEST_DATABASE_URL` to use another test database. The suite covers schema setup, persistent sessions, guest scoping, CSRF/origin checks, input validation, author permissions, votes/comments, selections, invite revocation, and real EJS rendering.
 
 ## Deliberately not in this draft
 

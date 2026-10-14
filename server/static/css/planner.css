@@ -263,7 +263,6 @@ legend { font-size: var(--fs-md); font-weight: 650; margin-bottom: 13px; }
 .simple-filter-form { display: grid; grid-template-columns: minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr) auto; gap: 14px; align-items: end; padding: 8px 0 16px; }
 .simple-filter-form > * { min-width: 0; }
 .filter-summary { display: flex; justify-content: space-between; margin: -4px 0 16px; font-size: var(--fs-sm); color: var(--muted); }
-.legacy-research-link { margin-top: 28px; }
 
 /* Idea cards */
 .idea-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; align-items: stretch; }
