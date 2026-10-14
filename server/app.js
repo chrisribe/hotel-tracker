@@ -14,8 +14,13 @@ async function createApp({ pool, config = {} }) {
     sessionSecret: process.env.SESSION_SECRET,
     cookieSecure: process.env.COOKIE_SECURE === 'true',
     trustProxy: process.env.TRUST_PROXY === '1',
+    apiToken: process.env.HOTEL_API_TOKEN || '',
     ...config,
   };
+  if (settings.apiToken && settings.apiToken.length < 32) {
+    console.warn('HOTEL_API_TOKEN must be at least 32 characters; API disabled.');
+    settings.apiToken = '';
+  }
   let secret = settings.sessionSecret;
   if (!secret) {
     await pool.query("INSERT INTO planner_settings(key,value) VALUES('session_secret',$1) ON CONFLICT(key) DO NOTHING", [auth.randomToken()]);
@@ -40,6 +45,8 @@ async function createApp({ pool, config = {} }) {
   });
   app.use('/static', express.static(path.join(__dirname, 'static')));
   app.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
+  // Bearer-token API: no cookies, sessions or CSRF.
+  app.use('/api/v1', require('./routes/api'));
   const sessionStore = new PgSession({ pool, tableName: 'planner_sessions', createTableIfMissing: false });
   app.set('sessionStore', sessionStore);
   app.use(session({

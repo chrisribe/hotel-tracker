@@ -16,11 +16,14 @@ CREATE TABLE IF NOT EXISTS participants (
   trip_id INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
   name TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 80),
   is_organizer BOOLEAN NOT NULL DEFAULT FALSE,
+  is_agent BOOLEAN NOT NULL DEFAULT FALSE,
   active BOOLEAN NOT NULL DEFAULT TRUE,
-  UNIQUE (id, trip_id)
+  UNIQUE (id, trip_id),
+  CHECK (NOT (is_organizer AND is_agent))
 );
 CREATE INDEX IF NOT EXISTS participants_trip ON participants(trip_id);
 CREATE UNIQUE INDEX IF NOT EXISTS one_trip_organizer ON participants(trip_id) WHERE is_organizer;
+CREATE UNIQUE INDEX IF NOT EXISTS one_trip_agent ON participants(trip_id) WHERE is_agent;
 
 CREATE TABLE IF NOT EXISTS research_items (
   id SERIAL PRIMARY KEY,

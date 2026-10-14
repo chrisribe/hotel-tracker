@@ -83,9 +83,15 @@ function credentialsMatch(user, password, config) {
   return Boolean(config.adminUser && config.adminPass && userMatches && passwordMatches);
 }
 
+const attemptKey = (req, scope) => createHmac('sha256', req.app.get('sessionSecret')).update(`${scope}:${req.ip}`).digest('hex');
+
 async function attempt(req, scope, limit) {
-  const key = createHmac('sha256', req.app.get('sessionSecret')).update(`${scope}:${req.ip}`).digest('hex');
-  if (await new AttemptsDAO(req.app.get('pool')).increment(key) > limit) throw httpError(429, 'Too many attempts. Try again in 15 minutes.');
+  if (await new AttemptsDAO(req.app.get('pool')).increment(attemptKey(req, scope)) > limit) throw httpError(429, 'Too many attempts. Try again in 15 minutes.');
+}
+
+// Check without counting, so only failures consume the budget.
+async function ensureNotBlocked(req, scope, limit) {
+  if (await new AttemptsDAO(req.app.get('pool')).count(attemptKey(req, scope)) >= limit) throw httpError(429, 'Too many attempts. Try again in 15 minutes.');
 }
 
 function regenerate(req) {
@@ -101,4 +107,4 @@ function saveSession(req) {
 }
 
 module.exports = { render, httpError, sameOrigin, csrfProtection, identify, authenticated, organizer,
-  credentialsMatch, attempt, regenerate, saveSession, randomToken, tokenHash };
+  credentialsMatch, attempt, ensureNotBlocked, regenerate, saveSession, randomToken, tokenHash, safeEqual };

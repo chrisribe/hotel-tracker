@@ -9,6 +9,7 @@ services:
       DATABASE_URL: postgresql://hotel:hotelpass@db:5432/hotel_tracker
       ADMIN_USER: ${ADMIN_USER:-admin}
       ADMIN_PASS: ${ADMIN_PASS:-changeme}
+      HOTEL_API_TOKEN: ${HOTEL_API_TOKEN:-}
       NODE_ENV: production
     depends_on:
       db:

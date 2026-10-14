@@ -13,6 +13,14 @@ const { DEMO_TRIP, seedDemoIdeas } = require('./plannerDemo');
 const KINDS = ['destination', 'stay', 'transport', 'activity', 'link'];
 const STATUSES = ['considering', 'shortlisted', 'selected', 'booked', 'eliminated'];
 const CURRENCIES = ['CAD', 'USD', 'EUR', 'GBP'];
+const TRIP_FIELDS = ['name', 'description', 'destination', 'travel_start', 'travel_end'];
+const IDEA_FIELDS = ['kind', 'title', 'location', 'notes', 'url', 'destination_id', 'cost', 'currency', 'capacity'];
+
+const pick = (body, fields) => Object.fromEntries(fields.filter(field => Object.hasOwn(body, field)).map(field => [field, body[field]]));
+
+// pg parses DATE as local midnight; format back without a timezone shift.
+const pad = n => String(n).padStart(2, '0');
+const dateText = value => value instanceof Date ? `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}` : value;
 
 function text(value, label, max, required = false) {
   if (value == null) value = '';
@@ -97,9 +105,11 @@ function ideaValues(body) {
     cost: null,
     capacity: null,
   };
-  if (body.cost != null && body.cost !== '') {
-    if (typeof body.cost !== 'string' || !/^\d{1,12}(\.\d{1,2})?$/.test(body.cost)) throw httpError(400, 'Cost must be a non-negative total quote with at most two decimal places.');
-    values.cost = body.cost;
+  // JSON clients may send numbers; String() of non-finite or imprecise values fails the pattern.
+  const cost = typeof body.cost === 'number' ? String(body.cost) : body.cost;
+  if (cost != null && cost !== '') {
+    if (typeof cost !== 'string' || !/^\d{1,12}(\.\d{1,2})?$/.test(cost)) throw httpError(400, 'Cost must be a non-negative total quote with at most two decimal places.');
+    values.cost = cost;
   }
   if (body.capacity != null && body.capacity !== '') {
     values.capacity = id(body.capacity, 'capacity');
@@ -143,9 +153,15 @@ class PlannerService {
       // Serialize a small group's operations, including revocation and invite rotation.
       const trip = await dao.trips.lock(tripId);
       if (!trip || (!viewer.isOrganizer && viewer.tripId !== tripId)) throw httpError(404, 'Trip not found.');
-      const participant = viewer.isOrganizer
-        ? await dao.participants.findOrganizer(tripId)
-        : await dao.participants.findActive(tripId, viewer.participantId);
+      let participant;
+      if (viewer.isAgent) {
+        participant = await dao.participants.upsertAgent(tripId, viewer.name);
+        if (!participant.active) participant = null;
+      } else {
+        participant = viewer.isOrganizer
+          ? await dao.participants.findOrganizer(tripId)
+          : await dao.participants.findActive(tripId, viewer.participantId);
+      }
       if (!participant || (!viewer.isOrganizer && participant.is_organizer)) throw httpError(403, 'Your trip access has been removed.');
       return work({ db, dao, trip, participant });
     });
@@ -215,6 +231,21 @@ class PlannerService {
     const value = choice(status, STATUSES, 'status', null);
     if (!value) throw httpError(400, 'Choose a status.');
     await context.dao.ideas.setStatus(context.trip.id, item.id, value);
+    return item;
+  }
+
+  // Partial update: sent fields override the stored ones, then the full form validation runs.
+  async updateTrip({ dao, trip }, body) {
+    const current = { ...pick(trip, TRIP_FIELDS), travel_start: dateText(trip.travel_start), travel_end: dateText(trip.travel_end) };
+    return dao.trips.update(trip.id, tripValues({ ...current, ...pick(body, TRIP_FIELDS) }));
+  }
+
+  async patchIdea(context, viewer, itemId, body) {
+    const item = await this.item(context, itemId);
+    this.ensureCanEdit(viewer, context, item);
+    const changes = pick(body, IDEA_FIELDS);
+    if (Object.keys(changes).length) await this.writeIdea(context, { ...pick(item, IDEA_FIELDS), ...changes }, item);
+    if (Object.hasOwn(body, 'status')) await this.updateStatus(context, item.id, body.status);
     return item;
   }
 
@@ -410,4 +441,4 @@ class PlannerService {
   }
 }
 
-module.exports = { PlannerService, KINDS, STATUSES, CURRENCIES, text, id, choice, tripValues, ideaValues };
+module.exports = { PlannerService, KINDS, STATUSES, CURRENCIES, text, id, choice, tripValues, ideaValues, dateText };

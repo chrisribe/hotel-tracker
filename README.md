@@ -47,7 +47,11 @@ The board header holds people/invite controls. Optional idea details stay collap
 - No booking automation—organizer decision is recorded; actual reservations remain external.
 
 **Testing & Operations:**
-- Eighteen database-backed integration tests cover schema setup, sessions, permissions, invite revocation, comparison views, source/image lifecycle, and simplified forms, using real EJS rendering.
+- Twenty-two database-backed integration tests cover schema setup, sessions, permissions, invite revocation, comparison views, source/image lifecycle, simplified forms and the JSON API, using real EJS rendering.
+
+## Assistant API
+
+A bearer-token JSON API at `/api/v1` lets an assistant such as Hermes add research. It is off unless `HOTEL_API_TOKEN` is set. See [docs/api.md](docs/api.md).
 
 ## Sharing and privacy
 
@@ -72,4 +76,3 @@ Live pricing/scraping, real booking integration, file uploads, verified accounts
 - [Product](PRODUCT.md) — group planning scope and constraints
 - [Design](DESIGN.md) — visual direction
 - [Original design notes](docs/design.md) — historical hotel-focused plan, not the new implementation contract
-- [Paint visualizer](mocks/paint-visualizer/README.md) — unrelated standalone experiment, preserved

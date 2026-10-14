@@ -10,3 +10,4 @@ docker-compose.override.yml
 .impeccable/hook.cache.json
 .impeccable/hook.pending.json
 .github/skills/impeccable/scripts/bin/
+.env

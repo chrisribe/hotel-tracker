@@ -12,7 +12,7 @@ class ParticipantsDAO {
   }
 
   async findActiveGuest(tripId, id) {
-    const r = await this.db.query('SELECT * FROM participants WHERE id = $1 AND trip_id = $2 AND active AND NOT is_organizer', [id, tripId]);
+    const r = await this.db.query('SELECT * FROM participants WHERE id = $1 AND trip_id = $2 AND active AND NOT is_organizer AND NOT is_agent', [id, tripId]);
     return r.rows[0];
   }
 
@@ -22,7 +22,7 @@ class ParticipantsDAO {
   }
 
   async listActive(tripId) {
-    const r = await this.db.query('SELECT id, name, is_organizer FROM participants WHERE trip_id = $1 AND active ORDER BY is_organizer DESC, id', [tripId]);
+    const r = await this.db.query('SELECT id, name, is_organizer, is_agent FROM participants WHERE trip_id = $1 AND active ORDER BY is_organizer DESC, id', [tripId]);
     return r.rows;
   }
 
@@ -35,6 +35,13 @@ class ParticipantsDAO {
     const r = await this.db.query(`INSERT INTO participants (trip_id, name, is_organizer) VALUES ($1, $2, TRUE)
       ON CONFLICT (trip_id) WHERE is_organizer DO UPDATE SET active = TRUE, name = EXCLUDED.name RETURNING *`,
     [tripId, (name || 'Organizer').slice(0, 80)]);
+    return r.rows[0];
+  }
+
+  // One API assistant member per trip; never reactivated once the organizer removes it.
+  async upsertAgent(tripId, name) {
+    const r = await this.db.query(`INSERT INTO participants (trip_id, name, is_agent) VALUES ($1, $2, TRUE)
+      ON CONFLICT (trip_id) WHERE is_agent DO UPDATE SET name = EXCLUDED.name RETURNING *`, [tripId, name]);
     return r.rows[0];
   }
 

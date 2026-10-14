@@ -7,6 +7,11 @@ class AttemptsDAO {
       ON CONFLICT (key) DO UPDATE SET attempts = planner_attempts.attempts + 1 RETURNING attempts`, [key]);
     return r.rows[0].attempts;
   }
+
+  async count(key) {
+    const r = await this.db.query('SELECT attempts FROM planner_attempts WHERE key = $1 AND expires_at > NOW()', [key]);
+    return r.rows[0]?.attempts || 0;
+  }
 }
 
 module.exports = AttemptsDAO;

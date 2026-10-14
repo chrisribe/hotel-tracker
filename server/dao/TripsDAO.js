@@ -24,6 +24,14 @@ class TripsDAO {
     return r.rows;
   }
 
+  async update(id, { name, description, destination, travel_start, travel_end }) {
+    const r = await this.pool.query(
+      `UPDATE trips SET name=$1, description=$2, destination=$3, travel_start=$4, travel_end=$5 WHERE id=$6 RETURNING *`,
+      [name, description ?? null, destination || null, travel_start || null, travel_end || null, id]
+    );
+    return r.rows[0];
+  }
+
   async lock(id) {
     const r = await this.pool.query('SELECT * FROM trips WHERE id=$1 FOR UPDATE', [id]);
     return r.rows[0];
