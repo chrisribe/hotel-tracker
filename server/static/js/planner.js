@@ -56,16 +56,89 @@ window.addEventListener('pageshow', () => {
   });
 });
 
-const kindFields = document.querySelectorAll('input[name="kind"]');
-function updateDestination() {
-  const destination = document.querySelector('[data-destination-field]');
-  if (!destination) return;
-  const isDestination = document.querySelector('input[name="kind"]:checked')?.value === 'destination';
-  destination.hidden = isDestination;
-  destination.querySelector('select').disabled = isDestination;
+// Without JavaScript, people clear a row to remove it and get one blank row to add.
+document.querySelectorAll('[data-rows]').forEach(group => {
+  const list = group.querySelector('[data-row-list]');
+  const template = group.querySelector('[data-row-template]');
+  const add = group.querySelector('[data-add-row]');
+  const max = Number(group.dataset.max) || 12;
+  group.querySelectorAll('[data-remove-row]').forEach(button => { button.hidden = false; });
+  add.hidden = false;
+  add.addEventListener('click', () => {
+    if (list.children.length >= max) { announce(`You can add up to ${max} rows.`); return; }
+    list.append(template.content.cloneNode(true));
+    list.lastElementChild.querySelector('input:not([type="hidden"])').focus();
+  });
+  list.addEventListener('click', event => {
+    const button = event.target.closest('[data-remove-row]');
+    if (!button) return;
+    const row = button.closest('[data-row]');
+    if (list.children.length > 1) row.remove();
+    else row.querySelectorAll('input').forEach(input => { input.value = ''; });
+    add.focus();
+  });
+});
+
+// Idea form: the visible fields, example text and suggested labels follow the chosen kind.
+// The server renders everything for the initial kind, and leaves all fields visible for no-JS.
+const ideaForm = document.querySelector('form[data-kind-form]');
+if (ideaForm) {
+  const kindForm = JSON.parse(ideaForm.dataset.kindForm);
+  const starterLabels = new Set(Object.values(kindForm).flatMap(copy => copy.starters));
+  const details = ideaForm.querySelector('[data-starter-rows]');
+  const destinationField = ideaForm.querySelector('[data-destination-field]');
+
+  // Includes the row templates, so rows added later get the same text.
+  const findAll = selector => [ideaForm, ...[...ideaForm.querySelectorAll('template')].map(t => t.content)]
+    .flatMap(root => [...root.querySelectorAll(selector)]);
+
+  function showFields(kind) {
+    // A field the kind doesn't use stays visible while it holds a value, so nothing disappears silently.
+    ideaForm.querySelectorAll('[data-kinds]').forEach(field => {
+      const used = field.dataset.kinds.split(' ').includes(kind);
+      field.hidden = !used && ![...field.querySelectorAll('input')].some(input => input.value);
+    });
+    // A destination can't belong to another destination.
+    destinationField.hidden = kind === 'destination';
+    destinationField.querySelector('select').disabled = kind === 'destination';
+  }
+
+  function showText(copy) {
+    findAll('[data-kind-text]').forEach(el => {
+      const text = copy[el.dataset.kindText];
+      if ('placeholder' in el) el.placeholder = text; else el.textContent = text;
+    });
+    ideaForm.querySelectorAll('datalist[data-kind-list]').forEach(datalist => {
+      datalist.replaceChildren(...copy[datalist.dataset.kindList].map(label => new Option(label)));
+    });
+  }
+
+  // Replace untouched starter rows (suggested label, no value) with the new kind's starters.
+  function swapStarterRows(copy) {
+    const list = details.querySelector('[data-row-list]');
+    const template = details.querySelector('[data-row-template]');
+    const label = row => row.querySelector('[name="detail_label"]');
+    const value = row => row.querySelector('[name="detail_value"]');
+    const untouched = row => !value(row).value.trim() && (!label(row).value || starterLabels.has(label(row).value));
+    const starterRow = text => {
+      const row = template.content.firstElementChild.cloneNode(true);
+      label(row).value = text;
+      value(row).placeholder = '';
+      return row;
+    };
+    [...list.children].filter(untouched).forEach(row => row.remove());
+    if (![...list.children].some(row => value(row).value.trim())) list.prepend(...copy.starters.map(starterRow));
+    if (!list.children.length) list.append(template.content.cloneNode(true));
+  }
+
+  showFields(ideaForm.querySelector('input[name="kind"]:checked')?.value);
+  ideaForm.querySelectorAll('input[name="kind"]').forEach(input => input.addEventListener('change', () => {
+    const copy = kindForm[input.value];
+    showFields(input.value);
+    showText(copy);
+    swapStarterRows(copy);
+  }));
 }
-kindFields.forEach(input => input.addEventListener('change', updateDestination));
-updateDestination();
 
 // Remote references can disappear or reject embedding. Keep the card usable.
 function showImageFallback(image) {

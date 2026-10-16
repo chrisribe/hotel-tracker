@@ -3,10 +3,8 @@
  const destination = data.destinations.find(d => d.id === item.destination_id);
  const priced = ['stay','transport','activity'].includes(item.kind);
 %>
-<a class="back-link" href="<%= destination ? base + '/ideas/' + destination.id : base %>#idea-<%= item.id %>"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg><%= destination ? 'Back to ' + destination.title : 'Back to research board' %></a>
 <% if (data.trip.is_demo) { %><div class="demo-note"><span class="badge sample">Sample idea</span><span>Illustrative content—not a verified listing or current quote. Photos are references, not proof of the fictional property.</span></div><% } %>
 <% if (item.kind === 'destination' && item.cover_image) { %><a class="detail-hero" href="#photos" aria-label="See all photos of <%= item.title %>"><%- include('photo', { photo: item.cover_image, photoTitle: item.title, photoClass: 'hero-photo' }) %></a><% } %>
-<div class="page-heading"><div><h1><%= item.title %></h1><div class="detail-meta"><span class="kind-label kind-<%= item.kind %>"><svg class="icon" aria-hidden="true"><use href="#i-<%= h.kindIcon(item.kind) %>"/></svg><%= h.singular[item.kind] %></span><span class="badge <%= item.status %>"><%= h.statuses[item.status] %></span><% if (item.location) { %><span><%= item.location %></span><% } %><% if (destination) { %><a href="<%= base %>/ideas/<%= destination.id %>"><svg class="icon small" aria-hidden="true"><use href="#i-pin"/></svg><%= destination.title %></a><% } %></div></div><% if (data.canEdit) { %><a class="button secondary" href="<%= path %>/edit">Edit idea</a><% } %></div>
 <div class="idea-detail">
   <aside class="idea-side" aria-labelledby="about-idea">
     <h2 id="about-idea" class="sr-only">Overview</h2>
@@ -14,9 +12,14 @@
       <% if (item.cost != null) { const p = h.price(item.cost, item.currency); %><div class="side-cost"><strong><%= p.text %></strong><span><%= p.currency %> · total quote for the group</span><% if (p.each) { %><span><%= p.each %>, split <%= h.travelers %> ways (estimate)</span><% } %><% if (p.converted) { %><span><%= p.title %></span><% } %></div><% } else if (priced) { %><div class="side-cost missing"><strong>No quote yet</strong><span>Add a cost when you have one, so it counts toward <%= destination ? destination.title : 'the plan' %>.</span></div><% } %>
       <% if (item.kind === 'destination' && data.rollup) { %><%- include('rollup', { rollup: data.rollup, h }) %><% } %>
       <% if (item.capacity) { %><p class="side-fact"><svg class="icon small" aria-hidden="true"><use href="#i-people"/></svg>Room for <%= item.capacity %> people</p><% } %>
+      <% if (item.details && item.details.length) { %><dl class="idea-facts"><% item.details.forEach(fact => { %><div><dt><%= fact.label %></dt><dd><%= fact.value %></dd></div><% }) %></dl><% } %>
       <% if (item.cost != null) { %><p class="fine-print">Updated <%= h.date(item.updated_at) %>. Confirm fees and availability with the source.</p><% } %>
+      <% if (item.sources.length) { %><div class="side-links" id="sources"><h3>Sources</h3><ul><% item.sources.forEach(source => { %><li><a href="<%= source.url %>" target="_blank" rel="noopener noreferrer"><%= source.label %><svg class="icon small" aria-hidden="true"><use href="#i-external"/></svg><span class="sr-only"> (opens in a new tab)</span></a><span class="fine-print"><%= h.host(source.url) %> · <%= source.author_name || 'Organizer' %></span></li><% }) %></ul></div><% } %>
       <div class="side-vote">
-        <form method="post" action="<%= path %>/vote"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button <%= item.voted ? 'interested' : 'secondary' %>" aria-pressed="<%= item.voted %>"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg><%= item.voted ? 'You’re interested' : 'I’m interested' %></button></form>
+        <div class="side-actions">
+          <form method="post" action="<%= path %>/vote"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button <%= item.voted ? 'interested' : 'secondary' %>" aria-pressed="<%= item.voted %>"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg><%= item.voted ? 'You’re interested' : 'I’m interested' %></button></form>
+          <a class="button secondary" href="#discussion"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg>Discuss<% if (data.comments.length) { %><span class="count"><%= data.comments.length %></span><% } %></a>
+        </div>
         <span class="fine-print"><%= item.vote_count %> interested · not a selection</span>
       </div>
       <% if (viewer.isOrganizer) { %>
@@ -32,13 +35,14 @@
     <% if (data.canEdit) { %><details class="danger-zone"><summary>Remove this idea</summary><p>This deletes the idea, its sources, image references, votes, and comments. Linked ideas are kept without this destination.</p><form method="post" action="<%= path %>/delete" data-confirm="Delete this idea and all its research? This cannot be undone."><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button danger">Delete idea</button></form></details><% } %>
   </aside>
   <div class="idea-main">
+    <div class="page-heading"><div><h1><%= item.title %></h1><div class="detail-meta"><span class="kind-label kind-<%= item.kind %>"><svg class="icon" aria-hidden="true"><use href="#i-<%= h.kindIcon(item.kind) %>"/></svg><%= h.singular[item.kind] %></span><span class="badge <%= item.status %>"><%= h.statuses[item.status] %></span><% if (item.location) { %><span><%= item.location %></span><% } %><% if (destination) { %><a href="<%= base %>/ideas/<%= destination.id %>#idea-<%= item.id %>"><svg class="icon small" aria-hidden="true"><use href="#i-pin"/></svg><%= destination.title %></a><% } %></div></div><% if (data.canEdit) { %><a class="button secondary" href="<%= path %>/edit">Edit idea</a><% } %></div>
     <% if (item.notes) { const [lead, ...rest] = item.notes.trim().split(/\r?\n/); const body = rest.join('\n').trim(); %><section class="idea-notes" aria-label="Notes"><p class="notes-lead"><%= lead %></p><% if (body) { %><div class="prose"><%= body %></div><% } %></section><% } %>
     <% if (data.options) { %>
     <section class="destination-options" id="options" aria-labelledby="options-title">
-      <div class="section-heading"><h2 id="options-title">Options here <span class="count"><%= data.options.length %></span></h2></div>
+      <div class="section-heading"><h2 id="options-title">Ideas here <span class="count"><%= data.options.length %></span></h2></div>
       <% if (data.options.length) { %><ul class="option-list"><% data.options.forEach(option => { %><%- include('idea-row', { item: option, base, h, csrfToken, returnTo: item.id }) %><% }) %></ul>
       <% } else { %><p class="collection-empty">Nothing linked yet. Add where you’d stay, how you’d get there, and what you’d do.</p><% } %>
-      <div class="option-add"><% ['stay','transport','activity'].forEach(kind => { %><a class="button subtle small" href="<%= base %>/ideas/new?kind=<%= kind %>&amp;destination=<%= item.id %>"><svg class="icon small" aria-hidden="true"><use href="#i-<%= h.kindIcon(kind) %>"/></svg>Add <%= h.singular[kind].toLowerCase() %></a><% }) %></div>
+      <div class="option-add"><a class="button subtle small" href="<%= base %>/ideas/new?kind=stay&amp;destination=<%= item.id %>"><svg class="icon small" aria-hidden="true"><use href="#i-plus"/></svg>Add idea<span class="sr-only"> for <%= item.title %></span></a></div>
     </section>
     <% } %>
     <%- include('research-collection', {data,item,path,viewer,csrfToken,h}) %>

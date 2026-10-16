@@ -11,9 +11,9 @@
 </head>
 <body>
 <%
- const kinds = { all: 'By destination', destination: 'Destinations', stay: 'Places to stay', transport: 'Getting around', activity: 'Things to do', link: 'Useful links' };
+ const kinds = { all: 'By destination', destination: 'Destinations', stay: 'Places to stay', transport: 'Getting around', activity: 'Things to do', link: 'Other' };
  const plural = { stay: 'Stays', transport: 'Transport', activity: 'Activities' };
- const singular = { destination: 'Destination', stay: 'Place to stay', transport: 'Transport', activity: 'Activity', link: 'Useful link' };
+ const singular = { destination: 'Destination', stay: 'Place to stay', transport: 'Transport', activity: 'Activity', link: 'Other' };
  const statuses = { considering: 'Exploring', shortlisted: 'Shortlisted', selected: 'Selected', booked: 'Booked', eliminated: 'Passed on' };
  const fmtMoney = (amount, currency = 'CAD') => new Intl.NumberFormat('en-CA', { style: 'currency', currency, minimumFractionDigits: Number(amount) % 1 ? 2 : 0, maximumFractionDigits: 2 }).format(Number(amount));
  const display = locals.money;

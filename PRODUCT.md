@@ -39,7 +39,7 @@ Participants join using a private invite link and a display name, not individual
 
 **Research Structure:**
 - Each destination, accommodation, transport, activity, or useful-link option is one card—not one card per supporting URL.
-- Each card may reference up to 20 labeled sources (articles, reviews, websites) with key takeaways extracted by the contributor.
+- Each card may reference up to 20 labeled sources (articles, reviews, websites); what they say goes in the card's notes.
 - Each card may include up to 12 external HTTPS image references, with optional captions and source attribution; one image is the cover.
 - **Permissions Model:** Any active trip member may add ideas, sources, and images; source/image authors or organizers may edit or remove their references; the idea author or organizer designates the cover image.
 

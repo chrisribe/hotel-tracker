@@ -2,30 +2,68 @@
  const v = data.values || {}, trip = data.trip, editing = Boolean(data.item);
  const hasError = typeof error !== 'undefined' && Boolean(error);
  const hasValue = value => value != null && String(value) !== '';
- const detailsOpen = hasError || [v.location, v.destination_id, v.notes].some(hasValue);
+ const detailsOpen = hasError || [v.destination_id, v.notes].some(hasValue);
  const tripCurrency = trip.currency || 'CAD';
  const quoteOpen = hasError || [v.cost, v.capacity].some(hasValue) || (hasValue(v.currency) && v.currency !== tripCurrency);
+ // Repeatable rows come back from the submitted form on errors, otherwise from the stored idea.
+ const list = value => value == null ? [] : [].concat(value);
+ const links = v.rows_form ? list(v.link_url).map((url, i) => ({ id: list(v.link_id)[i], url, label: list(v.link_label)[i] })).filter(l => hasValue(l.url) || hasValue(l.label)) : (data.links || []);
+ const saved = v.rows_form ? list(v.detail_label).map((label, i) => ({ label, value: list(v.detail_value)[i] })).filter(f => hasValue(f.label) || hasValue(f.value)) : (Array.isArray(v.details) ? v.details : []);
+ const kind = v.kind || 'destination';
+ // What the form says and suggests for each kind. Rendered for the current kind; the script swaps it on change.
+ // Text keys fill [data-kind-text] elements, list keys fill [data-kind-list] datalists, starters prefill empty details.
+ const kindForm = {
+   destination: { name: 'e.g. A week on the coast', location: 'Country or region', linksHint: 'Travel guides, maps or articles.', linkLabel: 'e.g. Travel guide', linkLabels: ['Travel guide', 'Tourism office', 'Wikipedia', 'Map'], detailsHint: 'Short facts like best season or flight time.', detailLabels: DETAIL_LABELS.destination, starters: ['Best season', 'Flight time'] },
+   stay: { name: 'e.g. A house by the bay', location: 'Neighbourhood or address', linksHint: 'Listing, booking page or reviews.', linkLabel: 'e.g. Airbnb listing', linkLabels: ['Airbnb listing', 'Booking.com', 'Vrbo', 'Reviews', 'Map'], detailsHint: 'Short facts like bedrooms or check-in time.', detailLabels: DETAIL_LABELS.stay, starters: ['Bedrooms', 'Beds', 'Bathrooms', 'Check-in'] },
+   transport: { name: 'e.g. Rental car for the week', location: 'City, area, or region', linksHint: 'Booking page, timetable or rental site.', linkLabel: 'e.g. Booking page', linkLabels: ['Booking page', 'Timetable', 'Airline', 'Car rental'], detailsHint: 'Short facts like departure time or baggage.', detailLabels: DETAIL_LABELS.transport, starters: ['From', 'To', 'Departs', 'Duration'] },
+   activity: { name: 'e.g. Boat trip around the bay', location: 'City, area, or region', linksHint: 'Tickets, official site or reviews.', linkLabel: 'e.g. Tickets', linkLabels: ['Tickets', 'Official site', 'Reviews', 'Map'], detailsHint: 'Short facts like duration or whether to book ahead.', detailLabels: DETAIL_LABELS.activity, starters: ['Duration', 'Booking needed'] },
+   link: { name: 'e.g. Make lemon drop cocktails', location: 'City, area, or region', linksHint: 'Recipes, articles, videos, anything useful.', linkLabel: 'e.g. Recipe', linkLabels: ['Recipe', 'Article', 'Video', 'Guide', 'Map'], detailsHint: 'Short facts like ingredients or who brings what.', detailLabels: DETAIL_LABELS.link, starters: [] }
+ };
+ const copy = kindForm[kind] || kindForm.link;
+ // Unfilled starter rows are not saved, so they cost nothing if ignored.
+ const facts = saved.length || !copy.starters.length ? [...saved, {}] : copy.starters.map(label => ({ label }));
+ // Kinds whose quote reaches the budget, and kinds where capacity matters.
+ const quoteKinds = 'stay transport activity', capacityKinds = 'stay transport';
 %>
 <a class="back-link" href="/plans/<%= trip.id %><%= editing ? '/ideas/' + data.item.id : '' %>"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg><%= editing ? 'Back to idea' : 'Back to research board' %></a>
 <div class="page-heading"><div><h1><%= editing ? 'Edit idea' : 'Add an idea' %></h1></div></div>
-<form method="post" action="<%= data.formAction %>" class="idea-editor editor-form stack-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>">
+<form method="post" action="<%= data.formAction %>" class="idea-editor editor-form stack-form" data-kind-form="<%= JSON.stringify(kindForm) %>"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="rows_form" value="1">
   <fieldset class="kind-picker"><legend>What kind of idea?</legend><% Object.entries(h.singular).forEach(([kind,label]) => { %><label><input type="radio" name="kind" value="<%= kind %>" <%= (v.kind || 'destination') === kind ? 'checked' : '' %>><span><svg class="icon" aria-hidden="true"><use href="#i-<%= h.kindIcon(kind) %>"/></svg><%= label %></span></label><% }) %></fieldset>
-  <label for="idea-title">Name<input id="idea-title" name="title" required maxlength="160" placeholder="e.g. A house by the coast" value="<%= v.title || '' %>"></label>
-  <% if (!editing) { %>
-  <label for="idea-url">First source URL <span class="optional">Optional</span><input type="url" id="idea-url" name="url" maxlength="2048" placeholder="https://…" value="<%= v.url || '' %>"></label>
-  <details class="editor-disclosure" <%= hasError || [v.source_label, v.takeaway].some(hasValue) ? 'open' : '' %>><summary>Source label & takeaway <span class="optional">Optional</span></summary><div class="stack-form">
-    <label for="source-label">Source label<input id="source-label" name="source_label" maxlength="120" placeholder="e.g. Airbnb listing, local travel guide" value="<%= v.source_label || '' %>"></label>
-    <label for="source-takeaway">Takeaway<textarea id="source-takeaway" name="takeaway" rows="3" maxlength="2000" placeholder="What did you learn?"><%= v.takeaway || '' %></textarea></label>
-  </div></details>
-  <% } %>
-  <details class="editor-disclosure" <%= detailsOpen ? 'open' : '' %>><summary>Location & notes <span class="optional">Optional</span></summary><div class="stack-form">
-    <div class="form-row"><label for="idea-location">Location<input id="idea-location" name="location" maxlength="200" placeholder="City, area, or region" value="<%= v.location || '' %>"></label><label for="idea-destination" data-destination-field>Related destination<select id="idea-destination" name="destination_id"><option value="">Not tied to a destination yet</option><% data.destinations.filter(d => !data.item || d.id !== data.item.id).forEach(d => { %><option value="<%= d.id %>" <%= String(v.destination_id) === String(d.id) ? 'selected' : '' %>><%= d.title %></option><% }) %></select></label></div>
+  <div class="form-row"><label for="idea-title">Name<input id="idea-title" name="title" required maxlength="160" placeholder="<%= copy.name %>" data-kind-text="name" value="<%= v.title || '' %>"></label><label for="idea-location" data-kinds="destination stay">Location <span class="optional">Optional</span><input id="idea-location" name="location" maxlength="200" placeholder="<%= copy.location %>" data-kind-text="location" value="<%= v.location || '' %>"></label></div>
+  <%# Links and details are the same shape: a label, then what it points to. %>
+  <fieldset class="entry-rows" data-rows data-max="20">
+    <legend>Links <span class="optional">Optional</span></legend>
+    <p class="fine-print"><span data-kind-text="linksHint"><%= copy.linksHint %></span> Leave the label blank to use the site name.</p>
+    <div class="entry-list" data-row-list>
+      <% links.concat({}).forEach(link => { %>
+      <div class="entry-row" data-row><input type="hidden" name="link_id" value="<%= link.id || '' %>"><label><span>Label</span><input name="link_label" maxlength="120" list="link-labels" placeholder="<%= copy.linkLabel %>" data-kind-text="linkLabel" value="<%= link.label || '' %>"></label><label><span>URL</span><input type="url" name="link_url" maxlength="2048" placeholder="https://…" value="<%= link.url || '' %>"></label><button type="button" class="icon-button" data-remove-row aria-label="Remove link" hidden><svg class="icon small" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+      <% }) %>
+    </div>
+    <template data-row-template><div class="entry-row" data-row><input type="hidden" name="link_id" value=""><label><span>Label</span><input name="link_label" maxlength="120" list="link-labels" placeholder="<%= copy.linkLabel %>" data-kind-text="linkLabel"></label><label><span>URL</span><input type="url" name="link_url" maxlength="2048" placeholder="https://…"></label><button type="button" class="icon-button" data-remove-row aria-label="Remove link"><svg class="icon small" aria-hidden="true"><use href="#i-close"/></svg></button></div></template>
+    <button type="button" class="add-row" data-add-row hidden><svg class="icon small" aria-hidden="true"><use href="#i-plus"/></svg>Add link</button>
+    <datalist id="link-labels" data-kind-list="linkLabels"><% copy.linkLabels.forEach(label => { %><option value="<%= label %>"><% }) %></datalist>
+    <% if (data.otherLinks && data.otherLinks.length) { %><p class="fine-print">Also linked by others: <% data.otherLinks.forEach((source, i) => { %><%= i ? ', ' : '' %><a href="<%= source.url %>" target="_blank" rel="noopener noreferrer"><%= source.label %></a> (<%= source.author_name || 'Organizer' %>)<% }) %></p><% } %>
+  </fieldset>
+  <fieldset class="entry-rows" data-rows data-max="12" data-starter-rows>
+    <legend>Details <span class="optional">Optional</span></legend>
+    <p class="fine-print"><span data-kind-text="detailsHint"><%= copy.detailsHint %></span> Rows without a value aren’t saved. Matching labels line up on the compare page.</p>
+    <div class="entry-list" data-row-list>
+      <% facts.forEach(fact => { %>
+      <div class="entry-row" data-row><label><span>Label</span><input name="detail_label" maxlength="40" list="detail-labels" placeholder="e.g. Bedrooms" value="<%= fact.label || '' %>"></label><label><span>Value</span><input name="detail_value" maxlength="120" placeholder="<%= fact.label ? '' : 'e.g. 3' %>" value="<%= fact.value || '' %>"></label><button type="button" class="icon-button" data-remove-row aria-label="Remove detail" hidden><svg class="icon small" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+      <% }) %>
+    </div>
+    <template data-row-template><div class="entry-row" data-row><label><span>Label</span><input name="detail_label" maxlength="40" list="detail-labels" placeholder="e.g. Bedrooms"></label><label><span>Value</span><input name="detail_value" maxlength="120" placeholder="e.g. 3"></label><button type="button" class="icon-button" data-remove-row aria-label="Remove detail"><svg class="icon small" aria-hidden="true"><use href="#i-close"/></svg></button></div></template>
+    <button type="button" class="add-row" data-add-row hidden><svg class="icon small" aria-hidden="true"><use href="#i-plus"/></svg>Add detail</button>
+    <datalist id="detail-labels" data-kind-list="detailLabels"><% copy.detailLabels.forEach(label => { %><option value="<%= label %>"><% }) %></datalist>
+  </fieldset>
+  <details class="editor-disclosure" <%= detailsOpen ? 'open' : '' %>><summary>Notes & destination <span class="optional">Optional</span></summary><div class="stack-form">
+    <label for="idea-destination" data-destination-field>Related destination<select id="idea-destination" name="destination_id"><option value="">Not tied to a destination yet</option><% data.destinations.filter(d => !data.item || d.id !== data.item.id).forEach(d => { %><option value="<%= d.id %>" <%= String(v.destination_id) === String(d.id) ? 'selected' : '' %>><%= d.title %></option><% }) %></select></label>
     <label for="idea-notes">Notes<textarea id="idea-notes" name="notes" rows="4" maxlength="10000" placeholder="What should the group know?"><%= v.notes || '' %></textarea></label>
   </div></details>
-  <details class="editor-disclosure" <%= quoteOpen ? 'open' : '' %>><summary>Quote & capacity <span class="optional">Optional</span></summary><div class="stack-form"><div class="form-row three">
+  <details class="editor-disclosure" data-kinds="<%= quoteKinds %>" <%= quoteOpen ? 'open' : '' %>><summary>Quote & capacity <span class="optional">Optional</span></summary><div class="stack-form"><div class="form-row three">
     <label for="idea-cost">Total quote<input id="idea-cost" type="number" name="cost" min="0" max="999999999999.99" step="0.01" placeholder="Not known yet" value="<%= v.cost == null ? '' : v.cost %>"></label>
     <label for="idea-currency">Currency<select id="idea-currency" name="currency"><% ['CAD','USD','EUR','GBP'].forEach(currency => { %><option value="<%= currency %>" <%= (v.currency || tripCurrency) === currency ? 'selected' : '' %>><%= currency %></option><% }) %></select></label>
-    <label for="idea-capacity">Capacity<input id="idea-capacity" type="number" name="capacity" min="1" max="100000" step="1" placeholder="People" value="<%= v.capacity == null ? '' : v.capacity %>"></label>
+    <label for="idea-capacity" data-kinds="<%= capacityKinds %>">Capacity<input id="idea-capacity" type="number" name="capacity" min="1" max="100000" step="1" placeholder="People" value="<%= v.capacity == null ? '' : v.capacity %>"></label>
   </div><p class="fine-print">Total for the stay, rental, or activity—not per night or person. Leave blank if unknown.</p></div></details>
   <p class="fine-print">Don’t include payment details, passports, or private booking documents.</p>
   <div class="form-actions"><button class="button primary"><%= editing ? 'Save changes' : 'Add idea' %></button><a class="button subtle" href="/plans/<%= trip.id %><%= editing ? '/ideas/' + data.item.id : '' %>">Cancel</a></div>

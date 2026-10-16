@@ -31,8 +31,8 @@ The board header holds people/invite controls. Optional idea details stay collap
 ## Research collections and decisions
 
 **Research Organization:**
-- Each option (destination, stay, transport, activity, or useful link) is one card with associated sources and images.
-- Up to 20 labeled sources per option, each with key takeaways from the article/resource.
+- Each option (destination, stay, transport, activity, or other) is one card with associated sources and images.
+- Up to 20 labeled sources per option; what they say goes in the idea's notes.
 - Up to 12 external HTTPS image references per option with captions, source attribution, and cover designation.
 - **Permissions:** Any active trip member may contribute ideas, sources, and images. Source/image authors or the organizer may edit/remove their contributions. The idea author or organizer sets the cover image.
 

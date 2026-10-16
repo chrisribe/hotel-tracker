@@ -77,6 +77,7 @@ test('an agent researches a trip end to end with its own attribution', async () 
   // Reads never add the assistant as a member.
   let board = await api(`/trips/${tripId}`);
   assert.deepEqual(board.json.members.map(m => m.name), ['test-organizer']);
+  assert.ok(board.json.detail_labels.stay.includes('Bedrooms'));
 
   const patched = await api(`/trips/${tripId}`, { method: 'PATCH', body: { description: 'Eight friends', travel_end: '2026-11-08' } });
   assert.equal(patched.status, 200);
@@ -87,14 +88,16 @@ test('an agent researches a trip end to end with its own attribution', async () 
   assert.equal(destination.status, 201);
   const stay = await api(`/trips/${tripId}/ideas`, { method: 'POST', body: {
     kind: 'stay', title: 'Beach house', cost: 7985, capacity: 8, currency: 'CAD', destination_id: destination.json.idea.id,
-    url: 'https://example.com/house', source_label: 'Listing', takeaway: 'Sleeps eight' } });
+    url: 'https://example.com/house', source_label: 'Listing',
+    details: [{ label: 'Bedrooms', value: '4' }, { label: '', value: '' }, { label: 'Pool', value: 'Heated' }] } });
   assert.equal(stay.status, 201);
+  assert.deepEqual(stay.json.idea.details, [{ label: 'Bedrooms', value: '4' }, { label: 'Pool', value: 'Heated' }]);
   const ideaPath = `/trips/${tripId}/ideas/${stay.json.idea.id}`;
   assert.equal(stay.json.idea.author, 'Hermes');
   assert.equal(stay.json.idea.cost, '7985.00');
   assert.equal(stay.json.idea.per_person, null);
   assert.equal(stay.json.idea.capacity, 8);
-  assert.equal(stay.json.idea.sources[0].takeaway, 'Sleeps eight');
+  assert.equal(stay.json.idea.sources[0].label, 'Listing');
   assert.equal(Object.hasOwn(stay.json.idea, 'voted'), false);
 
   assert.equal((await api(`${ideaPath}/sources`, { method: 'POST', body: { label: 'Reviews', url: 'https://example.com/reviews' } })).json.idea.sources.length, 2);
@@ -107,6 +110,8 @@ test('an agent researches a trip end to end with its own attribution', async () 
   assert.equal(updated.status, 200);
   assert.deepEqual([updated.json.idea.cost, updated.json.idea.status, updated.json.idea.title, updated.json.idea.capacity, updated.json.idea.url],
     ['8100.50', 'selected', 'Beach house', 8, 'https://example.com/house']);
+  assert.equal(updated.json.idea.details.length, 2, 'PATCH without details keeps them');
+  assert.deepEqual((await api(ideaPath, { method: 'PATCH', body: { details: [{ label: 'Beds', value: '6' }] } })).json.idea.details, [{ label: 'Beds', value: '6' }]);
 
   // Per-person is an estimate: total ÷ the trip's travelers.
   assert.equal((await api(`/trips/${tripId}`, { method: 'PATCH', body: { travelers: 8 } })).json.trip.travelers, 8);
@@ -137,6 +142,11 @@ test('API validation errors are JSON', async () => {
     [{ title: 'Bad cost', cost: 0.1 + 0.2 }, /Cost must be/],
     [{ title: 'Negative', cost: -5 }, /Cost must be/],
     [{ title: 'Bad kind', kind: 'castle' }, 'Invalid idea kind.'],
+    [{ title: 'Bad details', details: 'Bedrooms: 3' }, /Details must be a list/],
+    [{ title: 'Extra key', details: [{ label: 'Beds', value: '3', note: 'x' }] }, /Each detail must be/],
+    [{ title: 'Half row', details: [{ label: 'Beds', value: '' }] }, /needs a label and a value/],
+    [{ title: 'Long label', details: [{ label: 'x'.repeat(41), value: '1' }] }, /Detail label/],
+    [{ title: 'Too many', details: Array.from({ length: 13 }, (_, i) => ({ label: `L${i}`, value: 'v' })) }, /at most 12 details/],
   ];
   for (const [body, message] of cases) {
     const response = await api(ideas, { method: 'POST', body });
@@ -165,7 +175,9 @@ test('API rejects unknown fields instead of dropping them', async () => {
     [ideas, 'POST', { title: 'Flight', cost_basis: 'per_person' }, 'cost_basis'],
     [ideas, 'POST', { title: 'Flight', status: 'selected' }, 'status'],
     [`${ideas}/${idea.id}`, 'PATCH', { origin_costs: { YUL: 900 } }, 'origin_costs'],
+    [ideas, 'POST', { title: 'Flight', url: 'https://example.com', takeaway: 'x' }, 'takeaway'],
     [`${ideas}/${idea.id}`, 'PATCH', { takeaway: 'ignored on edit' }, 'takeaway'],
+    [`${ideas}/${idea.id}/sources`, 'POST', { label: 'L', url: 'https://example.com', takeaway: 'x' }, 'takeaway'],
     [`${ideas}/${idea.id}/sources`, 'POST', { label: 'L', url: 'https://example.com', note: 'x' }, 'note'],
     [`${ideas}/${idea.id}/images`, 'POST', { url: 'https://example.com/a.jpg', alt: 'x' }, 'alt'],
     [`${ideas}/${idea.id}/comments`, 'POST', { body: 'Hi', author: 'Bob' }, 'author'],

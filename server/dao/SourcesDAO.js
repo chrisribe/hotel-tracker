@@ -18,14 +18,14 @@ class SourcesDAO {
     return r.rows[0].count;
   }
 
-  async create(itemId, participantId, { label, url, takeaway }) {
-    await this.db.query('INSERT INTO research_sources (item_id, label, url, takeaway, created_by) VALUES ($1, $2, $3, $4, $5)',
-      [itemId, label, url, takeaway, participantId]);
+  async create(itemId, participantId, { label, url }) {
+    await this.db.query('INSERT INTO research_sources (item_id, label, url, created_by) VALUES ($1, $2, $3, $4)',
+      [itemId, label, url, participantId]);
   }
 
-  async update(itemId, id, { label, url, takeaway }) {
-    await this.db.query('UPDATE research_sources SET label = $1, url = $2, takeaway = $3 WHERE id = $4 AND item_id = $5',
-      [label, url, takeaway, id, itemId]);
+  async update(itemId, id, { label, url }) {
+    await this.db.query('UPDATE research_sources SET label = $1, url = $2 WHERE id = $3 AND item_id = $4',
+      [label, url, id, itemId]);
   }
 
   async delete(itemId, id) {

@@ -14,7 +14,17 @@ const KINDS = ['destination', 'stay', 'transport', 'activity', 'link'];
 const STATUSES = ['considering', 'shortlisted', 'selected', 'booked', 'eliminated'];
 const CURRENCIES = ['CAD', 'USD', 'EUR', 'GBP'];
 const TRIP_FIELDS = ['name', 'description', 'destination', 'travel_start', 'travel_end', 'currency', 'travelers'];
-const IDEA_FIELDS = ['kind', 'title', 'location', 'notes', 'url', 'destination_id', 'cost', 'currency', 'capacity'];
+const IDEA_FIELDS = ['kind', 'title', 'location', 'notes', 'url', 'destination_id', 'cost', 'currency', 'capacity', 'details'];
+const DETAIL_LIMIT = 12;
+const SOURCE_LIMIT = 20;
+// Shared detail labels per kind, so facts line up on the compare page. The form suggests them and the API returns them.
+const DETAIL_LABELS = {
+  destination: ['Best season', 'Flight time', 'Weather', 'Language'],
+  stay: ['Bedrooms', 'Beds', 'Bathrooms', 'Pool', 'Parking', 'Check-in', 'Quote for dates'],
+  transport: ['From', 'To', 'Departs', 'Arrives', 'Duration', 'Baggage'],
+  activity: ['Duration', 'Booking needed', 'Opening hours', 'Age limit'],
+  link: [],
+};
 
 const pick = (body, fields) => Object.fromEntries(fields.filter(field => Object.hasOwn(body, field)).map(field => [field, body[field]]));
 
@@ -157,8 +167,7 @@ function referenceField(field, validate) {
 
 function sourceValues(body) {
   return { label: referenceField('label', () => text(body.label, 'Source label', 120, true)),
-    url: referenceField('url', () => referenceUrl(body.url, 'Source URL', { required: true })),
-    takeaway: referenceField('takeaway', () => text(body.takeaway, 'Takeaway', 2000)) };
+    url: referenceField('url', () => referenceUrl(body.url, 'Source URL', { required: true })) };
 }
 
 function imageValues(body) {
@@ -167,8 +176,52 @@ function imageValues(body) {
     source_url: referenceField('credit', () => referenceUrl(body.source_url, 'Image source URL')) || null };
 }
 
+// Short label/value facts (e.g. Bedrooms: 3). Rows with both parts blank are dropped.
+function detailValues(value) {
+  if (value == null || value === '') return [];
+  if (!Array.isArray(value)) throw httpError(400, 'Details must be a list of { label, value }.');
+  const rows = value.map(row => {
+    if (row === null || typeof row !== 'object' || Array.isArray(row) || Object.keys(row).some(key => !['label', 'value'].includes(key))) {
+      throw httpError(400, 'Each detail must be { label, value }.');
+    }
+    return { label: text(row.label, 'Detail label', 40), value: text(row.value, 'Detail value', 120) };
+  }).filter(row => row.label || row.value);
+  if (rows.some(row => !row.label || !row.value)) throw httpError(400, 'Each detail needs a label and a value.');
+  if (rows.length > DETAIL_LIMIT) throw httpError(400, `Each idea can have at most ${DETAIL_LIMIT} details.`);
+  return rows;
+}
+
+// Repeated form fields arrive as a string (one row) or an array (several).
+const list = value => value == null ? [] : Array.isArray(value) ? value : [value];
+const rowsError = () => httpError(400, 'The form rows could not be read. Reload the page and try again.');
+
+// The form prefills suggested labels, so a label left without a value is dropped rather than rejected.
+function detailRows(body) {
+  const labels = list(body.detail_label), values = list(body.detail_value);
+  if (labels.length !== values.length) throw rowsError();
+  return labels.map((label, i) => ({ label, value: values[i] })).filter(row => typeof row.value !== 'string' || row.value.trim());
+}
+
+// Link rows edit the idea's sources. A cleared row is removed; a missing label defaults to the site name.
+function linkRows(body) {
+  const ids = list(body.link_id), urls = list(body.link_url), labels = list(body.link_label);
+  if (ids.length !== urls.length || labels.length !== urls.length) throw rowsError();
+  const links = [];
+  urls.forEach((rawUrl, i) => {
+    const label = text(labels[i], 'Link label', 120);
+    if (!text(rawUrl, 'Link URL', 2048)) {
+      if (label) throw httpError(400, `Add a URL for "${label}", or clear the row.`);
+      return;
+    }
+    const url = referenceUrl(rawUrl, 'Link URL', { required: true });
+    links.push({ id: ids[i] ? id(ids[i], 'link') : null, url, label: label || new URL(url).hostname.replace(/^www\./, '').slice(0, 120) });
+  });
+  return links;
+}
+
 function ideaValues(body, defaultCurrency = 'CAD') {
   const values = {
+    details: detailValues(body.details),
     kind: choice(body.kind, KINDS, 'idea kind', 'link'),
     title: text(body.title, 'Title', 160, true),
     location: text(body.location, 'Location', 200),
@@ -285,7 +338,6 @@ class PlannerService {
       options,
       rollup: options && rollup(options, moneyFor(context)),
       comments: await context.dao.comments.listForIdea(item.id),
-      sourceValues: {},
       imageValues: {},
       canEdit: this.canEdit(viewer, context, item),
       destinations: await this.destinations(context),
@@ -426,13 +478,14 @@ class PlannerService {
   async writeIdea(context, body, existing = null) {
     const { dao, trip, participant } = context;
     const v = ideaValues(body, trip.currency);
-    if (!existing && !v.url && (body.source_label || body.takeaway)) {
-      throw httpError(400, 'Add a first source URL to save its label and takeaway, or clear those fields.');
+    if (!existing && !v.url && body.source_label) {
+      throw httpError(400, 'Add a first source URL to save its label, or clear the label.');
     }
     // Legacy edits affect only the compatibility column, never the independent collection.
     if (existing && !Object.hasOwn(body, 'url')) v.url = existing.url;
+    if (existing && !Object.hasOwn(body, 'details')) v.details = existing.details;
     const initialSource = !existing && v.url ? sourceValues({ label: body.source_label == null || body.source_label === '' ? 'Original source' : body.source_label,
-      url: v.url, takeaway: body.takeaway }) : null;
+      url: v.url }) : null;
     if (v.destination_id) {
       const destination = await dao.ideas.findDestination(trip.id, v.destination_id);
       if (!destination || existing?.id === v.destination_id) throw httpError(400, 'Choose a destination from this trip.');
@@ -444,6 +497,41 @@ class PlannerService {
     if (existing) return dao.ideas.update(trip.id, existing.id, v);
     const item = await dao.ideas.create(trip.id, participant.id, v);
     if (initialSource) await this.mutateReference(context, item, 'sources', 'add', null, initialSource);
+    return item;
+  }
+
+  // Sources the viewer may edit in the idea form; the others are listed read-only.
+  async formLinks({ dao, participant }, item) {
+    const sources = item ? await dao.sources.listForIdeas([item.id]) : [];
+    const editable = source => participant.is_organizer || source.created_by === participant.id;
+    return { sources, links: sources.filter(editable), otherLinks: sources.filter(source => !editable(source)) };
+  }
+
+  // The idea form sends repeatable link and detail rows (marked by rows_form). Everything is
+  // validated before the first write, so a rejected form changes nothing.
+  async saveIdeaForm(context, body, existing = null) {
+    if (body.rows_form !== '1') return this.writeIdea(context, body, existing);
+    const { dao, participant } = context;
+    const links = linkRows(body);
+    const details = detailRows(body);
+    const { sources: current, links: mine } = await this.formLinks(context, existing);
+    const kept = new Map();
+    for (const link of links.filter(l => l.id)) {
+      if (!mine.some(source => source.id === link.id) || kept.has(link.id)) throw httpError(400, 'A link no longer belongs to this idea. Reload the page and try again.');
+      kept.set(link.id, link);
+    }
+    const removed = mine.filter(source => !kept.has(source.id));
+    const added = links.filter(link => !link.id);
+    if (current.length - removed.length + added.length > SOURCE_LIMIT) throw httpError(400, `Each idea can have at most ${SOURCE_LIMIT} links.`);
+    // Links replace the legacy first-source fields, so ignore those if they are sent too.
+    const { url, source_label, ...fields } = body;
+    const item = await this.writeIdea(context, { ...fields, details }, existing);
+    for (const source of removed) await dao.sources.delete(item.id, source.id);
+    for (const source of mine) {
+      const link = kept.get(source.id);
+      if (link && (link.url !== source.url || link.label !== source.label)) await dao.sources.update(item.id, source.id, { label: link.label, url: link.url });
+    }
+    for (const link of added) await dao.sources.create(item.id, participant.id, { label: link.label, url: link.url });
     return item;
   }
 
@@ -476,7 +564,7 @@ class PlannerService {
       return;
     }
     const count = await references.count(item.id);
-    if (count >= (image ? 12 : 20)) throw httpError(400, `Each idea can have at most ${image ? 12 : 20} ${collection}.`);
+    if (count >= (image ? 12 : SOURCE_LIMIT)) throw httpError(400, `Each idea can have at most ${image ? 12 : SOURCE_LIMIT} ${collection}.`);
     // The first photo becomes the cover.
     if (image) await dao.images.create(item.id, participant.id, v, count === 0);
     else await dao.sources.create(item.id, participant.id, v);
@@ -534,4 +622,4 @@ class PlannerService {
   }
 }
 
-module.exports = { PlannerService, KINDS, STATUSES, CURRENCIES, TRIP_FIELDS, IDEA_FIELDS, text, id, choice, tripValues, ideaValues, dateText, perPerson };
+module.exports = { PlannerService, KINDS, STATUSES, CURRENCIES, TRIP_FIELDS, IDEA_FIELDS, DETAIL_LABELS, text, id, choice, tripValues, ideaValues, dateText, perPerson };

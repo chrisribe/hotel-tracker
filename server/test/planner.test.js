@@ -44,7 +44,11 @@ function browser(baseUrl) {
     async request(path, { method = 'GET', body, headers = {}, token = true } = {}) {
       const options = { method, redirect: 'manual', headers: { Cookie: cookie, ...headers } };
       if (body !== undefined) {
-        options.body = new URLSearchParams({ ...(token ? { _csrf: csrf } : {}), ...body });
+        // Arrays become repeated fields, like the idea form's link and detail rows.
+        options.body = new URLSearchParams();
+        for (const [key, value] of Object.entries({ ...(token ? { _csrf: csrf } : {}), ...body })) {
+          [].concat(value).forEach(part => options.body.append(key, part));
+        }
       }
       const response = await fetch(`${baseUrl || base}${path}`, options);
       const setCookie = response.headers.get('set-cookie');
@@ -400,28 +404,21 @@ test('secure cookies require explicit HTTPS and proxy trust, and env-style sessi
 
 test('research collections preserve provenance, enforce subresource ownership, and replace covers', async () => {
   const { owner, alice, bob, path } = await group();
-  const item = await idea(alice, path, { url: 'https://example.com/original', source_label: 'Listing', takeaway: 'Initial quote' });
+  const item = await idea(alice, path, { url: 'https://example.com/original', source_label: 'Listing' });
   let detail = (await bob.request(item)).page.data.item;
   assert.equal(detail.source_count, 1);
   assert.equal(detail.sources[0].label, 'Listing');
-  assert.equal(detail.sources[0].takeaway, 'Initial quote');
   assert.equal(detail.sources[0].author_name, 'Alice');
   assert.equal(detail.cover_image, null);
   assert.deepEqual(detail.images, []);
   await bob.post(`${item}/vote`);
   await bob.post(`${item}/comments`, { body: 'Keep discussion' });
-  assert.equal((await bob.post(`${item}/sources`, { label: 'Review', url: 'http://example.com/review', takeaway: 'Helpful' })).location, `${item}#sources`);
-  detail = (await alice.request(item)).page.data.item;
-  const source = detail.sources[1];
-  assert.equal(source.author_name, 'Bob');
-  for (const action of ['edit', 'delete']) assert.equal((await alice.post(`${item}/sources/${source.id}/${action}`, { label: 'No', url: 'https://example.com' })).status, 403);
-  assert.equal((await bob.post(`${item}/sources/${source.id}/edit`, { label: 'Updated', url: 'https://example.com/new', takeaway: 'New finding' })).status, 302);
+  assert.equal((await bob.post(`${item}/sources`, { label: 'Review', url: 'https://example.com/review' })).status, 404);
   assert.equal((await alice.post(`${item}/edit`, { title: 'Changed title', kind: 'stay' })).status, 302);
   assert.equal((await alice.request(item)).page.data.item.url, 'https://example.com/original');
   assert.equal((await alice.post(`${item}/edit`, { title: 'Legacy URL edit', kind: 'stay', url: 'https://example.com/legacy-change' })).status, 302);
   detail = (await alice.request(item)).page.data.item;
   assert.equal(detail.sources[0].url, 'https://example.com/original');
-  assert.equal(detail.sources[1].url, 'https://example.com/new');
   assert.equal((await bob.post(`${item}/images`, { url: 'https://images.example.com/first.jpg', caption: 'First', source_url: 'http://example.com/credit' })).location, `${item}#photos`);
   assert.equal((await alice.post(`${item}/images`, { url: 'https://images.example.com/second.jpg', caption: 'Second' })).status, 302);
   detail = (await alice.request(item)).page.data.item;
@@ -438,7 +435,6 @@ test('research collections preserve provenance, enforce subresource ownership, a
   detail = (await bob.request(item)).page.data.item;
   assert.equal(detail.cover_image.id, second.id);
   assert.equal(detail.images[0].is_cover, true);
-  assert.equal((await owner.post(`${item}/sources/${source.id}/delete`)).status, 302);
   assert.equal((await owner.post(`${item}/images/${second.id}/delete`)).status, 302);
   detail = (await bob.request(item)).page.data.item;
   assert.equal(detail.cover_image, null);
@@ -456,7 +452,7 @@ test('comparison is read-only, ordered, same-kind and trip-scoped with 2–4 dis
   const stay = (await idea(owner, path, { kind: 'stay' })).split('/').at(-1);
   await alice.post(`${path}/ideas/${ids[0]}/vote`);
   await alice.post(`${path}/ideas/${ids[0]}/comments`, { body: 'Compare this' });
-  await alice.post(`${path}/ideas/${ids[0]}/sources`, { label: 'Guide', url: 'https://example.com/guide' });
+  await owner.post(`${path}/ideas/${ids[0]}/edit`, { kind: 'destination', title: 'Candidate 0', rows_form: '1', link_id: '', link_url: 'https://example.com/guide', link_label: 'Guide' });
   let page = (await alice.request(`${path}/compare`)).page;
   assert.equal(page.view, 'compare');
   assert.equal(page.data.kind, 'destination');
@@ -506,6 +502,67 @@ test('small comparisons open directly but never change selections or choose a su
   assert.equal((await alice.request(`${path}/compare?ids=${ids[0]}`)).status, 400);
 });
 
+test('idea form rows save links and details, keep other people\'s links, and reject bad rows without writing', async () => {
+  const { owner, alice, path } = await group();
+  const rows = { kind: 'stay', title: 'Casa Palm', rows_form: '1' };
+  const form = (await alice.request(`${path}/ideas/new?kind=stay`)).page.html;
+  assert.match(form, /name="detail_label"[^>]*value="Bedrooms"/);
+  assert.match(form, /data-kinds="stay transport"/);
+  // Unfilled starter rows are dropped, not rejected.
+  const starter = await idea(alice, path, { ...rows, title: 'Starter rows', detail_label: ['Bedrooms', 'Beds'], detail_value: ['2', ''] });
+  assert.deepEqual((await alice.request(starter)).page.data.item.details, [{ label: 'Bedrooms', value: '2' }]);
+  const item = await idea(alice, path, { ...rows,
+    link_id: ['', ''], link_url: ['https://www.airbnb.com/rooms/1', 'https://example.com/reviews'], link_label: ['', 'Reviews'],
+    detail_label: ['Bedrooms', '', 'Pool'], detail_value: ['3', '', 'Private'] });
+  let saved = (await alice.request(item)).page;
+  assert.deepEqual(saved.data.item.sources.map(s => [s.label, s.url]), [['airbnb.com', 'https://www.airbnb.com/rooms/1'], ['Reviews', 'https://example.com/reviews']]);
+  assert.deepEqual(saved.data.item.details, [{ label: 'Bedrooms', value: '3' }, { label: 'Pool', value: 'Private' }]);
+  assert.match(saved.html, /<dt>Bedrooms<\/dt><dd>3<\/dd>/);
+
+  // The organizer adds a link to Alice's idea; Alice sees it but cannot edit it.
+  const own = saved.data.item.sources;
+  assert.equal((await owner.post(`${item}/edit`, { ...rows, detail_label: ['Bedrooms', 'Pool'], detail_value: ['3', 'Private'],
+    link_id: [...own.map(s => String(s.id)), ''], link_url: [...own.map(s => s.url), 'https://example.com/bob'], link_label: [...own.map(s => s.label), 'Bob tip'] })).status, 302);
+  const edit = (await alice.request(`${item}/edit`)).page;
+  assert.deepEqual(edit.data.links.map(s => s.label), ['airbnb.com', 'Reviews']);
+  assert.deepEqual(edit.data.otherLinks.map(s => s.label), ['Bob tip']);
+  assert.match(edit.html, /value="Pool"/);
+  const [listing, reviews] = edit.data.links, bobs = edit.data.otherLinks[0];
+
+  // Rename one link, clear another, add one; no detail rows clears the details.
+  assert.equal((await alice.post(`${item}/edit`, { ...rows,
+    link_id: [String(listing.id), String(reviews.id), ''], link_url: [listing.url, '', 'https://example.com/booking'], link_label: ['Airbnb listing', '', 'Booking'] })).status, 302);
+  saved = (await alice.request(item)).page.data.item;
+  assert.deepEqual(saved.sources.map(s => s.label), ['Airbnb listing', 'Bob tip', 'Booking']);
+  assert.deepEqual(saved.details, []);
+
+  const kept = { link_id: [String(listing.id), ''], link_url: [listing.url, 'https://example.com/booking'], link_label: ['Airbnb listing', 'Booking'] };
+  const bad = [
+    { ...kept, detail_label: '', detail_value: '3' },
+    { link_id: '', link_url: '', link_label: 'Orphan label' },
+    { link_id: '', link_url: 'javascript:alert(1)', link_label: '' },
+    { link_id: String(bobs.id), link_url: 'https://example.com/steal', link_label: 'Mine' },
+    { link_id: ['', ''], link_url: 'https://example.com/a', link_label: ['a', 'b'] },
+    { link_id: Array(20).fill(''), link_url: Array.from({ length: 20 }, (_, i) => `https://example.com/${i}`), link_label: Array(20).fill('') },
+  ];
+  for (const body of bad) {
+    const response = await alice.post(`${item}/edit`, { ...rows, title: 'Changed title', ...body });
+    assert.equal(response.status, 400, JSON.stringify(body));
+  }
+  const orphan = await alice.post(`${item}/edit`, { ...rows, link_id: '', link_url: '', link_label: 'Orphan label' });
+  assert.match(orphan.page.html, /value="Orphan label"/);
+  saved = (await alice.request(item)).page.data.item;
+  assert.equal(saved.title, 'Casa Palm');
+  assert.deepEqual(saved.sources.map(s => [s.label, s.url]), [['Airbnb listing', listing.url], ['Bob tip', 'https://example.com/bob'], ['Booking', 'https://example.com/booking']]);
+
+  // Matching labels line up on the compare page.
+  const other = await idea(alice, path, { ...rows, title: 'Villa', detail_label: 'bedrooms', detail_value: '5' });
+  await alice.post(`${item}/edit`, { ...rows, ...kept, detail_label: ['Bedrooms', 'Pool'], detail_value: ['3', 'Private'] });
+  const compare = (await alice.request(`${path}/compare?kind=stay&ids=${item.split('/').at(-1)},${other.split('/').at(-1)}`)).page.html;
+  assert.match(compare, /<th scope="row">Bedrooms<\/th><td>3<\/td><td>5<\/td>/);
+  assert.match(compare, /<th scope="row">Pool<\/th><td>Private<\/td><td>—<\/td>/);
+});
+
 test('simplified forms keep optional fields accessible and open the matching validation error', async () => {
   const { owner, alice, path } = await group();
   const board = (await owner.request(path)).page.html;
@@ -514,25 +571,19 @@ test('simplified forms keep optional fields accessible and open the matching val
   assert.ok(board.includes(`${path}/share`));
   assert.ok(board.includes('id="view-filter"'));
   const editor = (await alice.request(`${path}/ideas/new`)).page.html;
-  assert.equal((editor.match(/<details class="editor-disclosure"\s*>/g) || []).length, 3);
-  for (const field of ['location','notes','cost','currency','capacity','source_label','takeaway']) {
+  assert.equal((editor.match(/<details class="editor-disclosure"(?: data-kinds="[^"]*")?\s*>/g) || []).length, 2);
+  for (const field of ['location','notes','cost','currency','capacity','link_url','link_label','detail_label','detail_value']) {
     assert.ok(editor.includes(`name="${field}"`));
   }
   const item = await idea(alice, path, {});
   const detail = (await alice.request(item)).page.html;
-  assert.match(detail, /<details class="add-reference" id="add-source"\s*>/);
+  // Links are edited only through "Edit idea".
+  assert.ok(!detail.includes('id="add-source"'));
+  assert.ok(!detail.includes('/sources/'));
   assert.match(detail, /<details class="add-reference" id="add-photo"\s*>/);
-  const sourceError = await alice.post(`${item}/sources`, { label: 'Keep this', url: 'javascript:bad', takeaway: 'Keep the note' });
-  assert.equal(sourceError.status, 400);
-  assert.match(sourceError.page.html, /id="add-source" open>/);
-  assert.match(sourceError.page.html, /id="add-photo"\s*>/);
-  assert.ok(sourceError.page.html.includes('href="#new-source-url"'));
-  assert.match(sourceError.page.html, /id="new-source-url"[^>]*aria-invalid="true"[^>]*aria-describedby="new-source-url-error"/);
-  assert.ok(sourceError.page.html.includes('Keep the note'));
   const imageError = await alice.post(`${item}/images`, { url: 'http://example.com/photo.jpg', caption: 'Keep caption' });
   assert.equal(imageError.status, 400);
   assert.match(imageError.page.html, /id="add-photo" open>/);
-  assert.match(imageError.page.html, /id="add-source"\s*>/);
   assert.ok(imageError.page.html.includes('href="#new-image-url"'));
   assert.match(imageError.page.html, /id="new-image-url"[^>]*aria-invalid="true"[^>]*aria-describedby="new-image-url-error new-image-hint"/);
   assert.ok(imageError.page.html.includes('id="new-image-url-error" class="field-error"'));
@@ -592,17 +643,12 @@ test('reference validation preserves attempted metadata, rejects unsafe URLs, an
   for (const url of ['', 'javascript:alert(1)', 'data:text/html,test', 'ftp://example.com', 'https://u:p@example.com',
     'https://@example.com', '/relative', 'https:example.com', 'https://example.com/white space', ' https://example.com/',
     'https://example.com/\tpath', 'https://example.com/\\path', 'https://example.com/\u00a0path', 'https://example.com/' + 'x'.repeat(2048)]) {
-    const response = await alice.post(`${item}/sources`, { label: 'Preserved label', url, takeaway: 'Preserved takeaway' });
+    const response = await alice.post(`${item}/edit`, { kind: 'link', title: 'Keep title', rows_form: '1', link_id: '', link_url: url, link_label: 'Preserved label' });
     assert.equal(response.status, 400, url);
-    assert.equal(response.page.view, 'idea');
-    assert.equal(response.page.data.sourceValues.url, url);
-    assert.equal(response.page.data.sourceValues.label, 'Preserved label');
-    assert.equal(response.page.data.sourceValues.takeaway, 'Preserved takeaway');
-    assert.deepEqual(response.page.data.item.sources, []);
-    assert.deepEqual(response.page.data.comments, []);
-    assert.equal(response.page.data.canEdit, true);
-    assert.deepEqual(response.page.data.destinations, []);
+    assert.equal(response.page.view, 'idea-form');
+    assert.ok(response.page.html.includes('value="Preserved label"'));
   }
+  assert.deepEqual((await alice.request(item)).page.data.item.sources, []);
   for (const url of ['', 'http://images.example.com/a.jpg', 'data:image/png;base64,a', 'javascript:alert(1)',
     'https://u:p@example.com/a.jpg', 'https://example.com/white space', 'https://example.com/\\path',
     'https://localhost/a', 'https://LOCALHOST./a', 'https://x.localhost/a', 'https://printer.local/a', 'https://intranet/a',
@@ -618,39 +664,29 @@ test('reference validation preserves attempted metadata, rejects unsafe URLs, an
     assert.equal(response.page.data.imageValues.source_url, 'https://example.com/credit');
     assert.equal(response.page.data.item.image_count, 0);
   }
-  for (const body of [{ label: '' }, { label: 'x'.repeat(121) }, { takeaway: 'x'.repeat(2001) }]) {
-    assert.equal((await alice.post(`${item}/sources`, { label: 'Valid', url: 'https://example.com', ...body })).status, 400);
-  }
+  assert.equal((await alice.post(`${item}/edit`, { kind: 'link', title: 'Keep title', rows_form: '1', link_id: '', link_url: 'https://example.com', link_label: 'x'.repeat(121) })).status, 400);
   for (const body of [{ caption: 'x'.repeat(301) }, { source_url: 'javascript:alert(1)' }, { source_url: 'https://u:p@example.com' }]) {
     assert.equal((await alice.post(`${item}/images`, { url: 'https://example.com/image.jpg', ...body })).status, 400);
   }
   const before = (await alice.request(path)).page.data.counts.all;
-  const incomplete = await alice.post(`${path}/ideas`, { kind: 'destination', title: 'Keep my research', source_label: 'A useful guide', takeaway: 'Important context' });
+  const incomplete = await alice.post(`${path}/ideas`, { kind: 'destination', title: 'Keep my research', source_label: 'A useful guide', notes: 'Important context' });
   assert.equal(incomplete.status, 400);
-  assert.equal(incomplete.page.data.values.takeaway, 'Important context');
-  for (const body of [{ source_label: 'x'.repeat(121) }, { takeaway: 'x'.repeat(2001) }]) {
+  assert.equal(incomplete.page.data.values.notes, 'Important context');
+  for (const body of [{ source_label: 'x'.repeat(121) }]) {
     const response = await alice.post(`${path}/ideas`, { kind: 'link', title: 'Do not partially insert', url: 'https://example.com', ...body });
     assert.equal(response.status, 400);
   }
   assert.equal((await alice.request(path)).page.data.counts.all, before);
-  const label = '<script>alert("source")</script>', takeaway = '<img src=x onerror=alert(1)>', caption = '<script>alert("caption")</script>';
-  assert.equal((await alice.post(`${item}/sources`, { label, url: 'https://example.com', takeaway })).status, 302);
-  assert.equal((await alice.post(`${item}/images`, { url: 'https://example.com/image.jpg', caption })).status, 302);
-  const result = await alice.request(item);
+  const label = '<script>alert("source")</script>', caption = '<script>alert("caption")</script>';
+  const xss = await idea(alice, path, { url: 'https://example.com', source_label: label });
+  assert.equal((await alice.post(`${xss}/images`, { url: 'https://example.com/image.jpg', caption })).status, 302);
+  const result = await alice.request(xss);
   assert.equal(result.page.data.item.sources[0].label, label);
-  assert.equal(result.page.data.item.sources[0].takeaway, takeaway);
   assert.equal(result.page.data.item.images[0].caption, caption);
   assert.ok(!result.page.html.includes(label));
-  assert.ok(!result.page.html.includes(takeaway));
   assert.ok(!result.page.html.includes(caption));
-  const sourceId = result.page.data.item.sources[0].id, imageId = result.page.data.item.images[0].id;
-  const badSourceEdit = await alice.post(`${item}/sources/${sourceId}/edit`, { label: 'Keep edit', url: 'javascript:alert(1)', takeaway });
-  assert.equal(badSourceEdit.status, 400);
-  assert.equal(badSourceEdit.page.data.sourceValues.id, String(sourceId));
-  assert.equal(badSourceEdit.page.data.referenceAction, 'edit');
-  assert.equal(badSourceEdit.page.data.errorTarget, `source-${sourceId}-url`);
-  assert.equal(badSourceEdit.page.data.item.sources[0].label, label);
-  const badImageEdit = await alice.post(`${item}/images/${imageId}/edit`, { url: 'http://example.com/a', caption });
+  const imageId = result.page.data.item.images[0].id;
+  const badImageEdit = await alice.post(`${xss}/images/${imageId}/edit`, { url: 'http://example.com/a', caption });
   assert.equal(badImageEdit.status, 400);
   assert.equal(badImageEdit.page.data.imageValues.id, String(imageId));
   assert.equal(badImageEdit.page.data.errorTarget, `image-${imageId}-url`);
@@ -659,15 +695,13 @@ test('reference validation preserves attempted metadata, rejects unsafe URLs, an
 
 test('source/image metadata is escaped by real collection EJS', async () => {
   const { alice, path } = await group();
-  const item = await idea(alice, path, {});
-  const label = '<script>alert("source")</script>', takeaway = '<img src=x onerror=alert(1)>', caption = '<script>alert("caption")</script>';
-  await alice.post(`${item}/sources`, { label, url: 'https://example.com/?one=1&two=2', takeaway });
+  const label = '<script>alert("source")</script>', caption = '<script>alert("caption")</script>';
+  const item = await idea(alice, path, { url: 'https://example.com/?one=1&two=2', source_label: label });
   await alice.post(`${item}/images`, { url: 'https://example.com/image.jpg', caption, source_url: 'https://example.com/?credit=1&two=2' });
   const result = await alice.request(item);
   assert.equal(result.status, 200);
-  assert.ok(result.page.html.includes(`/sources/${result.page.data.item.sources[0].id}/`));
   const { escapeXML } = require('ejs');
-  for (const value of [label, takeaway, caption, 'https://example.com/?one=1&two=2', 'https://example.com/?credit=1&two=2']) {
+  for (const value of [label, caption, 'https://example.com/?one=1&two=2', 'https://example.com/?credit=1&two=2']) {
     assert.ok(!result.page.html.includes(value));
     assert.ok(result.page.html.includes(escapeXML(value)));
   }
@@ -679,26 +713,23 @@ test('reference IDs are scoped to their parent idea/trip, guest membership is re
   const other = (await owner.post('/plans', { name: 'Foreign references' })).location;
   const foreign = await idea(owner, other, {});
   for (const item of [second, foreign]) {
-    await owner.post(`${item}/sources`, { label: 'Protected', url: 'https://example.com' });
     await owner.post(`${item}/images`, { url: 'https://example.com/image.jpg' });
     const detail = (await owner.request(item)).page.data.item;
     for (const action of ['edit', 'delete']) {
-      assert.equal((await owner.post(`${first}/sources/${detail.sources[0].id}/${action}`, { label: 'No', url: 'https://example.com' })).status, 404);
       assert.equal((await owner.post(`${first}/images/${detail.images[0].id}/${action}`, { url: 'https://example.com' })).status, 404);
     }
     assert.equal((await owner.post(`${first}/images/${detail.images[0].id}/cover`)).status, 404);
   }
   const foreignId = foreign.split('/').at(-1);
-  for (const suffix of ['/sources', '/images', '/sources/1/edit', '/sources/1/delete', '/images/1/edit', '/images/1/delete', '/images/1/cover']) {
+  for (const suffix of ['/images', '/images/1/edit', '/images/1/delete', '/images/1/cover']) {
     assert.equal((await alice.post(`${path}/ideas/${foreignId}${suffix}`, { label: 'No', url: 'https://example.com' })).status, 404);
     assert.equal((await alice.post(`${first}${suffix}`, { label: 'No', url: 'https://example.com' }, { token: false })).status, 403);
     assert.equal((await alice.post(`${first}${suffix}`, { label: 'No', url: 'https://example.com' }, { headers: { Origin: 'https://attacker.example' } })).status, 403);
   }
-  assert.equal((await alice.post(`${foreign}/sources`, { label: 'No', url: 'https://example.com' })).status, 404);
   assert.equal((await alice.post(`${foreign}/images`, { url: 'https://example.com' })).status, 404);
   const aliceMember = (await owner.request(`${path}/share`)).page.data.members.find(member => member.name === 'Alice');
   await owner.post(`${path}/members/${aliceMember.id}/remove`);
-  for (const suffix of ['/sources', '/images', '/images/1/cover']) assert.equal((await alice.post(`${first}${suffix}`, { label: 'No', url: 'https://example.com' })).status, 403);
+  for (const suffix of ['/images', '/images/1/cover']) assert.equal((await alice.post(`${first}${suffix}`, { label: 'No', url: 'https://example.com' })).status, 403);
   assert.equal((await bob.request(`${path}/selected`)).status, 200);
 });
 
@@ -711,18 +742,13 @@ test('collection limits hold under concurrent requests and cover replacement is 
   assert.equal(firstDetail.images.filter(image => image.is_cover).length, 1);
   assert.equal(firstDetail.cover_image.id, firstDetail.images[0].id);
   await assert.rejects(pool.query('UPDATE research_images SET is_cover=TRUE WHERE id=$1', [firstDetail.images[1].id]), /unique constraint/);
-  const item = await idea(owner, path, {});
-  for (let n = 0; n < 19; n++) assert.equal((await alice.post(`${item}/sources`, { label: `Source ${n}`, url: 'https://example.com' })).status, 302);
-  const sources = await Promise.all([alice, bob].map(person => person.post(`${item}/sources`, { label: 'Last slot', url: 'https://example.com' })));
-  assert.deepEqual(sources.map(response => response.status).sort(), [302, 400]);
+  const item = await idea(owner, path, { url: 'https://example.com' });
   for (let n = 0; n < 11; n++) assert.equal((await alice.post(`${item}/images`, { url: `https://example.com/${n}.jpg` })).status, 302);
   const images = await Promise.all([alice, bob].map(person => person.post(`${item}/images`, { url: 'https://example.com/last.jpg' })));
   assert.deepEqual(images.map(response => response.status).sort(), [302, 400]);
   let detail = (await owner.request(item)).page.data.item;
-  assert.equal(detail.source_count, 20);
   assert.equal(detail.image_count, 12);
   assert.equal(detail.images.filter(image => image.is_cover).length, 1);
-  assert.equal((await owner.post(`${item}/sources/${detail.sources[0].id}/edit`, { label: 'Editable at limit', url: 'https://example.com/new' })).status, 302);
   assert.equal((await owner.post(`${item}/images/${detail.images[0].id}/edit`, { url: 'https://example.com/new.jpg' })).status, 302);
   const oldest = detail.images[0].id, last = detail.images.at(-1).id;
   await Promise.all([owner.post(`${item}/images/${last}/cover`), owner.post(`${item}/images/${detail.images[4].id}/cover`)]);

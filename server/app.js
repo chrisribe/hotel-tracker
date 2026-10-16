@@ -6,6 +6,7 @@ const PgSession = require('connect-pg-simple')(session);
 const { migrate } = require('./scripts/init-db');
 const auth = require('./middleware/planner-auth');
 const { ExchangeRates } = require('./services/ExchangeRates');
+const { DETAIL_LABELS } = require('./services/PlannerService');
 
 async function createApp({ pool, config = {} }) {
   await migrate(pool);
@@ -38,6 +39,7 @@ async function createApp({ pool, config = {} }) {
   app.set('sessionSecret', secret);
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, 'views'));
+  app.locals.DETAIL_LABELS = DETAIL_LABELS;
   app.use((req, res, next) => {
     res.set('X-Content-Type-Options', 'nosniff');
     res.set('X-Frame-Options', 'DENY');
@@ -58,7 +60,8 @@ async function createApp({ pool, config = {} }) {
     cookie: { httpOnly: true, sameSite: 'lax', secure: settings.cookieSecure, maxAge: 7 * 24 * 60 * 60 * 1000 },
   }));
   app.use(express.json({ limit: '32kb', strict: true }));
-  app.use(express.urlencoded({ extended: false, limit: '32kb', parameterLimit: 40 }));
+  // Idea forms carry up to 20 link rows (3 fields each) and 12 detail rows (2 fields each).
+  app.use(express.urlencoded({ extended: false, limit: '32kb', parameterLimit: 120 }));
   app.use(auth.sameOrigin);
   app.use(auth.identify);
   app.get('/', (req, res) => res.redirect('/plans'));

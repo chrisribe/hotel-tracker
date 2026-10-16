@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS research_items (
   FOREIGN KEY (destination_id, trip_id) REFERENCES research_items(id, trip_id) ON DELETE SET NULL (destination_id),
   FOREIGN KEY (created_by, trip_id) REFERENCES participants(id, trip_id)
 );
+ALTER TABLE research_items ADD COLUMN IF NOT EXISTS details JSONB NOT NULL DEFAULT '[]'::jsonb;
 CREATE INDEX IF NOT EXISTS research_items_trip ON research_items(trip_id);
 CREATE INDEX IF NOT EXISTS research_items_destination ON research_items(destination_id);
 
@@ -109,11 +110,11 @@ CREATE TABLE IF NOT EXISTS research_sources (
   label TEXT NOT NULL CHECK (char_length(btrim(label))>0 AND char_length(label)<=120),
   url TEXT NOT NULL CHECK (char_length(url) BETWEEN 1 AND 2048 AND url ~ '^https?://[^/?#]+'
     AND url !~ '[[:space:][:cntrl:]]' AND strpos(url,chr(92))=0 AND url !~ '^https?://[^/?#]*@'),
-  takeaway TEXT NOT NULL DEFAULT '' CHECK (char_length(takeaway)<=2000),
   created_by INTEGER REFERENCES participants(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS research_sources_item ON research_sources(item_id);
+ALTER TABLE research_sources DROP COLUMN IF EXISTS takeaway;
 CREATE TABLE IF NOT EXISTS research_images (
   id SERIAL PRIMARY KEY,
   item_id INTEGER NOT NULL REFERENCES research_items(id) ON DELETE CASCADE,

@@ -48,15 +48,15 @@
           <% if (d.cover_image) { %><a class="destination-thumb" href="<%= base %>/ideas/<%= d.id %>" tabindex="-1" aria-hidden="true"><img src="<%= d.cover_image.url %>" alt="" loading="lazy" referrerpolicy="no-referrer"></a><% } else { %><span class="destination-thumb empty" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg></span><% } %>
           <div class="destination-name">
             <h3 id="dest-<%= d.id %>"><a href="<%= base %>/ideas/<%= d.id %>"><%= d.title %></a></h3>
-            <div class="destination-meta"><span class="badge <%= d.status %>"><%= h.statuses[d.status] %></span><% if (group.matched && d.location) { %><span><%= d.location %></span><% } %><span><%= group.options.length %> <%= group.options.length === 1 ? 'option' : 'options' %></span><% if (!group.matched) { %><span class="fine-print">Destination itself doesn’t match the filters</span><% } %></div>
+            <div class="destination-meta"><span class="badge <%= d.status %>"><%= h.statuses[d.status] %></span><% if (!group.matched) { %><span class="fine-print">Destination itself doesn’t match the filters</span><% } %></div>
           </div>
-          <%- include('rollup', { rollup: group.rollup, h }) %>
+          <%- include('rollup', { rollup: group.rollup, h, compact: true }) %>
           <div class="destination-actions">
             <% if (group.matched) { %><form method="post" action="<%= base %>/ideas/<%= d.id %>/vote"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="returnTo" value="board"><button class="social-button <%= d.voted ? 'voted' : '' %>" aria-label="<%= d.voted ? 'Remove interest in' : 'Interested in' %> <%= d.title %>" aria-pressed="<%= d.voted %>"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg><%= d.vote_count %></button></form><a class="social-button" href="<%= base %>/ideas/<%= d.id %>#discussion" aria-label="<%= d.comment_count %> comments on <%= d.title %>"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg><%= d.comment_count %></a><% } %>
-            <a class="button subtle small" href="<%= base %>/ideas/new?kind=stay&amp;destination=<%= d.id %>"><svg class="icon small" aria-hidden="true"><use href="#i-plus"/></svg>Add option<span class="sr-only"> for <%= d.title %></span></a>
+            <a class="button subtle small" href="<%= base %>/ideas/new?kind=stay&amp;destination=<%= d.id %>"><svg class="icon small" aria-hidden="true"><use href="#i-plus"/></svg>Add idea<span class="sr-only"> for <%= d.title %></span></a>
           </div>
         </header>
-        <% if (group.options.length) { %><ul class="option-list" aria-label="Options for <%= d.title %>"><% group.options.forEach(item => { %><%- include('idea-row', { item, ...rowArgs }) %><% }) %></ul>
+        <% if (group.options.length) { %><ul class="option-list" aria-label="Ideas for <%= d.title %>"><% group.options.forEach(item => { %><%- include('idea-row', { item, ...rowArgs }) %><% }) %></ul>
         <% } else { %><p class="option-empty">No stays, transport or activities linked yet.</p><% } %>
       </section>
     <% }) %>

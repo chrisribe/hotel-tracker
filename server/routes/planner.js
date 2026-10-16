@@ -81,18 +81,18 @@ router.get('/plans/:id/selected', auth.authenticated, scoped(async (req, planner
 })));
 
 router.get('/plans/:id/ideas/new', auth.authenticated, scoped(async (req, planner, context) => ({
-  view: 'idea-form', data: { trip: context.trip, item: null, destinations: await planner.destinations(context),
+  view: 'idea-form', data: { trip: context.trip, item: null, destinations: await planner.destinations(context), links: [], otherLinks: [],
     formAction: `/plans/${context.trip.id}/ideas`, values: { kind: req.query.kind, destination_id: req.query.destination } },
 })));
 
 router.post('/plans/:id/ideas', auth.authenticated, scoped(async (req, planner, context) => {
   try {
-    const item = await planner.writeIdea(context, req.body);
+    const item = await planner.saveIdeaForm(context, req.body);
     return { redirect: `/plans/${context.trip.id}/ideas/${item.id}` };
   } catch (error) {
     if (error.status !== 400) throw error;
     return { view: 'idea-form', status: 400, error: error.message, data: {
-      trip: context.trip, item: null, destinations: await planner.destinations(context),
+      trip: context.trip, item: null, destinations: await planner.destinations(context), links: [], otherLinks: [],
       formAction: `/plans/${context.trip.id}/ideas`, values: req.body,
     } };
   }
@@ -106,42 +106,37 @@ router.get('/plans/:id/ideas/:itemId', auth.authenticated, scoped(async (req, pl
   view: 'idea', data: await ideaDetail(req, planner, context),
 })));
 
-// Literal collection/action names keep mutation scope and redirects entirely server-controlled.
-for (const collection of ['sources', 'images']) {
-  const image = collection === 'images';
-  const param = image ? 'imageId' : 'sourceId';
-  for (const action of ['add', 'edit', 'delete', ...(image ? ['cover'] : [])]) {
-    const suffix = action === 'add' ? '' : `/:${param}/${action}`;
-    router.post(`/plans/:id/ideas/:itemId/${collection}${suffix}`, auth.authenticated, scoped(async (req, planner, context) => {
-      const item = await planner.item(context, req.params.itemId);
-      try {
-        await planner.mutateReference(context, item, collection, action, req.params[param], req.body);
-        return { redirect: `/plans/${context.trip.id}/ideas/${item.id}#${image ? 'photos' : 'sources'}` };
-      } catch (error) {
-        if (error.status !== 400) throw error;
-        const values = image ? { url: req.body.url, caption: req.body.caption, source_url: req.body.source_url } :
-          { label: req.body.label, url: req.body.url, takeaway: req.body.takeaway };
-        const referenceError = error.field ? {
-          field: error.field, message: error.message,
-          prefix: action === 'add' ? (image ? 'new-image' : 'new-source') : `${image ? 'image' : 'source'}-${req.params[param]}`,
-        } : null;
-        return { view: 'idea', status: 400, error: error.message, data: {
-          ...await ideaDetail(req, planner, context),
-          [image ? 'imageValues' : 'sourceValues']: { ...values, id: req.params[param] || null },
-          errorCollection: collection, referenceAction: action,
-          referenceError,
-          errorTarget: referenceError ? `${referenceError.prefix}-${referenceError.field}` : (image ? 'photos' : 'sources'),
-          errorTargetLabel: referenceError ? `Fix ${image ? 'photo' : 'source'} details` : `Review ${image ? 'photos' : 'sources'}`,
-        } };
-      }
-    }));
-  }
+// Photos are managed on the idea page; links are edited in the idea form.
+// Literal action names keep mutation scope and redirects entirely server-controlled.
+for (const action of ['add', 'edit', 'delete', 'cover']) {
+  const suffix = action === 'add' ? '' : `/:imageId/${action}`;
+  router.post(`/plans/:id/ideas/:itemId/images${suffix}`, auth.authenticated, scoped(async (req, planner, context) => {
+    const item = await planner.item(context, req.params.itemId);
+    try {
+      await planner.mutateReference(context, item, 'images', action, req.params.imageId, req.body);
+      return { redirect: `/plans/${context.trip.id}/ideas/${item.id}#photos` };
+    } catch (error) {
+      if (error.status !== 400) throw error;
+      const referenceError = error.field ? {
+        field: error.field, message: error.message,
+        prefix: action === 'add' ? 'new-image' : `image-${req.params.imageId}`,
+      } : null;
+      return { view: 'idea', status: 400, error: error.message, data: {
+        ...await ideaDetail(req, planner, context),
+        imageValues: { url: req.body.url, caption: req.body.caption, source_url: req.body.source_url, id: req.params.imageId || null },
+        errorCollection: 'images', referenceAction: action,
+        referenceError,
+        errorTarget: referenceError ? `${referenceError.prefix}-${referenceError.field}` : 'photos',
+        errorTargetLabel: referenceError ? 'Fix photo details' : 'Review photos',
+      } };
+    }
+  }));
 }
 
 router.get('/plans/:id/ideas/:itemId/edit', auth.authenticated, scoped(async (req, planner, context) => {
   const item = await planner.item(context, req.params.itemId);
   planner.ensureCanEdit(req.viewer, context, item);
-  return { view: 'idea-form', data: { trip: context.trip, item, destinations: await planner.destinations(context),
+  return { view: 'idea-form', data: { trip: context.trip, item, destinations: await planner.destinations(context), ...await planner.formLinks(context, item),
     formAction: `/plans/${context.trip.id}/ideas/${item.id}/edit`, values: item } };
 }));
 
@@ -149,12 +144,12 @@ router.post('/plans/:id/ideas/:itemId/edit', auth.authenticated, scoped(async (r
   const item = await planner.item(context, req.params.itemId);
   planner.ensureCanEdit(req.viewer, context, item);
   try {
-    await planner.writeIdea(context, req.body, item);
+    await planner.saveIdeaForm(context, req.body, item);
     return { redirect: `/plans/${context.trip.id}/ideas/${item.id}` };
   } catch (error) {
     if (error.status !== 400) throw error;
     return { view: 'idea-form', status: 400, error: error.message, data: {
-      trip: context.trip, item, destinations: await planner.destinations(context),
+      trip: context.trip, item, destinations: await planner.destinations(context), ...await planner.formLinks(context, item),
       formAction: `/plans/${context.trip.id}/ideas/${item.id}/edit`, values: req.body,
     } };
   }

@@ -1,6 +1,6 @@
 const express = require('express');
 const auth = require('../middleware/planner-auth');
-const { PlannerService, TRIP_FIELDS, IDEA_FIELDS, dateText, perPerson } = require('../services/PlannerService');
+const { PlannerService, TRIP_FIELDS, IDEA_FIELDS, DETAIL_LABELS, dateText, perPerson } = require('../services/PlannerService');
 
 const AGENT_NAME = 'Hermes';
 const FAILED_TOKEN_LIMIT = 20;
@@ -35,6 +35,7 @@ router.get('/trips/:id', inTrip(async (req, planner, ctx) => {
     ideas: board.items.map(idea => ideaJson(idea, board.trip)),
     budget: board.budget.map(b => ({ ...b, per_person: perPerson(b.total, board.trip.travelers) })),
     missing_costs: board.missingCosts,
+    detail_labels: DETAIL_LABELS,
   };
 }));
 
@@ -45,7 +46,7 @@ router.patch('/trips/:id', onlyFields(TRIP_FIELDS), inTrip(async (req, planner, 
 
 // ── Ideas ────────────────────────────────────────────────────────────
 
-router.post('/trips/:id/ideas', onlyFields([...IDEA_FIELDS, 'source_label', 'takeaway']), inTrip(async (req, planner, ctx) => {
+router.post('/trips/:id/ideas', onlyFields([...IDEA_FIELDS, 'source_label']), inTrip(async (req, planner, ctx) => {
   const item = await planner.writeIdea(ctx, req.body);
   return showIdea(req, planner, ctx, item.id);
 }, 201));
@@ -65,7 +66,7 @@ router.delete('/trips/:id/ideas/:itemId', inTrip(async (req, planner, ctx) => {
 
 // ── Sources, images, comments ────────────────────────────────────────
 
-const REFERENCE_FIELDS = { sources: ['label', 'url', 'takeaway'], images: ['url', 'caption', 'source_url'] };
+const REFERENCE_FIELDS = { sources: ['label', 'url'], images: ['url', 'caption', 'source_url'] };
 for (const collection of ['sources', 'images']) {
   router.post(`/trips/:id/ideas/:itemId/${collection}`, onlyFields(REFERENCE_FIELDS[collection]), inTrip(async (req, planner, ctx) => {
     const item = await planner.item(ctx, req.params.itemId);
