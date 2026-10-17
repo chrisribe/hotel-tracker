@@ -52,9 +52,13 @@
     <nav class="primary-nav" aria-label="Workspace">
       <a href="/plans" class="nav-link <%= view === 'plans' ? 'active' : '' %>" <%- view === 'plans' ? 'aria-current="page"' : '' %>><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg>My trips</a>
       <% if (data.trip && data.trip.id) { %>
-      <div class="nav-trip"><%= data.trip.name %></div>
-      <a href="/plans/<%= data.trip.id %>" class="nav-link <%= boardActive ? 'active' : '' %>" <%- view === 'board' ? 'aria-current="page"' : '' %>><svg class="icon" aria-hidden="true"><use href="#i-compass"/></svg>Research</a>
+      <div class="trip-nav" role="group" aria-labelledby="nav-trip-name">
+      <h2 class="nav-trip" id="nav-trip-name"><%= data.trip.name %></h2>
+      <div class="trip-nav-links">
+      <a href="/plans/<%= data.trip.id %>" class="nav-link <%= boardActive ? 'active' : '' %>" <%- boardActive ? `aria-current="${view === 'board' ? 'page' : 'location'}"` : '' %>><svg class="icon" aria-hidden="true"><use href="#i-compass"/></svg>Research</a>
       <a href="/plans/<%= data.trip.id %>/selected" class="nav-link <%= view === 'selected' ? 'active' : '' %>" <%- view === 'selected' ? 'aria-current="page"' : '' %>><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Selected plan</a>
+      </div>
+      </div>
       <% } %>
     </nav>
     <div class="viewer"><span class="avatar"><%= h.initials(viewer.name) %></span><span class="viewer-name"><strong><%= viewer.name %></strong><small><%= viewer.isOrganizer ? 'Trip organizer' : 'Travel companion' %></small></span><form method="post" action="/logout"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="icon-button light" aria-label="Sign out" title="Sign out"><svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg></button></form></div>
