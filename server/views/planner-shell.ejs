@@ -34,6 +34,7 @@
        title: `Quoted ${fmtMoney(amount, currency)} ${currency} · ECB rate of ${h.date(display.date)}` };
    },
    date: value => value ? new Date(value).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : 'Dates open',
+   when: value => new Date(value).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'UTC' }) + ' UTC',
   initials: name => (name || '?').replace(/[()]/g, '').trim().split(/\s+/).slice(0, 2).map(s => s[0]).join('').toUpperCase(),
    host: url => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } },
    kindIcon: kind => ({ destination: 'pin', stay: 'home', transport: 'car', activity: 'sun', link: 'link', all: 'grid' }[kind] || 'grid')

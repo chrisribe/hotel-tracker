@@ -93,7 +93,7 @@ test('an agent researches a trip end to end with its own attribution', async () 
   assert.equal(stay.status, 201);
   assert.deepEqual(stay.json.idea.details, [{ label: 'Bedrooms', value: '4' }, { label: 'Pool', value: 'Heated' }]);
   const ideaPath = `/trips/${tripId}/ideas/${stay.json.idea.id}`;
-  assert.equal(stay.json.idea.author, 'Hermes');
+  assert.equal(stay.json.idea.author, 'Trip Butler');
   assert.equal(stay.json.idea.cost, '7985.00');
   assert.equal(stay.json.idea.per_person, null);
   assert.equal(stay.json.idea.capacity, 8);
@@ -120,7 +120,7 @@ test('an agent researches a trip end to end with its own attribution', async () 
 
   board = await api(`/trips/${tripId}`);
   assert.equal(board.json.ideas.length, 2);
-  assert.deepEqual(board.json.members.map(m => [m.name, m.is_agent]), [['test-organizer', false], ['Hermes', true]]);
+  assert.deepEqual(board.json.members.map(m => [m.name, m.is_agent]), [['test-organizer', false], ['Trip Butler', true]]);
   assert.deepEqual(board.json.budget, [{ currency: 'CAD', total: '8100.50', per_person: 1012.56 }]);
   assert.equal(board.json.missing_costs, 0);
   assert.deepEqual((await api('/trips')).json.trips.map(t => t.name), ['Coast week']);
@@ -191,4 +191,64 @@ test('API rejects unknown fields instead of dropping them', async () => {
   assert.deepEqual((await api(ideas, { method: 'POST', raw: '[]' })).json, { error: 'Body must be a JSON object.' });
   // Nothing was written by the rejected requests.
   assert.deepEqual((await api(`/trips/${tripId}`)).json.ideas.map(i => i.title), ['Villa']);
+});
+
+test('brief → queued request → compare set → delta refresh keeps votes, comments and status', async () => {
+  const tripId = (await api('/trips', { method: 'POST', body: { name: 'Rep Dom' } })).json.trip.id;
+  const trip = `/trips/${tripId}`;
+  assert.equal((await api(`${trip}/generate`, { method: 'POST', body: {} })).status, 400, 'no brief yet');
+  assert.equal((await api(trip, { method: 'PATCH', body: { brief_meta: [1] } })).status, 400);
+
+  const briefed = (await api(trip, { method: 'PATCH', body: { brief_text: 'Rep Dom in March, good food, nice beach, 2 adults, ~4k CAD',
+    brief_meta: { month: '2027-03', budget: 4000 } } })).json.trip;
+  assert.deepEqual(briefed.brief_meta, { month: '2027-03', budget: 4000 });
+  assert.ok(briefed.brief_updated_at);
+  const unchanged = (await api(trip, { method: 'PATCH', body: { description: 'x' } })).json.trip;
+  assert.equal(unchanged.brief_updated_at, briefed.brief_updated_at, 'other fields leave brief_updated_at alone');
+
+  const first = await api(`${trip}/generate`, { method: 'POST', body: {} });
+  assert.equal(first.status, 202);
+  assert.deepEqual([first.json.request.mode, first.json.request.queued], ['generate', true]);
+  assert.equal((await api(`${trip}/generate`, { method: 'POST', body: { mode: 'bogus' } })).status, 400);
+  let queue = (await api('/generation-queue')).json.requests.filter(r => r.trip_id === tripId);
+  assert.equal(queue.length, 1);
+  assert.match(queue[0].brief_text, /good food/);
+
+  // Hermes builds the compare set; the group then votes, comments and shortlists.
+  const ids = [];
+  for (const title of ['Punta Cana', 'Las Terrenas', 'Cabarete']) {
+    ids.push((await api(`${trip}/ideas`, { method: 'POST', body: { kind: 'destination', title, url: `https://example.com/${title.length}`,
+      details: [{ label: 'Weather', value: 'Dry season' }] } })).json.idea.id);
+  }
+  const report = await api(`${trip}/generate/report`, { method: 'POST', body: { created: 3, requested_at: queue[0].requested_at } });
+  assert.deepEqual(report.json.trip.last_run_summary, { created: 3, updated: 0, flagged: 0, note: '' });
+  assert.equal(report.json.trip.generation_requested_at, null);
+  assert.equal((await api('/generation-queue')).json.requests.some(r => r.trip_id === tripId), false);
+  await pool.query(`INSERT INTO research_votes (item_id, participant_id) SELECT $1, id FROM participants WHERE trip_id = $2 AND is_organizer`, [ids[1], tripId]);
+  await api(`${trip}/ideas/${ids[1]}`, { method: 'PATCH', body: { status: 'shortlisted' } });
+  await api(`${trip}/ideas/${ids[1]}/comments`, { method: 'POST', body: { body: 'Love this one' } });
+
+  // Follow-up: refresh updates the card in place.
+  await api(trip, { method: 'PATCH', body: { brief_text: `${briefed.brief_text}\nAlso check prices from Toronto.` } });
+  assert.equal((await api(`${trip}/generate`, { method: 'POST', body: { mode: 'refresh' } })).json.request.mode, 'refresh');
+  queue = (await api('/generation-queue')).json.requests.filter(r => r.trip_id === tripId);
+  const refreshed = (await api(`${trip}/ideas/${ids[1]}`, { method: 'PATCH', body: {
+    details: [{ label: 'Weather', value: 'Dry season' }, { label: 'Flight time', value: '4h from YYZ' }], last_refresh_note: 'Added Toronto flight time' } })).json;
+  assert.deepEqual([refreshed.idea.status, refreshed.idea.vote_count, refreshed.comments.length, refreshed.idea.last_refresh_note],
+    ['shortlisted', 1, 1, 'Added Toronto flight time']);
+  assert.equal((await api(`${trip}/ideas/${ids[1]}`, { method: 'PATCH', body: { notes: 'x' } })).json.idea.last_refresh_note, 'Added Toronto flight time');
+
+  // A request made after the run started stays queued.
+  await pool.query("UPDATE trips SET generation_requested_at = NOW() + interval '1 minute' WHERE id = $1", [tripId]);
+  await api(`${trip}/generate/report`, { method: 'POST', body: { updated: 1, requested_at: queue[0].requested_at } });
+  assert.equal((await api('/generation-queue')).json.requests.filter(r => r.trip_id === tripId).length, 1);
+  assert.equal((await api(`${trip}/generate/report`, { method: 'POST', body: { updated: 1.5 } })).status, 400);
+  assert.equal((await api(`${trip}/generate/report`, { method: 'POST', body: { updated: 1, extra: 1 } })).json.field, 'extra');
+  await api(`${trip}/generate/report`, { method: 'POST', body: { updated: 1 } });
+  assert.equal((await api('/generation-queue')).json.requests.some(r => r.trip_id === tripId), false);
+
+  // Removing Hermes hides the trip from the queue.
+  await api(`${trip}/generate`, { method: 'POST', body: {} });
+  await pool.query('UPDATE participants SET active = FALSE WHERE trip_id = $1 AND is_agent', [tripId]);
+  assert.equal((await api('/generation-queue')).json.requests.some(r => r.trip_id === tripId), false);
 });

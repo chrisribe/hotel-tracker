@@ -82,17 +82,17 @@ class IdeasDAO {
 
   async create(tripId, participantId, v) {
     const r = await this.db.query(`INSERT INTO research_items
-      (trip_id, kind, title, location, notes, url, destination_id, cost, currency, capacity, created_by, details)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb) RETURNING *`,
-    [tripId, v.kind, v.title, v.location, v.notes, v.url, v.destination_id, v.cost, v.currency, v.capacity, participantId, JSON.stringify(v.details || [])]);
+      (trip_id, kind, title, location, notes, url, destination_id, cost, currency, capacity, created_by, details, last_refresh_note)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13) RETURNING *`,
+    [tripId, v.kind, v.title, v.location, v.notes, v.url, v.destination_id, v.cost, v.currency, v.capacity, participantId, JSON.stringify(v.details || []), v.last_refresh_note || null]);
     return r.rows[0];
   }
 
   async update(tripId, id, v) {
     const r = await this.db.query(`UPDATE research_items SET kind = $1, title = $2, location = $3, notes = $4, url = $5,
-      destination_id = $6, cost = $7, currency = $8, capacity = $9, details = $12::jsonb, updated_at = NOW()
+      destination_id = $6, cost = $7, currency = $8, capacity = $9, details = $12::jsonb, last_refresh_note = $13, updated_at = NOW()
       WHERE id = $10 AND trip_id = $11 RETURNING *`,
-    [v.kind, v.title, v.location, v.notes, v.url, v.destination_id, v.cost, v.currency, v.capacity, id, tripId, JSON.stringify(v.details || [])]);
+    [v.kind, v.title, v.location, v.notes, v.url, v.destination_id, v.cost, v.currency, v.capacity, id, tripId, JSON.stringify(v.details || []), v.last_refresh_note || null]);
     return r.rows[0];
   }
 

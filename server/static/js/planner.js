@@ -56,6 +56,28 @@ window.addEventListener('pageshow', () => {
   });
 });
 
+// While the Trip Butler has a request waiting, check every 20 s (only when the tab is visible, for up to
+// an hour) and reload once the research lands. If the organizer is mid-edit, just say so instead.
+const brief = document.querySelector('[data-status-url]');
+if (brief) {
+  const textarea = brief.querySelector('textarea');
+  const original = textarea?.value;
+  const stopAt = Date.now() + 60 * 60 * 1000;
+  const timer = setInterval(async () => {
+    if (document.hidden) return;
+    if (Date.now() > stopAt) return clearInterval(timer);
+    try {
+      const response = await fetch(brief.dataset.statusUrl, { headers: { Accept: 'application/json' } });
+      if (!response.ok) return;
+      const status = await response.json();
+      if (status.waiting) return;
+      clearInterval(timer);
+      if (textarea && textarea.value !== original) announce('Research is in. Reload the page to see the new ideas.');
+      else window.location.reload();
+    } catch { /* offline for a moment; try again next tick */ }
+  }, 20000);
+}
+
 // Without JavaScript, people clear a row to remove it and get one blank row to add.
 document.querySelectorAll('[data-rows]').forEach(group => {
   const list = group.querySelector('[data-row-list]');

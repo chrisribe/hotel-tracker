@@ -1,8 +1,7 @@
 const express = require('express');
 const auth = require('../middleware/planner-auth');
-const { PlannerService, TRIP_FIELDS, IDEA_FIELDS, DETAIL_LABELS, dateText, perPerson } = require('../services/PlannerService');
+const { PlannerService, ASSISTANT_NAME, TRIP_FIELDS, IDEA_FIELDS, RUN_FIELDS, DETAIL_LABELS, dateText, perPerson } = require('../services/PlannerService');
 
-const AGENT_NAME = 'Hermes';
 const FAILED_TOKEN_LIMIT = 20;
 const CLIENT_ERRORS = [400, 401, 403, 404, 413, 429];
 
@@ -41,6 +40,24 @@ router.get('/trips/:id', inTrip(async (req, planner, ctx) => {
 
 router.patch('/trips/:id', onlyFields(TRIP_FIELDS), inTrip(async (req, planner, ctx) => {
   const trip = await planner.updateTrip(ctx, req.body);
+  return { trip: tripJson(trip) };
+}));
+
+// ── Compare set from the trip brief ───────────────────────────────────
+
+// Trips waiting for Hermes, oldest first.
+router.get('/generation-queue', async (req, res) => {
+  const requests = await service(req).generationQueue(req.query.limit);
+  res.json({ requests });
+});
+
+router.post('/trips/:id/generate', onlyFields(['mode']), inTrip(async (req, planner, ctx) => {
+  const { trip, queued } = await planner.requestGeneration(ctx, req.body.mode);
+  return { request: { trip_id: trip.id, mode: trip.generation_mode, requested_at: trip.generation_requested_at, queued } };
+}, 202));
+
+router.post('/trips/:id/generate/report', onlyFields(RUN_FIELDS), inTrip(async (req, planner, ctx) => {
+  const trip = await planner.reportRun(ctx, req.body);
   return { trip: tripJson(trip) };
 }));
 
@@ -100,7 +117,7 @@ async function requireToken(req, res, next) {
 
   // Organizer-level access. Reads have no side effects; writes are credited to the trip's assistant member.
   const isWrite = !['GET', 'HEAD'].includes(req.method);
-  req.viewer = { isOrganizer: true, isAgent: isWrite, name: AGENT_NAME, participantId: null, tripId: null };
+  req.viewer = { isOrganizer: true, isAgent: isWrite, name: ASSISTANT_NAME, participantId: null, tripId: null };
   next();
 }
 

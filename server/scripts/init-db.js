@@ -12,6 +12,15 @@ CREATE TABLE IF NOT EXISTS trips (
 );
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'CAD' CHECK (currency IN ('CAD','USD','EUR','GBP'));
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS travelers INTEGER CHECK (travelers BETWEEN 1 AND 100);
+-- Trip brief: what the organizer is looking for. Hermes builds the compare set from it.
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS brief_text TEXT;
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS brief_meta JSONB;
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS brief_updated_at TIMESTAMPTZ;
+-- One pending request per trip (Hermes pulls it), plus the last finished run.
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS generation_requested_at TIMESTAMPTZ;
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS generation_mode TEXT CHECK (generation_mode IN ('generate','refresh'));
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS last_run_at TIMESTAMPTZ;
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS last_run_summary JSONB;
 CREATE UNIQUE INDEX IF NOT EXISTS one_demo_trip ON trips(is_demo) WHERE is_demo;
 
 CREATE TABLE IF NOT EXISTS participants (
@@ -50,6 +59,7 @@ CREATE TABLE IF NOT EXISTS research_items (
   FOREIGN KEY (created_by, trip_id) REFERENCES participants(id, trip_id)
 );
 ALTER TABLE research_items ADD COLUMN IF NOT EXISTS details JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE research_items ADD COLUMN IF NOT EXISTS last_refresh_note TEXT CHECK (char_length(last_refresh_note) <= 300);
 CREATE INDEX IF NOT EXISTS research_items_trip ON research_items(trip_id);
 CREATE INDEX IF NOT EXISTS research_items_destination ON research_items(destination_id);
 

@@ -53,6 +53,8 @@ The board header holds people/invite controls. Optional idea details stay collap
 
 A bearer-token JSON API at `/api/v1` lets an assistant such as Hermes add research. It is off unless `HOTEL_API_TOKEN` is set. See [docs/api.md](docs/api.md).
 
+The organizer can **Ask the Trip Butler** on the board: describe what to research, then update it after follow-ups. An agent picks requests up from `GET /api/v1/generation-queue` using the skill in `skills/hotel_tracker_butler`; set `DISCORD_WEBHOOK_URL` to also ping a Discord channel when one is queued.
+
 ## Sharing and privacy
 
 Invite links grant access to one trip. Names are display identities, not verified accounts. Anyone who receives a forwarded invite can join, so use this with a trusted group and do not store passports, payment information, or sensitive booking documents.

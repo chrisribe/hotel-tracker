@@ -3,7 +3,7 @@
   <span class="row-icon kind-<%= item.kind %>" title="<%= h.singular[item.kind] %>"><svg class="icon" aria-hidden="true"><use href="#i-<%= h.kindIcon(item.kind) %>"/></svg><span class="sr-only"><%= h.singular[item.kind] %>:</span></span>
   <div class="row-main">
     <a class="row-title" href="<%= base %>/ideas/<%= item.id %>"><%= item.title %></a>
-    <span class="row-meta"><%= h.singular[item.kind] %><% if (item.location) { %> · <%= item.location %><% } %> · <%= item.author_name || 'Organizer' %><% if (item.source_count) { %> · <%= item.source_count %> <%= item.source_count === 1 ? 'source' : 'sources' %><% } %></span>
+    <span class="row-meta"><%= h.singular[item.kind] %><% if (item.location) { %> · <%= item.location %><% } %> · <%= item.author_name || 'Organizer' %><% if (item.source_count) { %> · <%= item.source_count %> <%= item.source_count === 1 ? 'source' : 'sources' %><% } %><% if (item.last_refresh_note) { %> · <span class="refreshed" title="<%= item.last_refresh_note %>">Updated <%= h.date(item.updated_at) %></span><% } %></span>
   </div>
   <span class="row-cost"><% if (item.cost != null) { const p = h.price(item.cost, item.currency); %><strong title="<%= p.title %>"><%= p.text %></strong><small><%= p.currency %><% if (item.capacity) { %> · fits <%= item.capacity %><% } %></small><% } else if (priced) { %><span class="no-quote">No quote yet</span><% if (item.capacity) { %><small>fits <%= item.capacity %></small><% } %><% } %></span>
   <span class="badge <%= item.status %>"><%= h.statuses[item.status] %></span>

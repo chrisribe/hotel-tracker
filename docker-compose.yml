@@ -10,6 +10,8 @@ services:
       ADMIN_USER: ${ADMIN_USER:-admin}
       ADMIN_PASS: ${ADMIN_PASS:-changeme}
       HOTEL_API_TOKEN: ${HOTEL_API_TOKEN:-}
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+      DISCORD_MENTION_USER_ID: ${DISCORD_MENTION_USER_ID:-}
       NODE_ENV: production
     depends_on:
       db:

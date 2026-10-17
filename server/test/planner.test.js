@@ -781,3 +781,59 @@ test('login and invite join attempts are bounded in PostgreSQL, including after 
   assert.equal((await attacker.post('/login', { username: 'wrong', password: 'wrong' })).status, 429);
   assert.equal((await attacker.post(activeInvite, { name: 'New attempt' })).status, 429);
 });
+
+test('organizer writes the trip brief and asks the Trip Butler; guests only read it', async () => {
+  const { owner, alice, path } = await group();
+  let board = await owner.request(path);
+  assert.match(board.page.html, /Start research/);
+  assert.match(board.page.html, /Ask the Trip Butler/);
+  assert.equal(board.page.data.trip.brief_text, null);
+
+  const empty = await owner.post(`${path}/brief`, { brief_text: '  ', action: 'generate' });
+  assert.equal(empty.status, 400);
+  assert.equal(empty.page.error, 'Describe the trip first, then ask the Trip Butler.');
+
+  const brief = 'Rep Dom in March <b>good food</b>, nice beach, 2 adults, ~4k CAD';
+  assert.ok(!board.page.html.includes('Save brief'));
+  assert.equal((await owner.post(`${path}/brief`, { brief_text: brief, action: 'generate' })).location, `${path}#brief`);
+  board = await owner.request(path);
+  assert.equal(board.page.data.trip.brief_text, brief);
+  const asked = board.page.data.trip.generation_requested_at;
+  assert.ok(asked);
+  assert.equal(board.page.data.trip.generation_mode, 'generate');
+  assert.match(board.page.html, /Waiting for the Trip Butler/);
+  await owner.post(`${path}/brief`, { brief_text: brief, action: 'generate' });
+  assert.equal((await owner.request(path)).page.data.trip.generation_requested_at, asked, 'asking twice keeps one request');
+
+  // The board polls this while waiting; guests can read it too.
+  assert.match((await owner.request(path)).page.html, /data-status-url="[^"]+\/brief-status"/);
+  assert.equal((await owner.request(`${path}/brief-status`)).page.waiting, true);
+  assert.equal((await alice.request(`${path}/brief-status`)).page.waiting, true);
+
+  // Cancel clears the waiting request (text kept); asking again queues a fresh one.
+  assert.match((await owner.request(path)).page.html, /Cancel request/);
+  assert.equal((await owner.post(`${path}/brief`, { brief_text: 'ignored', action: 'cancel' })).location, `${path}#brief`);
+  board = await owner.request(path);
+  assert.equal(board.page.data.trip.generation_requested_at, null);
+  assert.equal(board.page.data.trip.brief_text, brief);
+  assert.ok(!board.page.html.includes('Cancel request'));
+  assert.ok(!board.page.html.includes('data-status-url'));
+  assert.equal((await owner.request(`${path}/brief-status`)).page.waiting, false);
+  await owner.post(`${path}/brief`, { brief_text: brief, action: 'generate' });
+  assert.ok((await owner.request(path)).page.data.trip.generation_requested_at > asked);
+
+  // After a run, the button refreshes instead.
+  await pool.query(`UPDATE trips SET generation_requested_at = NULL, last_run_at = NOW(), last_run_summary = '{"created":3,"updated":0,"flagged":1,"note":""}' WHERE id = $1`,
+    [Number(path.split('/').pop())]);
+  board = await owner.request(path);
+  assert.match(board.page.html, /Update research/);
+  assert.match(board.page.html, /3 new · 0 updated · 1 to double-check/);
+
+  const guestBoard = await alice.request(path);
+  assert.ok(guestBoard.page.html.includes(require('ejs').escapeXML(brief)));
+  assert.ok(!guestBoard.page.html.includes(brief));
+  assert.ok(guestBoard.page.html.includes('What we’re looking for'));
+  assert.ok(!guestBoard.page.html.includes('name="brief_text"'));
+  assert.equal((await alice.post(`${path}/brief`, { brief_text: 'mine', action: 'refresh' })).status, 403);
+  assert.equal((await owner.post(`${path}/brief`, { brief_text: brief, action: 'nope' })).status, 400);
+});

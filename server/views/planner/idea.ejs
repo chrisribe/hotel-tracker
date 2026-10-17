@@ -36,6 +36,7 @@
   </aside>
   <div class="idea-main">
     <div class="page-heading"><div><h1><%= item.title %></h1><div class="detail-meta"><span class="kind-label kind-<%= item.kind %>"><svg class="icon" aria-hidden="true"><use href="#i-<%= h.kindIcon(item.kind) %>"/></svg><%= h.singular[item.kind] %></span><span class="badge <%= item.status %>"><%= h.statuses[item.status] %></span><% if (item.location) { %><span><%= item.location %></span><% } %><% if (destination) { %><a href="<%= base %>/ideas/<%= destination.id %>#idea-<%= item.id %>"><svg class="icon small" aria-hidden="true"><use href="#i-pin"/></svg><%= destination.title %></a><% } %></div></div><% if (data.canEdit) { %><a class="button secondary" href="<%= path %>/edit">Edit idea</a><% } %></div>
+    <% if (item.last_refresh_note) { %><p class="refresh-note"><strong>Last refresh</strong> <time datetime="<%= new Date(item.updated_at).toISOString() %>"><%= h.date(item.updated_at) %></time>: <%= item.last_refresh_note %></p><% } %>
     <% if (item.notes) { const [lead, ...rest] = item.notes.trim().split(/\r?\n/); const body = rest.join('\n').trim(); %><section class="idea-notes" aria-label="Notes"><p class="notes-lead"><%= lead %></p><% if (body) { %><div class="prose"><%= body %></div><% } %></section><% } %>
     <% if (data.options) { %>
     <section class="destination-options" id="options" aria-labelledby="options-title">

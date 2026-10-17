@@ -13,8 +13,12 @@ const { DEMO_TRIP, seedDemoIdeas } = require('./plannerDemo');
 const KINDS = ['destination', 'stay', 'transport', 'activity', 'link'];
 const STATUSES = ['considering', 'shortlisted', 'selected', 'booked', 'eliminated'];
 const CURRENCIES = ['CAD', 'USD', 'EUR', 'GBP'];
-const TRIP_FIELDS = ['name', 'description', 'destination', 'travel_start', 'travel_end', 'currency', 'travelers'];
-const IDEA_FIELDS = ['kind', 'title', 'location', 'notes', 'url', 'destination_id', 'cost', 'currency', 'capacity', 'details'];
+const TRIP_FIELDS = ['name', 'description', 'destination', 'travel_start', 'travel_end', 'currency', 'travelers', 'brief_text', 'brief_meta'];
+const IDEA_FIELDS = ['kind', 'title', 'location', 'notes', 'url', 'destination_id', 'cost', 'currency', 'capacity', 'details', 'last_refresh_note'];
+// What the group sees the API assistant called (member name, board copy). Hermes is only the backend.
+const ASSISTANT_NAME = 'Trip Butler';
+const GENERATION_MODES = ['generate', 'refresh'];
+const RUN_FIELDS = ['created', 'updated', 'flagged', 'note', 'requested_at'];
 const DETAIL_LIMIT = 12;
 const SOURCE_LIMIT = 20;
 // Shared detail labels per kind, so facts line up on the compare page. The form suggests them and the API returns them.
@@ -134,6 +138,14 @@ function perPerson(cost, count) {
   return cost == null || !count ? null : Math.round(Number(cost) * 100 / count) / 100;
 }
 
+// Optional structured part of the brief (month, budget, departure city, must-haves…). Small JSON object, any keys.
+function briefMeta(value) {
+  if (value == null || value === '') return null;
+  if (typeof value !== 'object' || Array.isArray(value)) throw httpError(400, 'Brief details must be a JSON object.');
+  if (JSON.stringify(value).length > 2000) throw httpError(400, 'Brief details must be at most 2000 characters as JSON.');
+  return value;
+}
+
 function tripValues(body) {
   const values = {
     name: text(body.name, 'Trip name', 120, true),
@@ -143,6 +155,8 @@ function tripValues(body) {
     travel_end: date(body.travel_end, 'end date'),
     currency: choice(body.currency, CURRENCIES, 'currency', 'CAD'),
     travelers: travelers(body.travelers),
+    brief_text: text(body.brief_text, 'Trip brief', 4000),
+    brief_meta: briefMeta(body.brief_meta),
   };
   if (values.travel_start && values.travel_end && values.travel_start > values.travel_end) throw httpError(400, 'End date must be on or after the start date.');
   return values;
@@ -226,6 +240,7 @@ function ideaValues(body, defaultCurrency = 'CAD') {
     title: text(body.title, 'Title', 160, true),
     location: text(body.location, 'Location', 200),
     notes: text(body.notes, 'Notes', 10000),
+    last_refresh_note: text(body.last_refresh_note, 'Refresh note', 300),
     url: referenceUrl(body.url, 'URL'),
     currency: choice(body.currency, CURRENCIES, 'currency', defaultCurrency),
     destination_id: body.destination_id == null || body.destination_id === '' ? null : id(body.destination_id, 'destination'),
@@ -373,9 +388,51 @@ class PlannerService {
   }
 
   // Partial update: sent fields override the stored ones, then the full form validation runs.
-  async updateTrip({ dao, trip }, body) {
+  async updateTrip(context, body) {
+    const { dao, trip } = context;
     const current = { ...pick(trip, TRIP_FIELDS), travel_start: dateText(trip.travel_start), travel_end: dateText(trip.travel_end) };
-    return dao.trips.update(trip.id, tripValues({ ...current, ...pick(body, TRIP_FIELDS) }));
+    context.trip = await dao.trips.update(trip.id, tripValues({ ...current, ...pick(body, TRIP_FIELDS) }));
+    return context.trip;
+  }
+
+  // Asks Hermes to build (generate) or update (refresh) the compare set from the brief. Hermes pulls
+  // waiting requests from the API; `queued` is false when one was already waiting.
+  async requestGeneration(context, mode) {
+    const { dao, trip } = context;
+    mode = choice(mode, GENERATION_MODES, 'generation mode', 'generate');
+    if (!trip.brief_text) throw httpError(400, `Describe the trip first, then ask the ${ASSISTANT_NAME}.`);
+    const queued = !trip.generation_requested_at;
+    context.trip = await dao.trips.requestGeneration(trip.id, mode);
+    return { trip: context.trip, queued };
+  }
+
+  // Organizer gives up on a waiting request (e.g. the assistant never picked it up); asking again re-queues and re-pings.
+  async cancelGeneration(context) {
+    context.trip = await context.dao.trips.cancelGeneration(context.trip.id);
+    return context.trip;
+  }
+
+  // Hermes reports what one run did; this is the board's run log line.
+  async reportRun(context, body) {
+    const count = (value, label) => {
+      if (value == null || value === '') return 0;
+      if (!Number.isInteger(value) || value < 0 || value > 100) throw httpError(400, `${label} must be a whole number from 0 to 100.`);
+      return value;
+    };
+    const summary = { created: count(body.created, 'created'), updated: count(body.updated, 'updated'), flagged: count(body.flagged, 'flagged'),
+      note: text(body.note, 'Run note', 300) };
+    let requestedAt = null;
+    if (body.requested_at != null && body.requested_at !== '') {
+      requestedAt = typeof body.requested_at === 'string' ? new Date(body.requested_at) : null;
+      if (!requestedAt || !Number.isFinite(requestedAt.getTime())) throw httpError(400, 'requested_at must be the timestamp returned by the queue.');
+    }
+    context.trip = await context.dao.trips.finishRun(context.trip.id, summary, requestedAt);
+    return context.trip;
+  }
+
+  async generationQueue(limit) {
+    limit = limit == null || limit === '' ? 5 : id(limit, 'limit');
+    return new TripsDAO(this.pool).listGenerationQueue(Math.min(limit, 20));
   }
 
   async patchIdea(context, viewer, itemId, body) {
@@ -484,6 +541,7 @@ class PlannerService {
     // Legacy edits affect only the compatibility column, never the independent collection.
     if (existing && !Object.hasOwn(body, 'url')) v.url = existing.url;
     if (existing && !Object.hasOwn(body, 'details')) v.details = existing.details;
+    if (existing && !Object.hasOwn(body, 'last_refresh_note')) v.last_refresh_note = existing.last_refresh_note;
     const initialSource = !existing && v.url ? sourceValues({ label: body.source_label == null || body.source_label === '' ? 'Original source' : body.source_label,
       url: v.url }) : null;
     if (v.destination_id) {
@@ -622,4 +680,4 @@ class PlannerService {
   }
 }
 
-module.exports = { PlannerService, KINDS, STATUSES, CURRENCIES, TRIP_FIELDS, IDEA_FIELDS, DETAIL_LABELS, text, id, choice, tripValues, ideaValues, dateText, perPerson };
+module.exports = { PlannerService, ASSISTANT_NAME, KINDS, STATUSES, CURRENCIES, TRIP_FIELDS, IDEA_FIELDS, RUN_FIELDS, DETAIL_LABELS, text, id, choice, tripValues, ideaValues, dateText, perPerson };
