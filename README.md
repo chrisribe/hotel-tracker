@@ -47,13 +47,15 @@ The board header holds people/invite controls. Optional idea details stay collap
 - No booking automation—organizer decision is recorded; actual reservations remain external.
 
 **Testing & Operations:**
-- Twenty-two database-backed integration tests cover schema setup, sessions, permissions, invite revocation, comparison views, source/image lifecycle, simplified forms and the JSON API, using real EJS rendering.
+- Database-backed integration tests cover schema setup, sessions, permissions, invite revocation, comparison views, source/image lifecycle, simplified forms, the JSON API and concurrent agent safeguards, using real EJS rendering and temporary schemas.
 
 ## Assistant API
 
-A bearer-token JSON API at `/api/v1` lets an assistant such as Hermes add research. It is off unless `HOTEL_API_TOKEN` is set. See [docs/api.md](docs/api.md).
+A bearer-token JSON API at `/api/v1` lets an assistant such as Hermes add research. Set a separate `HOTEL_AGENT_TOKEN` (at least 32 characters) for the assistant; `HOTEL_API_TOKEN` remains an optional organizer/admin credential and must never be given to the agent. Tokens must differ. Both settings pass through Compose; an unset/invalid token disables its role. See [docs/api.md](docs/api.md).
 
-The organizer can **Ask the Trip Butler** on the board: describe what to research, then update it after follow-ups. An agent picks requests up from `GET /api/v1/generation-queue` using the skill in `skills/hotel_tracker_butler`; set `DISCORD_WEBHOOK_URL` to also ping a Discord channel when one is queued.
+Agent access is allowlisted: queue, active queued-trip/idea reads, research creation/references/comments, edits/deletes of agent-owned ideas, and run reporting. No trip administration, member identities/invites, status changes or self-queueing. Each trip call requires the exact `X-Hotel-Run-Id` from the queue; cancellation, reporting, replacement or the one-hour expiry stops access immediately. Atomic per-run limits allow 8 creations, 10 comments and 80 successful mutation requests, plus 5 total links/4 total photos per idea for agent additions. All returned research text is explicitly marked untrusted without removing its content. These controls limit damage; they do not make researched text trustworthy or sandbox an agent's other tools.
+
+The organizer can **Ask the Trip Butler** on the board: describe what to research, then update it after follow-ups. An agent picks requests up from `GET /api/v1/generation-queue` using the [Trip Butler skill](skills/hotel_tracker_butler/SKILL.md); set `DISCORD_WEBHOOK_URL` to also ping a Discord channel when one is queued. Pings contain fixed instructions and the numeric trip ID only, never trip names or brief text. Re-asking an active request does not reset its ID, expiry or counters; cancel and resubmit when a new run is intended. Expired requests require organizer resubmission.
 
 ## Sharing and privacy
 

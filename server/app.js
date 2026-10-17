@@ -32,12 +32,15 @@ function readSettings(overrides) {
     cookieSecure: env.COOKIE_SECURE === 'true',
     trustProxy: env.TRUST_PROXY === '1',
     apiToken: env.HOTEL_API_TOKEN || '',
+    agentToken: env.HOTEL_AGENT_TOKEN || '',
     discordWebhook: env.DISCORD_WEBHOOK_URL || '',
     discordMention: env.DISCORD_MENTION_USER_ID || '',
     ...overrides,
   };
   dropInvalid(settings, 'apiToken', (v) => v.length >= 32,
     'HOTEL_API_TOKEN must be at least 32 characters; API disabled.');
+  dropInvalid(settings, 'agentToken', v => v.length >= 32 && !auth.safeEqual(v, settings.apiToken),
+    'HOTEL_AGENT_TOKEN must be at least 32 characters and distinct from HOTEL_API_TOKEN; agent access disabled.');
   dropInvalid(settings, 'discordWebhook', (v) => DISCORD_WEBHOOK.test(v),
     'DISCORD_WEBHOOK_URL is not a Discord webhook URL; Discord pings disabled.');
   dropInvalid(settings, 'discordMention', (v) => DISCORD_USER_ID.test(v),
@@ -79,7 +82,7 @@ function handleError(error, req, res, next) {
   const status = SHOWN_STATUSES.includes(error.status) ? error.status : 500;
   // Never log request paths (invite secrets), credentials, bodies, or session secrets.
   if (status === 500) console.error('Request failed:', error.code || error.name);
-  if (status === 429) res.set('Retry-After', '900');
+  if (error.retryAfter) res.set('Retry-After', String(error.retryAfter));
   const message = errorMessage(error, status);
   auth.render(req, res, 'error', { message, backUrl: '/plans' }, message, status);
 }

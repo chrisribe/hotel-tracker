@@ -295,6 +295,12 @@ class PlannerService {
       // Serialize a small group's operations, including revocation and invite rotation.
       const trip = await dao.trips.lock(tripId);
       if (!trip || (!viewer.isOrganizer && viewer.tripId !== tripId)) throw httpError(404, 'Trip not found.');
+      if (viewer.isRestrictedAgent) {
+        if (!viewer.runId || !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(viewer.runId)) throw httpError(409, 'An exact X-Hotel-Run-Id from the queue is required.');
+        if (!await dao.trips.activeGeneration(tripId, viewer.runId)) throw httpError(409, 'Research request is inactive, expired or replaced.');
+        const agent = await dao.participants.findAgent(tripId);
+        if (agent?.active === false) throw httpError(403, 'Your trip access has been removed.');
+      }
       let participant;
       if (viewer.isAgent) {
         participant = await dao.participants.upsertAgent(tripId, viewer.name);
@@ -305,7 +311,7 @@ class PlannerService {
           : await dao.participants.findActive(tripId, viewer.participantId);
       }
       if (!participant || (!viewer.isOrganizer && participant.is_organizer)) throw httpError(403, 'Your trip access has been removed.');
-      return work({ db, dao, trip, participant });
+      return work({ db, dao, trip, participant, isRestrictedAgent: Boolean(viewer.isRestrictedAgent) });
     });
   }
 
@@ -335,6 +341,7 @@ class PlannerService {
   }
 
   canEdit(viewer, context, item) {
+    if (viewer.isRestrictedAgent) return item.created_by === context.participant.id && context.participant.is_agent;
     return viewer.isOrganizer || item.created_by === context.participant.id;
   }
 
@@ -378,6 +385,7 @@ class PlannerService {
 
   // Members may only move ideas between considering and shortlisted; decisions stay with the organizer.
   async updateStatus(context, viewer, itemId, status) {
+    if (context.isRestrictedAgent) throw httpError(403, 'Agents cannot change status.');
     const item = await this.item(context, itemId);
     const value = choice(status, STATUSES, 'status', null);
     if (!value) throw httpError(400, 'Choose a status.');
@@ -401,8 +409,8 @@ class PlannerService {
     const { dao, trip } = context;
     mode = choice(mode, GENERATION_MODES, 'generation mode', 'generate');
     if (!trip.brief_text) throw httpError(400, `Describe the trip first, then ask the ${ASSISTANT_NAME}.`);
-    const queued = !trip.generation_requested_at;
     context.trip = await dao.trips.requestGeneration(trip.id, mode);
+    const queued = context.trip.generation_run_id !== trip.generation_run_id;
     return { trip: context.trip, queued };
   }
 
@@ -426,13 +434,31 @@ class PlannerService {
       requestedAt = typeof body.requested_at === 'string' ? new Date(body.requested_at) : null;
       if (!requestedAt || !Number.isFinite(requestedAt.getTime())) throw httpError(400, 'requested_at must be the timestamp returned by the queue.');
     }
+    if (context.isRestrictedAgent && !await context.dao.trips.activeGeneration(context.trip.id, context.trip.generation_run_id)) {
+      throw httpError(409, 'Research request is inactive, expired or replaced.');
+    }
     context.trip = await context.dao.trips.finishRun(context.trip.id, summary, requestedAt);
     return context.trip;
   }
 
-  async generationQueue(limit) {
+  async generationQueue(limit, restricted = false) {
     limit = limit == null || limit === '' ? 5 : id(limit, 'limit');
-    return new TripsDAO(this.pool).listGenerationQueue(Math.min(limit, 20));
+    return new TripsDAO(this.pool).listGenerationQueue(Math.min(limit, 20), restricted);
+  }
+
+  async consumeAgentWrite(context, category) {
+    const usage = { ...context.trip.generation_usage };
+    const limits = { creations: 8, comments: 10, writes: 80 };
+    for (const key of ['writes', ...(category ? [category] : [])]) {
+      if (usage[key] >= limits[key]) {
+        const error = httpError(429, `Agent run ${key} limit (${limits[key]}) reached. Stop this run.`);
+        error.code = 'agent_run_limit';
+        throw error;
+      }
+      usage[key] = (usage[key] || 0) + 1;
+    }
+    await context.dao.trips.saveGenerationUsage(context.trip.id, usage);
+    context.trip.generation_usage = usage;
   }
 
   async patchIdea(context, viewer, itemId, body) {
@@ -622,7 +648,8 @@ class PlannerService {
       return;
     }
     const count = await references.count(item.id);
-    if (count >= (image ? 12 : SOURCE_LIMIT)) throw httpError(400, `Each idea can have at most ${image ? 12 : SOURCE_LIMIT} ${collection}.`);
+    const limit = context.isRestrictedAgent ? (image ? 4 : 5) : (image ? 12 : SOURCE_LIMIT);
+    if (count >= limit) throw httpError(400, `Each idea can have at most ${limit} ${collection}.`);
     // The first photo becomes the cover.
     if (image) await dao.images.create(item.id, participant.id, v, count === 0);
     else await dao.sources.create(item.id, participant.id, v);

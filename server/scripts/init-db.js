@@ -19,6 +19,9 @@ ALTER TABLE trips ADD COLUMN IF NOT EXISTS brief_updated_at TIMESTAMPTZ;
 -- One pending request per trip (Hermes pulls it), plus the last finished run.
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS generation_requested_at TIMESTAMPTZ;
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS generation_mode TEXT CHECK (generation_mode IN ('generate','refresh'));
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS generation_run_id UUID;
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS generation_expires_at TIMESTAMPTZ;
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS generation_usage JSONB NOT NULL DEFAULT '{"creations":0,"comments":0,"writes":0}'::jsonb;
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS last_run_at TIMESTAMPTZ;
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS last_run_summary JSONB;
 CREATE UNIQUE INDEX IF NOT EXISTS one_demo_trip ON trips(is_demo) WHERE is_demo;

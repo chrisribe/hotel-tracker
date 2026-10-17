@@ -1,7 +1,7 @@
 // One row per idea, with what a card needs: author, counts, the viewer's vote and the cover photo.
 // $1 = trip id, $2 = viewing participant id.
 const CARD_SELECT = `
-  SELECT i.*, author.name AS author_name,
+  SELECT i.*, author.name AS author_name, author.is_agent AS author_is_agent,
     my_vote.item_id IS NOT NULL AS voted,
     (SELECT COUNT(*)::int FROM research_votes v WHERE v.item_id = i.id) AS vote_count,
     (SELECT COUNT(*)::int FROM research_comments c WHERE c.item_id = i.id) AS comment_count,

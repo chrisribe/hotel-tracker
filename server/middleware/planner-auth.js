@@ -85,13 +85,19 @@ function credentialsMatch(user, password, config) {
 
 const attemptKey = (req, scope) => createHmac('sha256', req.app.get('sessionSecret')).update(`${scope}:${req.ip}`).digest('hex');
 
+function attemptLimit() {
+  const error = httpError(429, 'Too many attempts. Try again in 15 minutes.');
+  error.retryAfter = 900;
+  return error;
+}
+
 async function attempt(req, scope, limit) {
-  if (await new AttemptsDAO(req.app.get('pool')).increment(attemptKey(req, scope)) > limit) throw httpError(429, 'Too many attempts. Try again in 15 minutes.');
+  if (await new AttemptsDAO(req.app.get('pool')).increment(attemptKey(req, scope)) > limit) throw attemptLimit();
 }
 
 // Check without counting, so only failures consume the budget.
 async function ensureNotBlocked(req, scope, limit) {
-  if (await new AttemptsDAO(req.app.get('pool')).count(attemptKey(req, scope)) >= limit) throw httpError(429, 'Too many attempts. Try again in 15 minutes.');
+  if (await new AttemptsDAO(req.app.get('pool')).count(attemptKey(req, scope)) >= limit) throw attemptLimit();
 }
 
 function regenerate(req) {

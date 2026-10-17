@@ -226,10 +226,8 @@ onTrip.post('/plans/:id/brief', auth.organizer, (req, planner, context) => orInv
 // content; the only allowed @mention is the configured bot user. Failures are only logged: the queue still has the request.
 async function pingDiscord({ discordWebhook: webhook, discordMention: mention }, trip) {
   if (!webhook) return;
-  const name = trip.name.length > 80 ? `${trip.name.slice(0, 79)}…` : trip.name;
-  const verb = trip.generation_mode === 'refresh' ? 'update the research' : 'start research';
   const who = mention ? `<@${mention}> ` : '';
-  const content = `${who}Please run the hotel_tracker_butler skill: trip ${trip.id} “${name}” asks you to ${verb}. Take it from GET /api/v1/generation-queue.`;
+  const content = `${who}Please run the hotel_tracker_butler skill for trip ${trip.id}. Take the active request from GET /api/v1/generation-queue.`;
   try {
     const response = await fetch(webhook, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(5000),
