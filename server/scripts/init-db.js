@@ -12,18 +12,27 @@ CREATE TABLE IF NOT EXISTS trips (
 );
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'CAD' CHECK (currency IN ('CAD','USD','EUR','GBP'));
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS travelers INTEGER CHECK (travelers BETWEEN 1 AND 100);
--- Trip brief: what the organizer is looking for. Hermes builds the compare set from it.
-ALTER TABLE trips ADD COLUMN IF NOT EXISTS brief_text TEXT;
-ALTER TABLE trips ADD COLUMN IF NOT EXISTS brief_meta JSONB;
-ALTER TABLE trips ADD COLUMN IF NOT EXISTS brief_updated_at TIMESTAMPTZ;
+-- The separate Trip Butler brief was folded into the trip description ("What are you thinking?").
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'trips' AND column_name = 'brief_text') THEN
+    UPDATE trips SET description = CASE WHEN COALESCE(btrim(description), '') = '' THEN brief_text ELSE description || E'\\n\\n' || brief_text END
+    WHERE COALESCE(btrim(brief_text), '') <> '' AND COALESCE(description, '') NOT LIKE '%' || brief_text || '%';
+  END IF;
+END $$;
+ALTER TABLE trips DROP COLUMN IF EXISTS brief_text, DROP COLUMN IF EXISTS brief_meta, DROP COLUMN IF EXISTS brief_updated_at, DROP COLUMN IF EXISTS generation_mode;
 -- One pending request per trip (Hermes pulls it), plus the last finished run.
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS generation_requested_at TIMESTAMPTZ;
-ALTER TABLE trips ADD COLUMN IF NOT EXISTS generation_mode TEXT CHECK (generation_mode IN ('generate','refresh'));
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS generation_run_id UUID;
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS generation_expires_at TIMESTAMPTZ;
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS generation_usage JSONB NOT NULL DEFAULT '{"creations":0,"comments":0,"writes":0}'::jsonb;
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS last_run_at TIMESTAMPTZ;
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS last_run_summary JSONB;
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS last_run_description TEXT;
+-- One open question from any member for the Trip Butler, and today's count of runs members' questions started.
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS butler_question TEXT CHECK (char_length(butler_question) <= 500);
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS butler_question_at TIMESTAMPTZ;
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS runs_day DATE;
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS runs_today INTEGER NOT NULL DEFAULT 0;
 CREATE UNIQUE INDEX IF NOT EXISTS one_demo_trip ON trips(is_demo) WHERE is_demo;
 
 CREATE TABLE IF NOT EXISTS participants (
@@ -63,6 +72,9 @@ CREATE TABLE IF NOT EXISTS research_items (
 );
 ALTER TABLE research_items ADD COLUMN IF NOT EXISTS details JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE research_items ADD COLUMN IF NOT EXISTS last_refresh_note TEXT CHECK (char_length(last_refresh_note) <= 300);
+-- Any member may correct an idea; the last editor is shown.
+ALTER TABLE research_items ADD COLUMN IF NOT EXISTS last_edited_by INTEGER REFERENCES participants(id);
+ALTER TABLE research_items ADD COLUMN IF NOT EXISTS last_edited_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS research_items_trip ON research_items(trip_id);
 CREATE INDEX IF NOT EXISTS research_items_destination ON research_items(destination_id);
 

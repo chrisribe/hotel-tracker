@@ -30,7 +30,7 @@ Participants join using a private invite link and a display name, not individual
 
 ## First-draft assumptions
 
-- All participants can contribute ideas, sources, images, comments, and votes. Organizers manage invitations, participants, and final selections.
+- All participants can contribute ideas, sources, images, comments, and votes, correct any idea that isn't selected or booked (the last editor is shown, no history), and ask the Trip Butler (one shared question, or just "research the trip"). Organizers manage invitations, participants, final selections, and the trip details, including the description the Trip Butler researches.
 - Currency totals remain separate; research alternatives are not automatically summed as expenses.
 - A sample trip is available by explicit organizer action and clearly labeled fictional; never silently populate existing trips.
 - Branding remains Hotel Tracker during this draft; the new capability is group trip planning.

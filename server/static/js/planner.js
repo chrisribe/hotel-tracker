@@ -57,17 +57,17 @@ window.addEventListener('pageshow', () => {
 });
 
 // While the Trip Butler has a request waiting, check every 20 s (only when the tab is visible, for up to
-// an hour) and reload once the research lands. If the organizer is mid-edit, just say so instead.
-const brief = document.querySelector('[data-status-url]');
-if (brief) {
-  const textarea = brief.querySelector('textarea');
+// an hour) and reload once the research lands. If someone is mid-question, just say so instead.
+const butler = document.querySelector('[data-status-url]');
+if (butler) {
+  const textarea = butler.querySelector('textarea');
   const original = textarea?.value;
   const stopAt = Date.now() + 60 * 60 * 1000;
   const timer = setInterval(async () => {
     if (document.hidden) return;
     if (Date.now() > stopAt) return clearInterval(timer);
     try {
-      const response = await fetch(brief.dataset.statusUrl, { headers: { Accept: 'application/json' } });
+      const response = await fetch(butler.dataset.statusUrl, { headers: { Accept: 'application/json' } });
       if (!response.ok) return;
       const status = await response.json();
       if (status.waiting) return;

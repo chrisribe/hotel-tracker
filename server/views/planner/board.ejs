@@ -19,27 +19,28 @@
     </div>
     <% if (trip.description) { %><p class="board-description"><%= trip.description %></p><% } %>
   </div>
-  <div class="heading-actions"><a class="button subtle" href="<%= base %>/compare?kind=<%= filters.kind === 'all' ? 'destination' : filters.kind %>"><svg class="icon small" aria-hidden="true"><use href="#i-compare"/></svg>Compare</a><% if (viewer.isOrganizer) { %><a class="button subtle" href="<%= base %>/share">People & invites</a><% } %><a class="button primary" href="<%= base %>/ideas/new"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Add idea</a></div>
+  <div class="heading-actions"><a class="button subtle" href="<%= base %>/compare?kind=<%= filters.kind === 'all' ? 'destination' : filters.kind %>"><svg class="icon small" aria-hidden="true"><use href="#i-compare"/></svg>Compare</a><% if (viewer.isOrganizer) { %><a class="button subtle" href="<%= base %>/edit">Edit trip</a><a class="button subtle" href="<%= base %>/share">People & invites</a><% } %><a class="button primary" href="<%= base %>/ideas/new"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Add idea</a></div>
 </header>
-<% if (viewer.isOrganizer || trip.brief_text) {
+<% {
    const run = trip.last_run_summary;
-   const briefValue = typeof data.briefValue === 'string' ? data.briefValue : (trip.brief_text || '');
-   const refresh = Boolean(trip.last_run_at); %>
-<details class="trip-brief" id="brief" <%= !trip.brief_text || typeof data.briefValue === 'string' ? 'open' : '' %><% if (trip.generation_requested_at) { %> data-status-url="<%= base %>/brief-status"<% } %>>
-  <summary><span class="trip-brief-title"><%= viewer.isOrganizer ? 'Ask the ' + ASSISTANT_NAME : 'What we’re looking for' %></span>
-    <span class="brief-status" id="brief-status"><% if (trip.generation_requested_at) { %><span class="badge shortlisted">Waiting for the <%= ASSISTANT_NAME %></span> asked <time datetime="<%= new Date(trip.generation_requested_at).toISOString() %>"><%= h.when(trip.generation_requested_at) %></time><% } else if (run) { %>Last research <time datetime="<%= new Date(trip.last_run_at).toISOString() %>"><%= h.when(trip.last_run_at) %></time> · <%= run.created %> new · <%= run.updated %> updated<% if (run.flagged) { %> · <%= run.flagged %> to double-check<% } %><% } else if (trip.brief_text) { %>Not sent to the <%= ASSISTANT_NAME %> yet<% } else { %>Destinations, stays, flights and activities researched for you, with prices, links and photos<% } %></span></summary>
+   const questionValue = typeof data.questionValue === 'string' ? data.questionValue : (trip.butler_question || '');
+   const started = Boolean(trip.last_run_at), waiting = Boolean(trip.generation_requested_at); %>
+<%# Open to invite a first ask or show a saved/rejected question; closed while a request is waiting so the status reads as the answer. %>
+<details class="trip-brief" id="butler" <%= typeof data.questionValue === 'string' || (!waiting && (!started || trip.butler_question)) ? 'open' : '' %><% if (waiting) { %> data-status-url="<%= base %>/butler-status"<% } %>>
+  <summary><span class="trip-brief-title">Ask the <%= ASSISTANT_NAME %></span>
+    <span class="brief-status" id="butler-status"><% if (waiting) { %><span class="badge shortlisted">Waiting for the <%= ASSISTANT_NAME %></span> asked <time datetime="<%= new Date(trip.generation_requested_at).toISOString() %>"><%= h.when(trip.generation_requested_at) %></time><% } else if (run) { %>Last research <time datetime="<%= new Date(trip.last_run_at).toISOString() %>"><%= h.when(trip.last_run_at) %></time> · <%= run.created %> new · <%= run.updated %> updated<% if (run.flagged) { %> · <%= run.flagged %> to double-check<% } %><% } else { %>Destinations, stays, flights and activities researched for you, with prices, links and photos<% } %></span>
+    <% if (waiting) { %><span class="brief-asked"><%= trip.butler_question ? '“' + trip.butler_question + '”' : 'Researching the trip description' %></span><% } %></summary>
   <div class="brief-body">
   <% if (run && run.note) { %><p class="fine-print"><%= ASSISTANT_NAME %>: <%= run.note %></p><% } %>
-  <% if (viewer.isOrganizer) { %>
-    <form class="brief-form" method="post" action="<%= base %>/brief">
+    <form class="brief-form" method="post" action="<%= base %>/question">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-      <label for="brief-text">What should the <%= ASSISTANT_NAME %> research?<textarea id="brief-text" name="brief_text" rows="4" maxlength="4000" aria-describedby="brief-hint brief-status" placeholder="Dominican Republic in March, 2 adults, about 4k CAD. Good food and a nice beach. Compare a few all-inclusives and flights from Montreal."><%= briefValue %></textarea><small id="brief-hint">Where, when, who, budget and must-haves. The <%= ASSISTANT_NAME %> finds destinations, stays, flights and activities, compares prices, and adds links, photos and notes to the board. Add follow-ups any time (“also check flights from Toronto”) and update the research. Votes, comments and status are never touched.</small></label>
+      <label for="butler-question"><%= started ? 'What should the ' + ASSISTANT_NAME + ' check?' : 'Anything specific to look for?' %><% if (trip.description) { %> <span class="optional">Optional</span><% } %><textarea id="butler-question" name="question" rows="2" maxlength="500" <%= trip.description ? '' : 'required' %> aria-describedby="question-hint" placeholder="<%= started ? 'Also check flights from Toronto' : 'All-inclusives near a good beach, flights from Montreal' %>"><%= questionValue %></textarea>
+        <small id="question-hint"><% if (trip.description) { %>Leave empty to research the trip description. <% } else { %>The trip has no description yet, so say what to look for. <% } %>One question for the whole trip: asking replaces the open one, and it’s cleared once the <%= ASSISTANT_NAME %> has looked into it. Votes, comments and status are never touched.</small></label>
       <div class="form-actions">
-        <button class="button primary" name="action" value="<%= refresh ? 'refresh' : 'generate' %>"><%= refresh ? 'Update research' : 'Start research' %></button>
-        <% if (trip.generation_requested_at) { %><button class="button secondary" name="action" value="cancel" formnovalidate>Cancel request</button><% } %>
+        <button class="button primary"><%= started ? 'Ask' : 'Start research' %></button>
+        <% if (waiting && viewer.isOrganizer) { %><button class="button secondary" formaction="<%= base %>/question/cancel" formnovalidate>Cancel request</button><% } %>
       </div>
     </form>
-  <% } else { %><p class="brief-text"><%= trip.brief_text %></p><% } %>
   </div>
 </details>
 <% } %>

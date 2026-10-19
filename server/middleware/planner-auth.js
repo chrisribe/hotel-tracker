@@ -16,7 +16,7 @@ function httpError(status, message) {
 function render(req, res, view, data = {}, error = null, status = 200) {
   const titles = { login: 'Organizer login', plans: 'Trip plans', board: 'Trip research',
     compare: 'Compare options', selected: 'Selected plan',
-    'idea-form': 'Research idea', idea: 'Research idea', share: 'Share trip', join: 'Join trip', error: 'Request unavailable' };
+    'idea-form': 'Research idea', idea: 'Research idea', share: 'Share trip', 'trip-edit': 'Edit trip', join: 'Join trip', error: 'Request unavailable' };
   return res.status(status).render('planner-shell', {
     view,
     title: `${titles[view]} — Hotel Tracker`,

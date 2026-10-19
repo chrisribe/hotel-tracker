@@ -1,7 +1,8 @@
-// One row per idea, with what a card needs: author, counts, the viewer's vote and the cover photo.
+// One row per idea, with what a card needs: author, last editor, counts, the viewer's vote and the cover photo.
 // $1 = trip id, $2 = viewing participant id.
 const CARD_SELECT = `
   SELECT i.*, author.name AS author_name, author.is_agent AS author_is_agent,
+    editor.name AS editor_name, (editor.id IS NOT NULL AND NOT editor.is_agent) AS human_corrected,
     my_vote.item_id IS NOT NULL AS voted,
     (SELECT COUNT(*)::int FROM research_votes v WHERE v.item_id = i.id) AS vote_count,
     (SELECT COUNT(*)::int FROM research_comments c WHERE c.item_id = i.id) AS comment_count,
@@ -12,6 +13,7 @@ const CARD_SELECT = `
     END AS cover_image
   FROM research_items i
   LEFT JOIN participants author ON author.id = i.created_by
+  LEFT JOIN participants editor ON editor.id = i.last_edited_by
   LEFT JOIN research_votes my_vote ON my_vote.item_id = i.id AND my_vote.participant_id = $2
   LEFT JOIN research_images cover ON cover.item_id = i.id AND cover.is_cover
   WHERE i.trip_id = $1`;
@@ -88,11 +90,13 @@ class IdeasDAO {
     return r.rows[0];
   }
 
-  async update(tripId, id, v) {
+  // editorId is null when nothing changed, so a no-op save keeps the last editor.
+  async update(tripId, id, v, editorId) {
     const r = await this.db.query(`UPDATE research_items SET kind = $1, title = $2, location = $3, notes = $4, url = $5,
-      destination_id = $6, cost = $7, currency = $8, capacity = $9, details = $12::jsonb, last_refresh_note = $13, updated_at = NOW()
+      destination_id = $6, cost = $7, currency = $8, capacity = $9, details = $12::jsonb, last_refresh_note = $13, updated_at = NOW(),
+      last_edited_by = COALESCE($14, last_edited_by), last_edited_at = CASE WHEN $14::int IS NULL THEN last_edited_at ELSE NOW() END
       WHERE id = $10 AND trip_id = $11 RETURNING *`,
-    [v.kind, v.title, v.location, v.notes, v.url, v.destination_id, v.cost, v.currency, v.capacity, id, tripId, JSON.stringify(v.details || []), v.last_refresh_note || null]);
+    [v.kind, v.title, v.location, v.notes, v.url, v.destination_id, v.cost, v.currency, v.capacity, id, tripId, JSON.stringify(v.details || []), v.last_refresh_note || null, editorId]);
     return r.rows[0];
   }
 

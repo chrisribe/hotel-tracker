@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const auth = require('../middleware/planner-auth');
-const { PlannerService, CURRENCIES, choice } = require('../services/PlannerService');
+const { PlannerService, ASSISTANT_NAME, MEMBER_RUN_LIMIT, CURRENCIES, choice, dateText } = require('../services/PlannerService');
+const pick = (body, keys) => Object.fromEntries(keys.filter(key => key in body).map(key => [key, body[key]]));
 const service = req => new PlannerService(req.app.get('pool'));
 const tripPath = (context, suffix = '') => `/plans/${context.trip.id}${suffix}`;
 const invalid = (view, error, data) => ({ view, status: 400, error: error.message, data });
@@ -49,7 +50,8 @@ router.post('/plans', auth.authenticated, auth.organizer, async (req, res) => {
   const planner = service(req);
   await orInvalid(async () => {
     const trip = await planner.create(req.body, req.viewer);
-    res.redirect(`/plans/${trip.id}`);
+    res.redirect(`/plans/${trip.id}${trip.generation_requested_at ? '#butler' : ''}`);
+    if (trip.generation_requested_at) pingDiscord(req.app.get('plannerConfig'), trip);
   }, async error => auth.render(req, res, 'plans', { trips: await planner.list(req.viewer), values: req.body }, error.message, 400));
 });
 
@@ -91,7 +93,7 @@ const onTrip = {
 // ── Board views ──
 
 // Polled by the board while a research request waits, so the page can reload when the run lands.
-onTrip.get('/plans/:id/brief-status', async (req, planner, { trip }) => ({
+onTrip.get('/plans/:id/butler-status', async (req, planner, { trip }) => ({
   json: { waiting: Boolean(trip.generation_requested_at), last_run_at: trip.last_run_at },
 }));
 onTrip.get('/plans/:id', async (req, planner, context) => ({ view: 'board', data: await planner.board(context, req.query) }));
@@ -200,27 +202,33 @@ onTrip.post('/plans/:id/display-currency', async (req, planner, context) => {
   return { redirect: tripPath(context) };
 });
 
-// Group size used to show a rough per-person share of each total quote.
-onTrip.post('/plans/:id/travelers', auth.organizer, async (req, planner, context) => {
-  await planner.updateTrip(context, { travelers: req.body.travelers });
-  return { redirect: tripPath(context, '/share') };
-});
+// The organizer edits the trip details. The description is what the Trip Butler researches, but saving never asks it.
+const tripForm = (trip, values) => ({ trip, values: values || { ...trip, travel_start: dateText(trip.travel_start), travel_end: dateText(trip.travel_end) } });
+onTrip.get('/plans/:id/edit', auth.organizer, async (req, planner, context) => ({ view: 'trip-edit', data: tripForm(context.trip) }));
+onTrip.post('/plans/:id/edit', auth.organizer, (req, planner, context) => orInvalid(async () => {
+  await planner.updateTrip(context, pick(req.body, ['name', 'description', 'travel_start', 'travel_end', 'travelers']));
+  return { redirect: tripPath(context) };
+}, async error => invalid('trip-edit', error, tripForm(context.trip, req.body))));
 
 // ── Trip Butler ──
 
-// Saves the brief and asks the Trip Butler to start (generate) or update (refresh) research; cancel withdraws the request.
-onTrip.post('/plans/:id/brief', auth.organizer, (req, planner, context) => orInvalid(async () => {
-  const action = choice(req.body.action, ['generate', 'refresh', 'cancel'], 'brief action', 'generate');
-  const done = { redirect: tripPath(context, '#brief') };
-  if (action === 'cancel') {
-    await planner.cancelGeneration(context);
-    return done;
+// Any member asks the Trip Butler (optionally with a question). Over the members' daily limit a question is kept for the next run.
+onTrip.post('/plans/:id/question', (req, planner, context) => orInvalid(async () => {
+  const { trip, queued, capped, saved } = await planner.askButler(context, req.viewer, req.body);
+  if (capped) {
+    return { view: 'board', status: 429, data: await planner.board(context, {}),
+      error: `The ${ASSISTANT_NAME} has done ${MEMBER_RUN_LIMIT} checks for this trip today. ${saved ? 'Your question is saved; ask' : 'Ask'} again tomorrow.` };
   }
-  await planner.updateTrip(context, { brief_text: req.body.brief_text });
-  const { trip, queued } = await planner.requestGeneration(context, action);
+  const done = { redirect: tripPath(context, '#butler') };
   // Ping after the commit, so the agent never finds the request missing.
   return queued ? { ...done, after: () => pingDiscord(req.app.get('plannerConfig'), trip) } : done;
-}, async error => invalid('board', error, { ...await planner.board(context, {}), briefValue: req.body.brief_text })));
+}, async error => invalid('board', error, { ...await planner.board(context, {}), questionValue: req.body.question })));
+
+// The organizer withdraws a waiting request (e.g. the assistant never picked it up); asking again re-queues and re-pings.
+onTrip.post('/plans/:id/question/cancel', auth.organizer, async (req, planner, context) => {
+  await planner.cancelGeneration(context);
+  return { redirect: tripPath(context, '#butler') };
+});
 
 // Optional nudge so the agent checks the queue now instead of on its next scheduled run. Carries no brief
 // content; the only allowed @mention is the configured bot user. Failures are only logged: the queue still has the request.

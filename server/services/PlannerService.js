@@ -13,14 +13,17 @@ const { DEMO_TRIP, seedDemoIdeas } = require('./plannerDemo');
 const KINDS = ['destination', 'stay', 'transport', 'activity', 'link'];
 const STATUSES = ['considering', 'shortlisted', 'selected', 'booked', 'eliminated'];
 const CURRENCIES = ['CAD', 'USD', 'EUR', 'GBP'];
-const TRIP_FIELDS = ['name', 'description', 'destination', 'travel_start', 'travel_end', 'currency', 'travelers', 'brief_text', 'brief_meta'];
+const TRIP_FIELDS = ['name', 'description', 'destination', 'travel_start', 'travel_end', 'currency', 'travelers'];
 const IDEA_FIELDS = ['kind', 'title', 'location', 'notes', 'url', 'destination_id', 'cost', 'currency', 'capacity', 'details', 'last_refresh_note'];
 // What the group sees the API assistant called (member name, board copy). Hermes is only the backend.
 const ASSISTANT_NAME = 'Trip Butler';
-const GENERATION_MODES = ['generate', 'refresh'];
-const RUN_FIELDS = ['created', 'updated', 'flagged', 'note', 'requested_at'];
+const RUN_FIELDS = ['created', 'updated', 'flagged', 'note', 'requested_at', 'question_at'];
 const DETAIL_LIMIT = 12;
 const SOURCE_LIMIT = 20;
+// Decided ideas: only the organizer may change their research fields.
+const DECIDED = ['selected', 'booked'];
+// New research runs members' questions may start per trip per day (the organizer is not limited).
+const MEMBER_RUN_LIMIT = 20;
 // Shared detail labels per kind, so facts line up on the compare page. The form suggests them and the API returns them.
 const DETAIL_LABELS = {
   destination: ['Best season', 'Flight time', 'Weather', 'Language'],
@@ -31,6 +34,11 @@ const DETAIL_LABELS = {
 };
 
 const pick = (body, fields) => Object.fromEntries(fields.filter(field => Object.hasOwn(body, field)).map(field => [field, body[field]]));
+// Stored vs validated idea values: blank equals null, and quotes compare as amounts ("10.00" = "10").
+function sameValue(field, stored, next) {
+  if (field === 'cost') return (stored == null ? null : Number(stored)) === (next == null ? null : Number(next));
+  return JSON.stringify(stored ?? '') === JSON.stringify(next ?? '');
+}
 
 // pg parses DATE as local midnight; format back without a timezone shift.
 const pad = n => String(n).padStart(2, '0');
@@ -138,14 +146,6 @@ function perPerson(cost, count) {
   return cost == null || !count ? null : Math.round(Number(cost) * 100 / count) / 100;
 }
 
-// Optional structured part of the brief (month, budget, departure city, must-haves…). Small JSON object, any keys.
-function briefMeta(value) {
-  if (value == null || value === '') return null;
-  if (typeof value !== 'object' || Array.isArray(value)) throw httpError(400, 'Brief details must be a JSON object.');
-  if (JSON.stringify(value).length > 2000) throw httpError(400, 'Brief details must be at most 2000 characters as JSON.');
-  return value;
-}
-
 function tripValues(body) {
   const values = {
     name: text(body.name, 'Trip name', 120, true),
@@ -155,8 +155,6 @@ function tripValues(body) {
     travel_end: date(body.travel_end, 'end date'),
     currency: choice(body.currency, CURRENCIES, 'currency', 'CAD'),
     travelers: travelers(body.travelers),
-    brief_text: text(body.brief_text, 'Trip brief', 4000),
-    brief_meta: briefMeta(body.brief_meta),
   };
   if (values.travel_start && values.travel_end && values.travel_start > values.travel_end) throw httpError(400, 'End date must be on or after the start date.');
   return values;
@@ -278,13 +276,15 @@ class PlannerService {
     return new TripsDAO(this.pool).listForViewer(viewer.isOrganizer, viewer.tripId);
   }
 
+  // With start_research ticked, the Trip Butler is asked right away (the description is required then).
   async create(body, viewer) {
     const v = tripValues(body);
     return transaction(this.pool, async db => {
       const dao = daos(db);
-      const trip = await dao.trips.create(v);
-      await dao.participants.upsertOrganizer(trip.id, viewer.name);
-      return trip;
+      const context = { dao, trip: await dao.trips.create(v) };
+      await dao.participants.upsertOrganizer(context.trip.id, viewer.name);
+      if (body.start_research) await this.requestGeneration(context);
+      return context.trip;
     });
   }
 
@@ -340,13 +340,31 @@ class PlannerService {
     return items;
   }
 
+  // Any member may correct an idea's research until it is selected or booked; then only the organizer.
+  // The restricted agent edits only its own ideas, and never one a person has corrected.
   canEdit(viewer, context, item) {
+    if (viewer.isRestrictedAgent) return this.canDelete(viewer, context, item) && !item.human_corrected;
+    return viewer.isOrganizer || !DECIDED.includes(item.status);
+  }
+
+  canDelete(viewer, context, item) {
     if (viewer.isRestrictedAgent) return item.created_by === context.participant.id && context.participant.is_agent;
     return viewer.isOrganizer || item.created_by === context.participant.id;
   }
 
   ensureCanEdit(viewer, context, item) {
-    if (!this.canEdit(viewer, context, item)) throw httpError(403, 'Only the author or organizer can edit or delete this idea.');
+    if (viewer.isRestrictedAgent) this.ensureAgentOwned(viewer, context, item);
+    else if (!this.canEdit(viewer, context, item)) throw httpError(403, 'Only the organizer can change a selected or booked idea. Add a comment or an alternative instead.');
+  }
+
+  ensureCanDelete(viewer, context, item) {
+    if (viewer.isRestrictedAgent) this.ensureAgentOwned(viewer, context, item);
+    else if (!this.canDelete(viewer, context, item)) throw httpError(403, 'Only the author or organizer can delete this idea.');
+  }
+
+  ensureAgentOwned(viewer, context, item) {
+    if (!this.canDelete(viewer, context, item)) throw httpError(403, 'Only the author or organizer can edit or delete this idea.');
+    if (item.human_corrected) throw httpError(403, `A trip member corrected this idea, so it is read-only for the ${ASSISTANT_NAME}. Add a comment or a separate alternative instead.`);
   }
 
   async ideaDetail(context, viewer, itemId) {
@@ -362,6 +380,7 @@ class PlannerService {
       comments: await context.dao.comments.listForIdea(item.id),
       imageValues: {},
       canEdit: this.canEdit(viewer, context, item),
+      canDelete: this.canDelete(viewer, context, item),
       destinations: await this.destinations(context),
     };
   }
@@ -403,15 +422,31 @@ class PlannerService {
     return context.trip;
   }
 
-  // Asks Hermes to build (generate) or update (refresh) the compare set from the brief. Hermes pulls
+  // Asks Hermes to research the trip from its description and the open question. Hermes pulls
   // waiting requests from the API; `queued` is false when one was already waiting.
-  async requestGeneration(context, mode) {
+  async requestGeneration(context) {
     const { dao, trip } = context;
-    mode = choice(mode, GENERATION_MODES, 'generation mode', 'generate');
-    if (!trip.brief_text) throw httpError(400, `Describe the trip first, then ask the ${ASSISTANT_NAME}.`);
-    context.trip = await dao.trips.requestGeneration(trip.id, mode);
+    if (!trip.description && !trip.butler_question) {
+      throw httpError(400, `Tell the ${ASSISTANT_NAME} what to look for: describe the trip or ask a question.`);
+    }
+    context.trip = await dao.trips.requestGeneration(trip.id);
     const queued = context.trip.generation_run_id !== trip.generation_run_id;
     return { trip: context.trip, queued };
+  }
+
+  // Any member asks the Trip Butler: a question replaces the open one; left empty, the Butler just researches the
+  // trip description. It joins a waiting request (usage kept) or queues one. A member starting a new run counts toward
+  // the daily cap; over the cap a question is still saved (`capped`) and waits for the next run.
+  async askButler(context, viewer, body) {
+    const { dao, trip } = context;
+    const question = text(body.question, 'Question', 500);
+    if (question) context.trip = await dao.trips.setQuestion(trip.id, question);
+    const waiting = await dao.trips.activeGeneration(trip.id, trip.generation_run_id);
+    if (!waiting && (context.trip.description || context.trip.butler_question) && !viewer.isOrganizer &&
+        !await dao.trips.countMemberRun(trip.id, MEMBER_RUN_LIMIT)) {
+      return { trip: context.trip, queued: false, capped: true, saved: Boolean(question) };
+    }
+    return this.requestGeneration(context);
   }
 
   // Organizer gives up on a waiting request (e.g. the assistant never picked it up); asking again re-queues and re-pings.
@@ -429,21 +464,26 @@ class PlannerService {
     };
     const summary = { created: count(body.created, 'created'), updated: count(body.updated, 'updated'), flagged: count(body.flagged, 'flagged'),
       note: text(body.note, 'Run note', 300) };
-    let requestedAt = null;
-    if (body.requested_at != null && body.requested_at !== '') {
-      requestedAt = typeof body.requested_at === 'string' ? new Date(body.requested_at) : null;
-      if (!requestedAt || !Number.isFinite(requestedAt.getTime())) throw httpError(400, 'requested_at must be the timestamp returned by the queue.');
-    }
+    const timestamp = field => {
+      if (body[field] == null || body[field] === '') return null;
+      const value = typeof body[field] === 'string' ? new Date(body[field]) : null;
+      if (!value || !Number.isFinite(value.getTime())) throw httpError(400, `${field} must be the timestamp returned by the queue.`);
+      return value;
+    };
+    const requestedAt = timestamp('requested_at');
+    const questionAt = timestamp('question_at');
     if (context.isRestrictedAgent && !await context.dao.trips.activeGeneration(context.trip.id, context.trip.generation_run_id)) {
       throw httpError(409, 'Research request is inactive, expired or replaced.');
     }
-    context.trip = await context.dao.trips.finishRun(context.trip.id, summary, requestedAt);
+    context.trip = await context.dao.trips.finishRun(context.trip.id, summary, requestedAt, questionAt);
+    // A member changed the question during the run: queue another run so it gets looked at.
+    if (context.trip.butler_question && !context.trip.generation_requested_at) await this.requestGeneration(context);
     return context.trip;
   }
 
-  async generationQueue(limit, restricted = false) {
+  async generationQueue(limit) {
     limit = limit == null || limit === '' ? 5 : id(limit, 'limit');
-    return new TripsDAO(this.pool).listGenerationQueue(Math.min(limit, 20), restricted);
+    return new TripsDAO(this.pool).listGenerationQueue(Math.min(limit, 20));
   }
 
   async consumeAgentWrite(context, category) {
@@ -472,7 +512,7 @@ class PlannerService {
 
   async removeIdea(context, viewer, itemId) {
     const item = await this.item(context, itemId);
-    this.ensureCanEdit(viewer, context, item);
+    this.ensureCanDelete(viewer, context, item);
     await context.dao.ideas.delete(context.trip.id, item.id);
   }
 
@@ -558,7 +598,8 @@ class PlannerService {
     return { budget, missingCosts };
   }
 
-  async writeIdea(context, body, existing = null) {
+  // An edit that changes something records who made it (last editor); a no-change save keeps the previous editor.
+  async writeIdea(context, body, existing = null, linksChanged = false) {
     const { dao, trip, participant } = context;
     const v = ideaValues(body, trip.currency);
     if (!existing && !v.url && body.source_label) {
@@ -578,7 +619,10 @@ class PlannerService {
       const referenced = await dao.ideas.hasLinkedIdeas(trip.id, existing.id);
       if (referenced) throw httpError(400, 'Move linked ideas before changing this destination to another kind.');
     }
-    if (existing) return dao.ideas.update(trip.id, existing.id, v);
+    if (existing) {
+      const changed = linksChanged || IDEA_FIELDS.some(field => !sameValue(field, existing[field], v[field]));
+      return dao.ideas.update(trip.id, existing.id, v, changed ? participant.id : null);
+    }
     const item = await dao.ideas.create(trip.id, participant.id, v);
     if (initialSource) await this.mutateReference(context, item, 'sources', 'add', null, initialSource);
     return item;
@@ -609,7 +653,11 @@ class PlannerService {
     if (current.length - removed.length + added.length > SOURCE_LIMIT) throw httpError(400, `Each idea can have at most ${SOURCE_LIMIT} links.`);
     // Links replace the legacy first-source fields, so ignore those if they are sent too.
     const { url, source_label, ...fields } = body;
-    const item = await this.writeIdea(context, { ...fields, details }, existing);
+    const linksChanged = removed.length > 0 || added.length > 0 || mine.some(source => {
+      const link = kept.get(source.id);
+      return link && (link.url !== source.url || link.label !== source.label);
+    });
+    const item = await this.writeIdea(context, { ...fields, details }, existing, linksChanged);
     for (const source of removed) await dao.sources.delete(item.id, source.id);
     for (const source of mine) {
       const link = kept.get(source.id);
@@ -707,4 +755,4 @@ class PlannerService {
   }
 }
 
-module.exports = { PlannerService, ASSISTANT_NAME, KINDS, STATUSES, CURRENCIES, TRIP_FIELDS, IDEA_FIELDS, RUN_FIELDS, DETAIL_LABELS, text, id, choice, tripValues, ideaValues, dateText, perPerson };
+module.exports = { PlannerService, ASSISTANT_NAME, MEMBER_RUN_LIMIT, KINDS, STATUSES, CURRENCIES, TRIP_FIELDS, IDEA_FIELDS, RUN_FIELDS, DETAIL_LABELS, text, id, choice, tripValues, ideaValues, dateText, perPerson };

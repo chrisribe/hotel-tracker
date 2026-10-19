@@ -26,7 +26,8 @@
  const quoteKinds = 'stay transport activity', capacityKinds = 'stay transport';
 %>
 <a class="back-link" href="/plans/<%= trip.id %><%= editing ? '/ideas/' + data.item.id : '' %>"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg><%= editing ? 'Back to idea' : 'Back to research board' %></a>
-<div class="page-heading"><div><h1><%= editing ? 'Edit idea' : 'Add an idea' %></h1></div></div>
+<% const correcting = editing && !viewer.isOrganizer && data.item.created_by !== viewer.participantId; %>
+<div class="page-heading"><div><h1><%= correcting ? 'Correct details' : editing ? 'Edit idea' : 'Add an idea' %></h1><% if (correcting) { %><p class="fine-print">Your change is saved with your name.</p><% } %></div></div>
 <form method="post" action="<%= data.formAction %>" class="idea-editor editor-form stack-form" data-kind-form="<%= JSON.stringify(kindForm) %>"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="rows_form" value="1">
   <fieldset class="kind-picker"><legend>What kind of idea?</legend><% Object.entries(h.singular).forEach(([kind,label]) => { %><label><input type="radio" name="kind" value="<%= kind %>" <%= (v.kind || 'destination') === kind ? 'checked' : '' %>><span><svg class="icon" aria-hidden="true"><use href="#i-<%= h.kindIcon(kind) %>"/></svg><%= label %></span></label><% }) %></fieldset>
   <div class="form-row"><label for="idea-title">Name<input id="idea-title" name="title" required maxlength="160" placeholder="<%= copy.name %>" data-kind-text="name" value="<%= v.title || '' %>"></label><label for="idea-location" data-kinds="destination stay">Location <span class="optional">Optional</span><input id="idea-location" name="location" maxlength="200" placeholder="<%= copy.location %>" data-kind-text="location" value="<%= v.location || '' %>"></label></div>

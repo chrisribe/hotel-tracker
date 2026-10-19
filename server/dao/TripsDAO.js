@@ -1,12 +1,11 @@
 class TripsDAO {
   constructor(pool) { this.pool = pool; }
 
-  async create({ name, description, destination, travel_start, travel_end, currency, travelers, brief_text, brief_meta }) {
+  async create({ name, description, destination, travel_start, travel_end, currency, travelers }) {
     const r = await this.pool.query(
-      `INSERT INTO trips (name, description, destination, travel_start, travel_end, currency, travelers, brief_text, brief_meta, brief_updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb, CASE WHEN $8::text IS NULL AND $9::jsonb IS NULL THEN NULL ELSE NOW() END) RETURNING *`,
-      [name, description ?? null, destination || null, travel_start || null, travel_end || null, currency, travelers ?? null,
-        brief_text || null, brief_meta == null ? null : JSON.stringify(brief_meta)]
+      `INSERT INTO trips (name, description, destination, travel_start, travel_end, currency, travelers)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [name, description ?? null, destination || null, travel_start || null, travel_end || null, currency, travelers ?? null]
     );
     return r.rows[0];
   }
@@ -25,61 +24,79 @@ class TripsDAO {
     return r.rows;
   }
 
-  // brief_updated_at moves only when the brief itself changes.
-  async update(id, { name, description, destination, travel_start, travel_end, currency, travelers, brief_text, brief_meta }) {
+  async update(id, { name, description, destination, travel_start, travel_end, currency, travelers }) {
     const r = await this.pool.query(
-      `UPDATE trips SET name=$1, description=$2, destination=$3, travel_start=$4, travel_end=$5, currency=$6, travelers=$7,
-         brief_updated_at = CASE WHEN brief_text IS DISTINCT FROM $9::text OR brief_meta IS DISTINCT FROM $10::jsonb THEN NOW() ELSE brief_updated_at END,
-         brief_text=$9, brief_meta=$10::jsonb
+      `UPDATE trips SET name=$1, description=$2, destination=$3, travel_start=$4, travel_end=$5, currency=$6, travelers=$7
        WHERE id=$8 RETURNING *`,
-      [name, description ?? null, destination || null, travel_start || null, travel_end || null, currency, travelers ?? null, id,
-        brief_text || null, brief_meta == null ? null : JSON.stringify(brief_meta)]
+      [name, description ?? null, destination || null, travel_start || null, travel_end || null, currency, travelers ?? null, id]
     );
     return r.rows[0];
   }
 
-  // Keeps the first request time if one is already waiting; the latest mode wins.
-  async requestGeneration(id, mode) {
+  // Keeps the waiting request (time, run ID, usage) if there is one; otherwise starts a fresh run.
+  async requestGeneration(id) {
     const r = await this.pool.query(
       `UPDATE trips SET
          generation_run_id = CASE WHEN generation_requested_at IS NULL OR generation_expires_at <= statement_timestamp() OR generation_run_id IS NULL THEN gen_random_uuid() ELSE generation_run_id END,
          generation_usage = CASE WHEN generation_requested_at IS NULL OR generation_expires_at <= statement_timestamp() OR generation_run_id IS NULL THEN '{"creations":0,"comments":0,"writes":0}'::jsonb ELSE generation_usage END,
          generation_expires_at = CASE WHEN generation_requested_at IS NULL OR generation_expires_at <= statement_timestamp() OR generation_run_id IS NULL THEN statement_timestamp() + interval '1 hour' ELSE generation_expires_at END,
-         generation_requested_at = CASE WHEN generation_requested_at IS NULL OR generation_expires_at <= statement_timestamp() OR generation_run_id IS NULL THEN statement_timestamp() ELSE generation_requested_at END,
-         generation_mode = $2 WHERE id = $1 RETURNING *`, [id, mode]);
+         generation_requested_at = CASE WHEN generation_requested_at IS NULL OR generation_expires_at <= statement_timestamp() OR generation_run_id IS NULL THEN statement_timestamp() ELSE generation_requested_at END
+       WHERE id = $1 RETURNING *`, [id]);
     return r.rows[0];
   }
 
   // Drops a waiting request without touching the last run.
   async cancelGeneration(id) {
-    const r = await this.pool.query('UPDATE trips SET generation_requested_at = NULL, generation_mode = NULL, generation_run_id = NULL, generation_expires_at = NULL WHERE id = $1 RETURNING *', [id]);
+    const r = await this.pool.query('UPDATE trips SET generation_requested_at = NULL, generation_run_id = NULL, generation_expires_at = NULL WHERE id = $1 RETURNING *', [id]);
     return r.rows[0];
   }
 
   // Clears the pending request unless a newer one arrived after the run started (requestedAt = what the run picked up).
-  async finishRun(id, summary, requestedAt) {
+  // The question is cleared only if it is not newer than the one the run saw (questionAt, else requestedAt).
+  // Keeps the description as of this run so the next run can see what changed.
+  async finishRun(id, summary, requestedAt, questionAt = null) {
     const r = await this.pool.query(
-      `UPDATE trips SET last_run_at = NOW(), last_run_summary = $2::jsonb,
+      `UPDATE trips SET last_run_at = NOW(), last_run_summary = $2::jsonb, last_run_description = description,
         generation_run_id = CASE WHEN $3::timestamptz IS NULL OR date_trunc('milliseconds', generation_requested_at) <= $3 THEN NULL ELSE generation_run_id END,
         generation_expires_at = CASE WHEN $3::timestamptz IS NULL OR date_trunc('milliseconds', generation_requested_at) <= $3 THEN NULL ELSE generation_expires_at END,
-         generation_mode = CASE WHEN $3::timestamptz IS NULL OR date_trunc('milliseconds', generation_requested_at) <= $3 THEN NULL ELSE generation_mode END,
-         generation_requested_at = CASE WHEN $3::timestamptz IS NULL OR date_trunc('milliseconds', generation_requested_at) <= $3 THEN NULL ELSE generation_requested_at END
+         generation_requested_at = CASE WHEN $3::timestamptz IS NULL OR date_trunc('milliseconds', generation_requested_at) <= $3 THEN NULL ELSE generation_requested_at END,
+         butler_question = CASE WHEN COALESCE($4::timestamptz, $3) IS NULL OR date_trunc('milliseconds', butler_question_at) <= COALESCE($4, $3) THEN NULL ELSE butler_question END,
+         butler_question_at = CASE WHEN COALESCE($4::timestamptz, $3) IS NULL OR date_trunc('milliseconds', butler_question_at) <= COALESCE($4, $3) THEN NULL ELSE butler_question_at END
        WHERE id = $1 RETURNING *`,
-      [id, JSON.stringify(summary), requestedAt]);
+      [id, JSON.stringify(summary), requestedAt, questionAt]);
     return r.rows[0];
   }
 
-  // Waiting requests, oldest first. Trips where the assistant was removed are skipped.
-  async listGenerationQueue(limit, restricted = false) {
+  // The trip's one open question for the Trip Butler; a new one replaces it.
+  async setQuestion(id, question) {
+    const r = await this.pool.query('UPDATE trips SET butler_question = $2, butler_question_at = statement_timestamp() WHERE id = $1 RETURNING *', [id, question]);
+    return r.rows[0];
+  }
+
+  // Counts a run started by a member's question; false when today's limit is already reached.
+  async countMemberRun(id, limit) {
+    const r = await this.pool.query(`UPDATE trips SET runs_today = CASE WHEN runs_day = CURRENT_DATE THEN runs_today + 1 ELSE 1 END, runs_day = CURRENT_DATE
+      WHERE id = $1 AND (runs_day IS DISTINCT FROM CURRENT_DATE OR runs_today < $2) RETURNING id`, [id, limit]);
+    return r.rows.length > 0;
+  }
+
+  // Live (unexpired) requests, oldest first. Trips where the assistant was removed are skipped.
+  // mode: 'generate' until the assistant has added an idea to the trip, then 'refresh'.
+  async listGenerationQueue(limit) {
     const r = await this.pool.query(
-      `SELECT t.id AS trip_id, t.name AS trip_name, t.generation_mode AS mode, t.generation_requested_at AS requested_at,
-              t.brief_text, t.brief_meta, t.brief_updated_at, t.last_run_at,
-              t.generation_run_id AS run_id, t.generation_expires_at AS expires_at
+      `SELECT t.id AS trip_id, t.name AS trip_name, t.description, t.destination,
+              to_char(t.travel_start, 'YYYY-MM-DD') AS travel_start, to_char(t.travel_end, 'YYYY-MM-DD') AS travel_end,
+              t.travelers, t.currency,
+              CASE WHEN EXISTS (SELECT 1 FROM research_items i JOIN participants p ON p.id = i.created_by WHERE i.trip_id = t.id AND p.is_agent)
+                THEN 'refresh' ELSE 'generate' END AS mode,
+              t.generation_requested_at AS requested_at, t.last_run_at, t.last_run_description AS previous_description,
+              t.generation_run_id AS run_id, t.generation_expires_at AS expires_at,
+              t.butler_question AS question, t.butler_question_at AS question_at
        FROM trips t
        WHERE t.generation_requested_at IS NOT NULL
-         AND (NOT $2::boolean OR (t.generation_run_id IS NOT NULL AND t.generation_expires_at > clock_timestamp()))
+         AND t.generation_run_id IS NOT NULL AND t.generation_expires_at > clock_timestamp()
          AND NOT EXISTS (SELECT 1 FROM participants p WHERE p.trip_id = t.id AND p.is_agent AND NOT p.active)
-       ORDER BY t.generation_requested_at, t.id LIMIT $1`, [limit, restricted]);
+       ORDER BY t.generation_requested_at, t.id LIMIT $1`, [limit]);
     return r.rows;
   }
 

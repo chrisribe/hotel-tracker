@@ -31,16 +31,14 @@ function readSettings(overrides) {
     sessionSecret: env.SESSION_SECRET,
     cookieSecure: env.COOKIE_SECURE === 'true',
     trustProxy: env.TRUST_PROXY === '1',
-    apiToken: env.HOTEL_API_TOKEN || '',
     agentToken: env.HOTEL_AGENT_TOKEN || '',
     discordWebhook: env.DISCORD_WEBHOOK_URL || '',
     discordMention: env.DISCORD_MENTION_USER_ID || '',
     ...overrides,
   };
-  dropInvalid(settings, 'apiToken', (v) => v.length >= 32,
-    'HOTEL_API_TOKEN must be at least 32 characters; API disabled.');
-  dropInvalid(settings, 'agentToken', v => v.length >= 32 && !auth.safeEqual(v, settings.apiToken),
-    'HOTEL_AGENT_TOKEN must be at least 32 characters and distinct from HOTEL_API_TOKEN; agent access disabled.');
+  if (env.HOTEL_API_TOKEN) console.warn('HOTEL_API_TOKEN is no longer used; the API only accepts HOTEL_AGENT_TOKEN.');
+  dropInvalid(settings, 'agentToken', v => v.length >= 32,
+    'HOTEL_AGENT_TOKEN must be at least 32 characters; API disabled.');
   dropInvalid(settings, 'discordWebhook', (v) => DISCORD_WEBHOOK.test(v),
     'DISCORD_WEBHOOK_URL is not a Discord webhook URL; Discord pings disabled.');
   dropInvalid(settings, 'discordMention', (v) => DISCORD_USER_ID.test(v),

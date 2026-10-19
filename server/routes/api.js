@@ -1,6 +1,6 @@
 const express = require('express');
 const auth = require('../middleware/planner-auth');
-const { PlannerService, ASSISTANT_NAME, TRIP_FIELDS, IDEA_FIELDS, RUN_FIELDS, DETAIL_LABELS, dateText, perPerson } = require('../services/PlannerService');
+const { PlannerService, ASSISTANT_NAME, IDEA_FIELDS, RUN_FIELDS, DETAIL_LABELS, dateText, perPerson } = require('../services/PlannerService');
 
 const FAILED_TOKEN_LIMIT = 20;
 const CLIENT_ERRORS = [400, 401, 403, 404, 409, 413, 429];
@@ -10,28 +10,23 @@ const router = express.Router();
 const service = req => new PlannerService(req.app.get('pool'));
 
 router.use(requireToken);
-router.use(agentScope);
+router.use(trustNotice);
 router.use(express.json({ limit: '32kb', strict: true }));
 
-// ── Trips ────────────────────────────────────────────────────────────
+// ── Trip Butler research runs ────────────────────────────────────────
 
-router.get('/trips', async (req, res) => {
-  const trips = await service(req).list(req.viewer);
-  res.json({ trips: trips.map(tripJson) });
-});
+// Trips, statuses and research requests are managed on the website. The API only serves queued Trip Butler runs.
 
-router.post('/trips', onlyFields(TRIP_FIELDS), async (req, res) => {
-  // Trips belong to the organizer, not the assistant.
-  const organizer = { ...req.viewer, name: req.app.get('plannerConfig').adminUser };
-  const trip = await service(req).create(req.body, organizer);
-  res.status(201).json({ trip: tripJson(trip) });
+// Live requests, oldest first.
+router.get('/generation-queue', async (req, res) => {
+  const requests = await service(req).generationQueue(req.query.limit);
+  res.json({ requests });
 });
 
 router.get('/trips/:id', inTrip(async (req, planner, ctx) => {
   const board = await planner.board(ctx, {});
   return {
     trip: tripJson(board.trip),
-    members: board.members,
     destinations: board.destinations,
     ideas: board.items.map(idea => ideaJson(idea, board.trip)),
     budget: board.budget.map(b => ({ ...b, per_person: perPerson(b.total, board.trip.travelers) })),
@@ -40,27 +35,8 @@ router.get('/trips/:id', inTrip(async (req, planner, ctx) => {
   };
 }));
 
-router.patch('/trips/:id', onlyFields(TRIP_FIELDS), inTrip(async (req, planner, ctx) => {
-  const trip = await planner.updateTrip(ctx, req.body);
-  return { trip: tripJson(trip) };
-}));
-
-// ── Compare set from the trip brief ───────────────────────────────────
-
-// Trips waiting for Hermes, oldest first.
-router.get('/generation-queue', async (req, res) => {
-  const requests = await service(req).generationQueue(req.query.limit, req.viewer.isRestrictedAgent);
-  res.json({ requests });
-});
-
-router.post('/trips/:id/generate', onlyFields(['mode']), inTrip(async (req, planner, ctx) => {
-  const { trip, queued } = await planner.requestGeneration(ctx, req.body.mode);
-  return { request: { trip_id: trip.id, mode: trip.generation_mode, requested_at: trip.generation_requested_at,
-    run_id: trip.generation_run_id, expires_at: trip.generation_expires_at, queued } };
-}, 202));
-
 router.post('/trips/:id/generate/report', onlyFields(RUN_FIELDS), inTrip(async (req, planner, ctx) => {
-  if (req.viewer.isRestrictedAgent && req.body.requested_at !== ctx.trip.generation_requested_at.toISOString()) {
+  if (req.body.requested_at !== ctx.trip.generation_requested_at.toISOString()) {
     throw auth.httpError(409, 'requested_at must exactly match the active queue request.');
   }
   const trip = await planner.reportRun(ctx, req.body);
@@ -77,8 +53,8 @@ router.post('/trips/:id/ideas', onlyFields([...IDEA_FIELDS, 'source_label']), in
 router.get('/trips/:id/ideas/:itemId', inTrip((req, planner, ctx) =>
   showIdea(req, planner, ctx, req.params.itemId)));
 
-router.patch('/trips/:id/ideas/:itemId', onlyFields([...IDEA_FIELDS, 'status']), inTrip(async (req, planner, ctx) => {
-  if (req.viewer.isRestrictedAgent && Object.hasOwn(req.body, 'status')) throw auth.httpError(403, 'Agents cannot change status.');
+// Status is the group's decision, so it is not an accepted field.
+router.patch('/trips/:id/ideas/:itemId', onlyFields(IDEA_FIELDS), inTrip(async (req, planner, ctx) => {
   const item = await planner.patchIdea(ctx, req.viewer, req.params.itemId, req.body);
   return showIdea(req, planner, ctx, item.id);
 }));
@@ -110,39 +86,29 @@ router.use(sendError);
 // ── Helpers ──────────────────────────────────────────────────────────
 
 async function requireToken(req, res, next) {
-  const { apiToken, agentToken } = req.app.get('plannerConfig');
-  if (!apiToken && !agentToken) throw auth.httpError(404, 'API disabled.');
+  const { agentToken } = req.app.get('plannerConfig');
+  if (!agentToken) throw auth.httpError(404, 'API disabled.');
 
   // Only failed tokens count toward the limit.
   await auth.ensureNotBlocked(req, 'api', FAILED_TOKEN_LIMIT);
   const [, token] = /^Bearer\s+(\S+)$/.exec(req.get('Authorization') || '') || [];
-  const isAdmin = Boolean(token && apiToken && auth.safeEqual(token, apiToken));
-  const isRestrictedAgent = Boolean(token && agentToken && auth.safeEqual(token, agentToken));
-  if (!isAdmin && !isRestrictedAgent) {
+  if (!token || !auth.safeEqual(token, agentToken)) {
     await auth.attempt(req, 'api', FAILED_TOKEN_LIMIT);
     res.set('WWW-Authenticate', 'Bearer');
     throw auth.httpError(401, 'Invalid or missing API token.');
   }
 
-  // Organizer-level access. Reads have no side effects; writes are credited to the trip's assistant member.
+  // The Trip Butler, bound to one queued run. Reads have no side effects; writes are credited to the trip's assistant member.
   const isWrite = !['GET', 'HEAD'].includes(req.method);
-  req.viewer = { isOrganizer: true, isAgent: isWrite, isRestrictedAgent, runId: req.get('X-Hotel-Run-Id'),
+  req.viewer = { isOrganizer: true, isAgent: isWrite, isRestrictedAgent: true, runId: req.get('X-Hotel-Run-Id'),
     name: ASSISTANT_NAME, participantId: null, tripId: null };
   next();
 }
 
-// Deny by default, including unknown routes and methods (HEAD is a read).
-function agentScope(req, res, next) {
-  if (!req.viewer.isRestrictedAgent) return next();
-  const read = ['GET', 'HEAD'].includes(req.method);
-  const allowed = (read && req.path === '/generation-queue') ||
-    (read && /^\/trips\/[1-9]\d*(?:\/ideas\/[1-9]\d*)?$/.test(req.path)) ||
-    (req.method === 'POST' && /^\/trips\/[1-9]\d*\/(?:generate\/report|ideas(?:\/[1-9]\d*\/(?:sources|images|comments))?)$/.test(req.path)) ||
-    (['PATCH', 'DELETE'].includes(req.method) && /^\/trips\/[1-9]\d*\/ideas\/[1-9]\d*$/.test(req.path));
-  // Wrap successes and errors alike. Nothing in the payload can replace the trusted notice.
+// Every response, errors included, carries the fixed trust notice; nothing in the payload can replace it.
+function trustNotice(req, res, next) {
   const json = res.json.bind(res);
   res.json = body => json({ ...agentData(body), _trust: { notice: UNTRUSTED_NOTICE, untrusted_scope: 'All fields outside /_trust, recursively, including every free-text string and URL.' } });
-  if (!allowed) throw auth.httpError(403, 'Endpoint is not available to agents.');
   next();
 }
 
@@ -150,9 +116,9 @@ function agentScope(req, res, next) {
 function agentData(value) {
   if (value == null || typeof value !== 'object' || value instanceof Date) return value;
   if (Array.isArray(value)) return value.map(agentData);
-  const hidden = ['members', 'author', 'author_name', 'created_by', 'participant_id', 'author_is_agent'];
+  const hidden = ['members', 'author', 'author_name', 'created_by', 'participant_id', 'author_is_agent', 'editor', 'last_edited_by'];
   return Object.fromEntries(Object.entries(value).filter(([key]) => !hidden.includes(key))
-    .map(([key, child]) => [key, key === 'brief_meta' ? child : agentData(child)]));
+    .map(([key, child]) => [key, agentData(child)]));
 }
 
 // Rejects bodies that are not a JSON object or carry fields the endpoint would silently drop.
@@ -175,7 +141,7 @@ function inTrip(handler, status = 200) {
   return async (req, res) => {
     const planner = service(req);
     const body = await planner.withTrip(req.params.id, req.viewer, async ctx => {
-      if (req.viewer.isRestrictedAgent && !['GET', 'HEAD'].includes(req.method)) {
+      if (!['GET', 'HEAD'].includes(req.method)) {
         const category = req.method === 'POST' && /\/ideas$/.test(req.path) ? 'creations'
           : /\/comments$/.test(req.path) ? 'comments' : null;
         await planner.consumeAgentWrite(ctx, category);
@@ -183,7 +149,7 @@ function inTrip(handler, status = 200) {
       const result = await handler(req, planner, ctx);
       // A lease can expire while validation/reads run; do not commit late mutations.
       // Reporting checks just before clearing the request instead.
-      if (req.viewer.isRestrictedAgent && !req.path.endsWith('/generate/report') &&
+      if (!req.path.endsWith('/generate/report') &&
           !await ctx.dao.trips.activeGeneration(ctx.trip.id, req.viewer.runId)) {
         throw auth.httpError(409, 'Research request is inactive, expired or replaced.');
       }
@@ -203,9 +169,11 @@ function tripJson(trip) {
 }
 
 // per_person is an estimate: total cost ÷ the trip's travelers (null if either is unknown).
-function ideaJson({ author_name, voted, ...idea }, trip) {
+// human_corrected: a person edited it last, so the restricted agent may no longer change it.
+function ideaJson({ author_name, editor_name, voted, ...idea }, trip) {
   const { author_is_agent, ...fields } = idea;
-  return { ...fields, agent_owned: Boolean(author_is_agent), author: author_name, per_person: perPerson(idea.cost, trip.travelers) };
+  return { ...fields, agent_owned: Boolean(author_is_agent), human_corrected: Boolean(idea.human_corrected), author: author_name,
+    editor: editor_name || null, per_person: perPerson(idea.cost, trip.travelers) };
 }
 
 // Express needs all four parameters to treat this as an error handler.
