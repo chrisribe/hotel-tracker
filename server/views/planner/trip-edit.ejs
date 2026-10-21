@@ -1,0 +1,11 @@
+<% const v = data.values, base = '/plans/' + data.trip.id; %>
+<a class="back-link" href="<%= base %>"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>Back to research board</a>
+<div class="page-heading"><div><h1>Edit trip</h1></div></div>
+<form method="post" action="<%= base %>/edit" class="editor-form stack-form">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <label for="trip-name">Trip name<input id="trip-name" name="name" required maxlength="120" value="<%= v.name || '' %>"></label>
+  <label for="trip-description">What are you thinking? <span class="optional">Optional</span><textarea id="trip-description" name="description" rows="5" maxlength="5000" aria-describedby="description-hint"><%= v.description || '' %></textarea><small id="description-hint">Where, who, budget, must-haves. The <%= ASSISTANT_NAME %> reads this next time it’s asked; saving doesn’t ask it.</small></label>
+  <div class="form-row"><label for="travel-start">From <span class="optional">Optional</span><input type="date" id="travel-start" name="travel_start" value="<%= v.travel_start || '' %>"></label><label for="travel-end">Until <span class="optional">Optional</span><input type="date" id="travel-end" name="travel_end" value="<%= v.travel_end || '' %>"></label></div>
+  <label for="trip-travelers">Travelers <span class="optional">Optional</span><input type="number" id="trip-travelers" name="travelers" min="1" max="100" value="<%= v.travelers || '' %>" aria-describedby="travelers-hint"><small id="travelers-hint">Can differ from who joined. Totals are divided by this for a rough per-person share; leave empty to hide it.</small></label>
+  <div class="form-actions"><button class="button primary">Save changes</button><a class="button subtle" href="<%= base %>">Cancel</a></div>
+</form>

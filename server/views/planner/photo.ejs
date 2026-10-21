@@ -1,0 +1,4 @@
+<figure class="reference-photo <%= typeof photoClass !== 'undefined' ? photoClass : '' %>">
+  <img src="<%= photo.url %>" alt="<%= photo.caption || 'Photo for ' + photoTitle %>" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-reference-image>
+  <span class="photo-fallback" hidden><svg class="icon" aria-hidden="true"><use href="#i-image"/></svg>Image unavailable<span>Open the source or replace this reference.</span></span>
+</figure>

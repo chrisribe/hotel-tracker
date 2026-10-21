@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-12T00:00:00Z",
+  "title": "Design System: Hotel Tracker",
+  "extensions": {
+    "colorMeta": {
+      "ground": { "role": "neutral", "displayName": "Warm ground", "tonalRamp": ["oklch(15% 0.008 85)", "oklch(27% 0.008 85)", "oklch(39% 0.008 85)", "oklch(51% 0.008 85)", "oklch(63% 0.008 85)", "oklch(75% 0.008 85)", "oklch(87% 0.008 85)", "oklch(95% 0.008 85)"] },
+      "paper": { "role": "neutral", "displayName": "Warm paper", "tonalRamp": ["oklch(15% 0.006 95)", "oklch(27% 0.006 95)", "oklch(39% 0.006 95)", "oklch(51% 0.006 95)", "oklch(63% 0.006 95)", "oklch(75% 0.006 95)", "oklch(87% 0.006 95)", "oklch(95% 0.006 95)"] },
+      "ink": { "role": "neutral", "displayName": "Green ink", "tonalRamp": ["oklch(15% 0.032 174)", "oklch(27% 0.032 174)", "oklch(39% 0.032 174)", "oklch(51% 0.032 174)", "oklch(63% 0.032 174)", "oklch(75% 0.032 174)", "oklch(87% 0.032 174)", "oklch(95% 0.032 174)"] },
+      "muted": { "role": "neutral", "displayName": "Muted green-gray", "tonalRamp": ["oklch(15% 0.019 158)", "oklch(27% 0.019 158)", "oklch(39% 0.019 158)", "oklch(51% 0.019 158)", "oklch(63% 0.019 158)", "oklch(75% 0.019 158)", "oklch(87% 0.019 158)", "oklch(95% 0.019 158)"] },
+      "forest": { "role": "primary", "displayName": "Forest navigation", "tonalRamp": ["oklch(15% 0.046 179)", "oklch(27% 0.046 179)", "oklch(39% 0.046 179)", "oklch(51% 0.046 179)", "oklch(63% 0.046 179)", "oklch(75% 0.046 179)", "oklch(87% 0.046 179)", "oklch(95% 0.046 179)"] },
+      "forest-deep": { "role": "primary", "displayName": "Deep forest", "tonalRamp": ["oklch(15% 0.04 179)", "oklch(27% 0.04 179)", "oklch(39% 0.04 179)", "oklch(51% 0.04 179)", "oklch(63% 0.04 179)", "oklch(75% 0.04 179)", "oklch(87% 0.04 179)", "oklch(95% 0.04 179)"] },
+      "teal": { "role": "primary", "displayName": "Action teal", "tonalRamp": ["oklch(15% 0.079 174)", "oklch(27% 0.079 174)", "oklch(39% 0.079 174)", "oklch(51% 0.079 174)", "oklch(63% 0.079 174)", "oklch(75% 0.079 174)", "oklch(87% 0.079 174)", "oklch(95% 0.079 174)"] },
+      "teal-dark": { "role": "primary", "displayName": "Deep action teal", "tonalRamp": ["oklch(15% 0.068 169)", "oklch(27% 0.068 169)", "oklch(39% 0.068 169)", "oklch(51% 0.068 169)", "oklch(63% 0.068 169)", "oklch(75% 0.068 169)", "oklch(87% 0.068 169)", "oklch(95% 0.068 169)"] },
+      "line": { "role": "neutral", "displayName": "Soft divider", "tonalRamp": ["oklch(15% 0.013 132)", "oklch(27% 0.013 132)", "oklch(39% 0.013 132)", "oklch(51% 0.013 132)", "oklch(63% 0.013 132)", "oklch(75% 0.013 132)", "oklch(87% 0.013 132)", "oklch(95% 0.013 132)"] },
+      "mint": { "role": "neutral", "displayName": "Quiet mint", "tonalRamp": ["oklch(15% 0.015 142)", "oklch(27% 0.015 142)", "oklch(39% 0.015 142)", "oklch(51% 0.015 142)", "oklch(63% 0.015 142)", "oklch(75% 0.015 142)", "oklch(87% 0.015 142)", "oklch(95% 0.015 142)"] },
+      "danger": { "role": "semantic", "displayName": "Destructive red", "tonalRamp": ["oklch(15% 0.137 28)", "oklch(27% 0.137 28)", "oklch(39% 0.137 28)", "oklch(51% 0.137 28)", "oklch(63% 0.137 28)", "oklch(75% 0.137 28)", "oklch(87% 0.137 28)", "oklch(95% 0.137 28)"] },
+      "white": { "role": "neutral", "displayName": "White on solid actions", "tonalRamp": ["oklch(15% 0 0)", "oklch(27% 0 0)", "oklch(39% 0 0)", "oklch(51% 0 0)", "oklch(63% 0 0)", "oklch(75% 0 0)", "oklch(87% 0 0)", "oklch(95% 0 0)"] },
+      "exploring-bg": { "role": "semantic", "displayName": "Exploring ground", "tonalRamp": ["oklch(15% 0.011 119)", "oklch(27% 0.011 119)", "oklch(39% 0.011 119)", "oklch(51% 0.011 119)", "oklch(63% 0.011 119)", "oklch(75% 0.011 119)", "oklch(87% 0.011 119)", "oklch(95% 0.011 119)"] },
+      "exploring-text": { "role": "semantic", "displayName": "Exploring ink", "tonalRamp": ["oklch(15% 0.032 147)", "oklch(27% 0.032 147)", "oklch(39% 0.032 147)", "oklch(51% 0.032 147)", "oklch(63% 0.032 147)", "oklch(75% 0.032 147)", "oklch(87% 0.032 147)", "oklch(95% 0.032 147)"] },
+      "shortlisted-bg": { "role": "semantic", "displayName": "Shortlist ground", "tonalRamp": ["oklch(15% 0.029 133)", "oklch(27% 0.029 133)", "oklch(39% 0.029 133)", "oklch(51% 0.029 133)", "oklch(63% 0.029 133)", "oklch(75% 0.029 133)", "oklch(87% 0.029 133)", "oklch(95% 0.029 133)"] },
+      "shortlisted-text": { "role": "semantic", "displayName": "Shortlist ink", "tonalRamp": ["oklch(15% 0.068 151)", "oklch(27% 0.068 151)", "oklch(39% 0.068 151)", "oklch(51% 0.068 151)", "oklch(63% 0.068 151)", "oklch(75% 0.068 151)", "oklch(87% 0.068 151)", "oklch(95% 0.068 151)"] },
+      "booked-bg": { "role": "semantic", "displayName": "Booked green", "tonalRamp": ["oklch(15% 0.072 157)", "oklch(27% 0.072 157)", "oklch(39% 0.072 157)", "oklch(51% 0.072 157)", "oklch(63% 0.072 157)", "oklch(75% 0.072 157)", "oklch(87% 0.072 157)", "oklch(95% 0.072 157)"] },
+      "passed-bg": { "role": "semantic", "displayName": "Passed-on ground", "tonalRamp": ["oklch(15% 0.014 47)", "oklch(27% 0.014 47)", "oklch(39% 0.014 47)", "oklch(51% 0.014 47)", "oklch(63% 0.014 47)", "oklch(75% 0.014 47)", "oklch(87% 0.014 47)", "oklch(95% 0.014 47)"] },
+      "passed-text": { "role": "semantic", "displayName": "Passed-on ink", "tonalRamp": ["oklch(15% 0.054 34)", "oklch(27% 0.054 34)", "oklch(39% 0.054 34)", "oklch(51% 0.054 34)", "oklch(63% 0.054 34)", "oklch(75% 0.054 34)", "oklch(87% 0.054 34)", "oklch(95% 0.054 34)"] },
+      "sample-bg": { "role": "semantic", "displayName": "Sample amber ground", "tonalRamp": ["oklch(15% 0.055 90)", "oklch(27% 0.055 90)", "oklch(39% 0.055 90)", "oklch(51% 0.055 90)", "oklch(63% 0.055 90)", "oklch(75% 0.055 90)", "oklch(87% 0.055 90)", "oklch(95% 0.055 90)"] },
+      "sample-text": { "role": "semantic", "displayName": "Sample amber ink", "tonalRamp": ["oklch(15% 0.079 77)", "oklch(27% 0.079 77)", "oklch(39% 0.079 77)", "oklch(51% 0.079 77)", "oklch(63% 0.079 77)", "oklch(75% 0.079 77)", "oklch(87% 0.079 77)", "oklch(95% 0.079 77)"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Page heading", "purpose": "Default h1; source media queries provide narrow-screen and welcome overrides." },
+      "headline": { "displayName": "Section heading", "purpose": "Default h2; rail and welcome contexts override size." },
+      "title": { "displayName": "Idea title", "purpose": "Card h3 with wrapped titles and 1.35 line-height." },
+      "body": { "displayName": "Inherited reading text", "purpose": "Root DM Sans stack and line-height. Root font-size is not explicitly set. Self-hosted Latin and Latin Extended normal variable weights 400–700 use swap and no synthesis. Component specimens inherit loaded font faces from the host; otherwise the documented fallback stack applies." },
+      "excerpt": { "displayName": "Card excerpt", "purpose": "Three-line-clamped research notes; inherits root family and normal weight." },
+      "prose": { "displayName": "Expanded idea notes", "purpose": "Whitespace-preserving notes, up to 70ch; inherits root family." },
+      "label": { "displayName": "Field label", "purpose": "Sentence-case form labels with inherited family and line-height." },
+      "button": { "displayName": "Action label", "purpose": "Button elements use line-height 1.3; anchor buttons inherit 1.55. Family is inherited." },
+      "badge": { "displayName": "Ancillary status label", "purpose": "Existing compact status/sample pills only; not a recommended minimum body size." },
+      "quote": { "displayName": "Card quote", "purpose": "Tabular numerals, total quote rather than nightly rate." },
+      "budget": { "displayName": "Selected estimate", "purpose": "Tabular numerals; currencies shown separately." },
+      "quote-total": { "displayName": "Detail quote total", "purpose": "Tabular numerals in the supporting detail panel." }
+    },
+    "shadows": [
+      { "name": "selected-view", "value": "0 1px 3px #263d3712", "purpose": "Selected research/shortlist switch option." },
+      { "name": "idea-hover", "value": "0 5px 16px #263d3709", "purpose": "Research-card hover only; cards are unshadowed at rest." },
+      { "name": "toast", "value": "0 5px 20px #173e3826", "purpose": "Transient clipboard/status feedback." },
+      { "name": "welcome", "value": "0 12px 40px #243e3709", "purpose": "Welcome/join container." }
+    ],
+    "motion": [
+      { "name": "button-state", "value": "background .15s, border-color .15s", "purpose": "Shared button transition; default CSS ease." },
+      { "name": "idea-state", "value": "border-color .15s, box-shadow .15s", "purpose": "Research-card hover; no translation." },
+      { "name": "reduced-motion", "value": "scroll-behavior: auto !important; transition: none !important", "purpose": "All elements and pseudo-elements when prefers-reduced-motion is reduce." },
+      { "name": "toast-timeout", "value": "5000ms", "purpose": "JavaScript visibility duration, not an animation token." }
+    ],
+    "breakpoints": [
+      { "name": "wide-research-min", "value": "1600px" },
+      { "name": "compact-desktop-max", "value": "1250px" },
+      { "name": "stack-board-max", "value": "1050px" },
+      { "name": "flow-navigation-max", "value": "760px" },
+      { "name": "single-column-max", "value": "520px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Teal contribution action; button-element line-height. Visual specimen only.",
+      "html": "<button type=\"button\" class=\"ds-primary\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M12 5v14M5 12h14\"/></svg>Add an idea</button>",
+      "css": ".ds-primary{font-family:'DM Sans','Segoe UI',system-ui,sans-serif;font-size:.83rem;font-weight:600;line-height:1.3;min-height:44px;padding:11px 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid transparent;border-radius:8px;background:var(--teal,#237363);color:#fff;cursor:pointer;transition:background .15s,border-color .15s}.ds-primary svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}.ds-primary:hover{background:var(--teal-dark,#185949)}.ds-primary:focus-visible{outline:3px solid #ad6e1c;outline-offset:4px}.ds-primary:disabled{opacity:.65;cursor:wait}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none!important}}"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Paper action for editing, inviting, and updating decisions.",
+      "html": "<button type=\"button\" class=\"ds-secondary\">Edit idea</button>",
+      "css": ".ds-secondary{font-family:'DM Sans','Segoe UI',system-ui,sans-serif;font-size:.83rem;font-weight:600;line-height:1.3;min-height:44px;padding:11px 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid #cbd3c8;border-radius:8px;background:var(--paper,#fffefa);color:var(--forest,#173e38);cursor:pointer;transition:background .15s,border-color .15s}.ds-secondary:hover{background:#ebf0e7;border-color:#9caf9e}.ds-secondary:focus-visible{outline:3px solid #ad6e1c;outline-offset:4px}.ds-secondary:disabled{opacity:.65;cursor:wait}@media(prefers-reduced-motion:reduce){.ds-secondary{transition:none!important}}"
+    },
+    {
+      "name": "Subtle button",
+      "kind": "button",
+      "refersTo": "button-subtle",
+      "description": "Quiet filter action; narrow-screen filter context adds a divider-colored border.",
+      "html": "<button type=\"button\" class=\"ds-subtle\">Filter</button>",
+      "css": ".ds-subtle{font-family:'DM Sans','Segoe UI',system-ui,sans-serif;font-size:.83rem;font-weight:600;line-height:1.3;min-height:44px;padding:11px 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--teal-dark,#185949);cursor:pointer;transition:background .15s,border-color .15s}.ds-subtle:hover{background:#e7ece2}.ds-subtle:focus-visible{outline:3px solid #ad6e1c;outline-offset:4px}.ds-subtle:disabled{opacity:.65;cursor:wait}@media(max-width:520px){.ds-subtle{border-color:var(--line,#dadfd6)}}@media(prefers-reduced-motion:reduce){.ds-subtle{transition:none!important}}"
+    },
+    {
+      "name": "Danger button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Destructive action revealed by native details, separate from Passed on status.",
+      "html": "<button type=\"button\" class=\"ds-danger\">Delete idea</button>",
+      "css": ".ds-danger{font-family:'DM Sans','Segoe UI',system-ui,sans-serif;font-size:.83rem;font-weight:600;line-height:1.3;min-height:44px;padding:11px 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid #d8b8b1;border-radius:8px;background:#fff7f3;color:var(--danger,#9b342f);cursor:pointer;transition:background .15s,border-color .15s}.ds-danger:hover{background:#f6e3dc}.ds-danger:focus-visible{outline:3px solid #ad6e1c;outline-offset:4px}.ds-danger:disabled{opacity:.65;cursor:wait}@media(prefers-reduced-motion:reduce){.ds-danger{transition:none!important}}"
+    },
+    {
+      "name": "Interested button",
+      "kind": "button",
+      "refersTo": "button-interested",
+      "description": "Selected detail interest state. Source has no distinct hover/active treatment; aria-pressed carries the state.",
+      "html": "<button type=\"button\" class=\"ds-interested\" aria-pressed=\"true\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M20 5a5 5 0 0 0-8 1 5 5 0 0 0-8-1c-5 5 8 15 8 15S25 10 20 5Z\"/></svg>You’re interested</button>",
+      "css": ".ds-interested{font-family:'DM Sans','Segoe UI',system-ui,sans-serif;font-size:.83rem;font-weight:600;line-height:1.3;min-height:44px;padding:11px 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid #a8bda4;border-radius:8px;background:#e1eadc;color:#274e37;cursor:pointer;transition:background .15s,border-color .15s}.ds-interested svg{width:20px;height:20px;fill:#bfd5b6;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}.ds-interested:focus-visible{outline:3px solid #ad6e1c;outline-offset:4px}.ds-interested:disabled{opacity:.65;cursor:wait}@media(prefers-reduced-motion:reduce){.ds-interested{transition:none!important}}"
+    },
+    {
+      "name": "Labeled text field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Native labeled field with full-opacity placeholder and combined border/outline focus; no invented hover state.",
+      "html": "<label class=\"ds-field-label\">Give it a name<input class=\"ds-field\" name=\"title\" placeholder=\"e.g. A house by the coast\" maxlength=\"160\" required></label>",
+      "css": ".ds-field-label{display:block;font-family:'DM Sans','Segoe UI',system-ui,sans-serif;font-size:.83rem;font-weight:600;line-height:1.55;color:var(--ink,#263d37)}.ds-field{display:block;width:100%;font:inherit;line-height:1.5;min-height:44px;margin-top:7px;padding:11px 12px;border:1px solid #bcc7b8;border-radius:7px;background:var(--paper,#fffefa);color:var(--ink,#263d37);caret-color:var(--teal,#237363)}.ds-field::placeholder{color:#647061;opacity:1;font-weight:400}.ds-field:focus{border-color:var(--teal,#237363)}.ds-field:focus-visible{outline:3px solid #ad6e1c;outline-offset:4px}"
+    },
+    {
+      "name": "Workspace navigation",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Forest rail context with selected paper-green destination and a normal-flow horizontal layout at 760px. Sidebar padding is included in this isolated specimen.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Workspace sample\"><a class=\"ds-nav-link ds-nav-active\" href=\"#research-sample\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"m16 8-2.5 5.5L8 16l2.5-5.5L16 8Z\"/></svg>Research board</a><a class=\"ds-nav-link\" href=\"#shortlist-sample\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M20 5a5 5 0 0 0-8 1 5 5 0 0 0-8-1c-5 5 8 15 8 15S25 10 20 5Z\"/></svg>Our shortlist</a></nav>",
+      "css": ".ds-nav{display:flex;flex-direction:column;gap:5px;padding:30px 16px 18px;background:var(--forest,#173e38);font-family:'DM Sans','Segoe UI',system-ui,sans-serif;line-height:1.55}.ds-nav-link{display:flex;align-items:center;gap:11px;min-height:46px;padding:12px 13px;border-radius:8px;color:#d8e4d9;text-decoration:none;font-size:.86rem}.ds-nav-link svg{width:20px;height:20px;flex:0 0 20px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}.ds-nav-link:hover{background:#244d43;color:#fff}.ds-nav-link.ds-nav-active{background:#e3eadb;color:var(--forest-deep,#11312c);font-weight:650}.ds-nav-link:focus-visible{outline:3px solid #ad6e1c;outline-offset:4px}@media(max-width:760px){.ds-nav{flex-direction:row;overflow-x:auto;gap:6px;padding:16px 20px 10px}.ds-nav-link{flex:0 0 auto;min-height:42px;padding:9px 11px;font-size:.75rem;gap:6px}}"
+    },
+    {
+      "name": "Decision and sample badges",
+      "kind": "chip",
+      "refersTo": "badge-shortlisted",
+      "description": "Noninteractive labeled pills; no fabricated hover or focus states. All five shipped status/sample variants.",
+      "html": "<span class=\"ds-badge ds-exploring\">Exploring</span> <span class=\"ds-badge ds-shortlisted\">Shortlisted</span> <span class=\"ds-badge ds-booked\">Booked</span> <span class=\"ds-badge ds-passed\">Passed on</span> <span class=\"ds-badge ds-sample\">Sample workspace</span>",
+      "css": ".ds-badge{display:inline-flex;align-items:center;align-self:flex-start;min-height:25px;padding:3px 9px;border-radius:30px;font-family:'DM Sans','Segoe UI',system-ui,sans-serif;font-size:.65rem;font-weight:650;line-height:1.55;white-space:nowrap}.ds-exploring{background:#eff1e9;color:#516353}.ds-shortlisted{background:#e0ecd9;color:#345d3f}.ds-booked{background:#33674b;color:#fff}.ds-passed{background:#f2e7e2;color:#79524a}.ds-sample{background:#f2e3ba;color:#71521f}"
+    },
+    {
+      "name": "Research card",
+      "kind": "card",
+      "refersTo": "idea-card",
+      "description": "Representative paper research card with separate title, attribution, and interest targets. Sample title comes from the editor placeholder; initials are illustrative, not production data.",
+      "html": "<article class=\"ds-card\"><div class=\"ds-card-head\"><span class=\"ds-kind\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m3 10 9-7 9 7M5 9v12h14V9M9 21v-8h6v8\"/></svg>Place to stay</span><span class=\"ds-card-badge\">Exploring</span></div><h3 class=\"ds-card-title\"><a href=\"#idea-sample\">A house by the coast</a></h3><p class=\"ds-card-excerpt\">An idea worth exploring. Open it to add your thoughts.</p><div class=\"ds-card-details\"><span class=\"ds-no-quote\">Cost still to explore</span></div><footer class=\"ds-card-footer\"><span class=\"ds-contributor\"><span class=\"ds-avatar\">A</span><span>Alex</span></span><button class=\"ds-card-interest\" type=\"button\" aria-label=\"Interested in this idea\" aria-pressed=\"false\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M20 5a5 5 0 0 0-8 1 5 5 0 0 0-8-1c-5 5 8 15 8 15S25 10 20 5Z\"/></svg>0</button></footer></article>",
+      "css": ".ds-card{font-family:'DM Sans','Segoe UI',system-ui,sans-serif;line-height:1.55;color:var(--ink,#263d37);background:var(--paper,#fffefa);border:1px solid #dce1d6;border-radius:var(--radius,12px);display:flex;flex-direction:column;overflow:hidden;transition:border-color .15s,box-shadow .15s}.ds-card:hover{border-color:#a6baa1;box-shadow:0 5px 16px #263d3709}.ds-card svg{width:20px;height:20px;flex:0 0 20px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}.ds-card-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin:20px 20px 14px}.ds-kind{display:inline-flex;align-items:center;gap:7px;color:#84602a;font-size:.71rem;font-weight:600}.ds-card-badge{display:inline-flex;align-items:center;align-self:flex-start;min-height:25px;padding:3px 9px;border-radius:30px;font-size:.65rem;font-weight:650;white-space:nowrap;background:#eff1e9;color:#516353}.ds-card-title{margin:0 20px 8px;font-size:1.13rem;font-weight:650;line-height:1.35;letter-spacing:-.015em;text-wrap:balance;overflow-wrap:anywhere}.ds-card-title a{color:var(--ink,#263d37);text-decoration:none;text-underline-offset:.22em}.ds-card-title a:hover{text-decoration:underline}.ds-card-excerpt{margin:0 20px 18px;color:#5d6a60;font-size:.8rem;line-height:1.65;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}.ds-card-details{margin:auto 20px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;min-height:26px}.ds-no-quote{font-size:.76rem;color:var(--muted,#647169)}.ds-card-footer{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:10px 14px 10px 20px;border-top:1px solid #e8ebe3}.ds-contributor{display:flex;gap:7px;align-items:center;color:var(--muted,#647169);font-size:.7rem;min-width:0}.ds-avatar{width:26px;height:26px;flex:0 0 26px;border-radius:50%;background:#e3e8d6;color:#3c5541;display:inline-flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700}.ds-card-interest{font:inherit;font-size:.76rem;line-height:1.3;font-variant-numeric:tabular-nums;min-width:44px;min-height:42px;display:inline-flex;align-items:center;justify-content:center;gap:5px;color:#5f6d60;background:transparent;border:0;border-radius:7px;padding:7px;cursor:pointer}.ds-card-interest:hover{background:#edf0e7}.ds-card a:focus-visible,.ds-card button:focus-visible{outline:3px solid #ad6e1c;outline-offset:4px}@media(prefers-reduced-motion:reduce){.ds-card{transition:none!important}}"
+    },
+    {
+      "name": "Card interest control",
+      "kind": "custom",
+      "refersTo": "social-button",
+      "description": "Compact selected interest state with tabular count, filled heart, and aria-pressed; no booking implication.",
+      "html": "<button type=\"button\" class=\"ds-social ds-voted\" aria-pressed=\"true\" aria-label=\"Remove interest\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M20 5a5 5 0 0 0-8 1 5 5 0 0 0-8-1c-5 5 8 15 8 15S25 10 20 5Z\"/></svg>1</button>",
+      "css": ".ds-social{font-family:'DM Sans','Segoe UI',system-ui,sans-serif;font-size:.76rem;font-weight:400;line-height:1.3;font-variant-numeric:tabular-nums;min-width:44px;min-height:42px;display:inline-flex;align-items:center;justify-content:center;gap:5px;color:#5f6d60;background:transparent;border:0;border-radius:7px;padding:7px;cursor:pointer}.ds-social svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}.ds-social:hover{background:#edf0e7}.ds-social.ds-voted{color:#7a4137}.ds-voted svg{fill:#edd1c4}.ds-social:focus-visible{outline:3px solid #ad6e1c;outline-offset:4px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "A shared travel journal",
+    "overview": "Personal, approachable trip planning remains the incumbent character. The approved group-research rework expresses it through warm off-white ground, deep green navigation, teal actions, and quiet paper working surfaces. It is a working research space for a trusted group, not a luxury travel storefront or a corporate dashboard.\n\nTypography and grouping carry the hierarchy. Contributor initials, outlined SVG symbols, and visible interest and discussion controls make participation legible without photography. Estimates, preferences, and booking decisions remain distinct; sample content stays visibly labeled.",
+    "keyCharacteristics": [
+      "Warm ground, paper surfaces, and teal actions anchored by deep green navigation.",
+      "Self-hosted DM Sans, sentence-case hierarchy, and compact supporting metadata.",
+      "Bordered research cards with visible attribution and interest controls.",
+      "Responsive rails that become normal-flow navigation and stacked content.",
+      "Native links and forms with small progressive JavaScript conveniences."
+    ],
+    "rules": [
+      { "name": "The Action and Decision Rule", "body": "Teal identifies actions; labeled status tints identify decisions. Interest is a preference, not a booking.", "section": "colors" },
+      { "name": "The One Family Rule", "body": "Planner headings, forms, and reading text use DM Sans; legacy display typography does not leak into new planner surfaces.", "section": "typography" },
+      { "name": "The Rails Become Content Rule", "body": "On smaller screens, navigation and supporting rails enter normal flow; the planner does not introduce an overlay drawer or fixed bottom navigation.", "section": "layout" },
+      { "name": "The Quiet Depth Rule", "body": "Preserve tonal separation and borders at rest; use the shipped small shadows only for their documented roles.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do preserve warm ground, paper work surfaces, deep green navigation, and teal action hierarchy.",
+      "Do use self-hosted DM Sans and the documented sentence-case hierarchy on planner surfaces.",
+      "Do retain visible focus, labeled SVG controls, attribution, and interest state beyond color alone.",
+      "Do keep estimates, preferences, bookings, and clearly labeled sample content distinct.",
+      "Do use native links and forms and let supporting rails stack into normal flow."
+    ],
+    "donts": [
+      "Don't reintroduce the stale terracotta/Outfit specification or merge the legacy stylesheet into the planner.",
+      "Don't replace SVG symbols with emoji, glyph icons, or decorative raster assets for these planner components.",
+      "Don't convert every tint into a brand accent or ban contextual blue, white, borders, or subtle shadows that the implementation uses.",
+      "Don't treat synthetic tonal ramps, compact metadata sizes, or the bounded six-fix ship verdict as approval for unreviewed visual changes."
+    ]
+  }
+}

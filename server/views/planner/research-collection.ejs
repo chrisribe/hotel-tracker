@@ -1,0 +1,28 @@
+<% const imageValues = data.imageValues || {}; %>
+<section class="collection-section" id="photos" aria-labelledby="photos-title">
+  <div class="section-heading"><h2 id="photos-title">Photos <span class="count"><%= item.images.length %></span></h2></div>
+  <% if (!item.images.length) { %><p class="collection-empty">No photos yet.</p><% } %>
+  <div class="photo-gallery"><% item.images.forEach(image => { const editable = viewer.isOrganizer || image.created_by === viewer.participantId; const editing = data.errorCollection === 'images' && data.referenceAction === 'edit' && String(imageValues.id) === String(image.id); const caption = image.caption || 'Photo for ' + item.title; const author = image.author_name || 'Organizer'; %>
+    <article class="gallery-entry">
+      <a href="<%= image.url %>" target="_blank" rel="noopener noreferrer" aria-label="Open full image: <%= caption %>"><%- include('photo', {photo:image,photoTitle:item.title,photoClass:'gallery-photo'}) %></a>
+      <% if (image.is_cover) { %><span class="badge selected cover-flag">Cover</span><% } %>
+      <div class="photo-bar">
+        <span class="avatar small-avatar" title="Added by <%= author %>" aria-hidden="true"><%= h.initials(author) %></span>
+        <p title="<%= caption %> · Added by <%= author %>"><%= caption %><span class="sr-only">, added by <%= author %></span></p>
+        <div class="photo-tools">
+          <% if (image.source_url) { %><a class="photo-tool" href="<%= image.source_url %>" target="_blank" rel="noopener noreferrer" title="Image source: <%= h.host(image.source_url) %>"><svg class="icon small" aria-hidden="true"><use href="#i-external"/></svg><span class="sr-only">Image source for <%= caption %> (opens in a new tab)</span></a><% } %>
+          <% if (data.canDelete && !image.is_cover) { %><form method="post" action="<%= path %>/images/<%= image.id %>/cover"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="photo-tool" title="Use as cover"><svg class="icon small" aria-hidden="true"><use href="#i-star"/></svg><span class="sr-only">Use as cover: <%= caption %></span></button></form><% } %>
+          <% if (editable) { %><details class="photo-edit" <%= editing ? 'open' : '' %>><summary class="photo-tool" title="Edit photo"><svg class="icon small" aria-hidden="true"><use href="#i-edit"/></svg><span class="sr-only">Edit photo <%= caption %></span></summary>
+            <div class="photo-edit-panel">
+              <form method="post" action="<%= path %>/images/<%= image.id %>/edit" class="stack-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><%- include('reference-fields',{prefix:'image-'+image.id,values:editing ? imageValues : image,validation:data.referenceError}) %><button class="button secondary">Save photo changes</button></form>
+              <form class="remove-reference" method="post" action="<%= path %>/images/<%= image.id %>/delete" data-confirm="Remove this image reference? The source image is not deleted."><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button danger subtle">Remove photo</button></form>
+            </div>
+          </details><% } %>
+        </div>
+      </div>
+    </article>
+  <% }) %></div>
+  <details class="add-reference" id="add-photo" <%= data.errorCollection === 'images' && data.referenceAction === 'add' && !imageValues.id ? 'open' : '' %>><summary><svg class="icon disclosure-icon" aria-hidden="true"><use href="#i-chevron"/></svg>Add a photo<span class="fine-print"><%= item.images.length %>/12</span></summary>
+    <form method="post" action="<%= path %>/images" class="stack-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><%- include('reference-fields',{prefix:'new-image',values:!imageValues.id ? imageValues : {},validation:data.referenceError}) %><p class="fine-print">Use images you have permission to embed. External hosts see viewers’ IP addresses and may block or expire links. We suppress the referrer; we don’t download or proxy images.</p><div><button class="button primary" <%= item.images.length >= 12 ? 'disabled' : '' %>>Add photo</button></div></form>
+  </details>
+</section>

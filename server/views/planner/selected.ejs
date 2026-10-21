@@ -1,0 +1,27 @@
+<% const base = '/plans/' + data.trip.id, groups = ['destination','stay','transport','activity','link']; %>
+<div class="page-heading"><div><h1>Selected plan</h1><p>Selected and booked options only. Shortlisted alternatives don’t count toward the estimate.</p></div><a class="button secondary" href="<%= base %>">Back to research</a></div>
+<% if (data.trip.is_demo) { %><div class="demo-note"><span class="badge sample">Sample plan</span><span>Illustrative selections and quotes—not real bookings.</span></div><% } %>
+<% if (!data.items.length) { %>
+<div class="empty-state"><h2>No selections yet</h2><p><%= viewer.isOrganizer ? 'Compare your options, then choose “Select for plan” when the group is ready.' : 'Compare your options. Your organizer can select the group’s choices.' %></p><a class="button primary" href="<%= base %>/compare">Compare options</a></div>
+<% } else { %>
+<div class="plan-page">
+  <section class="plan-summary" aria-labelledby="plan-estimate"><h2 id="plan-estimate">Cost estimate</h2><div class="plan-totals"><% data.budget.forEach(b => { %><div class="budget-line"<% if (b.converted) { %> title="Converted at ECB reference rates from <%= b.parts.map(p => h.money(p.total, p.currency) + ' ' + p.currency).join(' + ') %>"<% } %>><strong><%= b.converted ? '≈ ' : '' %><%= h.money(b.total,b.currency) %></strong><span><%= b.currency %> total<% if (h.travelers) { %> · <%= h.each(b.total, b.currency, data.missingCosts > 0) %><% } %></span></div><% }) %></div>
+    <% if (!data.budget.length) { %><p>No priced selections yet.</p><% } %>
+    <% if (data.missingCosts) { %><p class="missing-costs"><strong><%= data.missingCosts %> selected <%= data.missingCosts === 1 ? 'option needs' : 'options need' %> a quote.</strong> The estimate is incomplete.</p><% } %>
+    <p class="fine-print">Stays, transport, and activities only.<% if (h.travelers) { %> Per person = total ÷ <%= h.travelers %> travelers, an estimate.<% } %><% if (data.budget.some(b => b.converted)) { %> Converted amounts (≈) use ECB reference rates and are estimates.<% } %></p>
+  </section>
+  <% if (data.selectionWarnings.length) { %><section class="selection-warning" aria-labelledby="selection-check"><h2 id="selection-check">Check these selections</h2><ul><% data.selectionWarnings.forEach(w => { %><li><%= w %></li><% }) %></ul></section><% } %>
+  <div class="selected-options"><% groups.forEach(kind => { const items=data.items.filter(i=>i.kind===kind); if (!items.length) return; %>
+    <section class="selected-group"><div class="section-heading"><h2><%= h.kinds[kind] %></h2></div><% items.forEach(item => { const destination=data.destinations.find(d=>d.id===item.destination_id), costBearing=['stay','transport','activity'].includes(item.kind); %>
+      <article class="selected-row">
+        <% if (item.cover_image) { %><a href="<%= base %>/ideas/<%= item.id %>"><%- include('photo',{photo:item.cover_image,photoTitle:item.title,photoClass:'selected-photo'}) %></a><% } %>
+        <div class="selected-row-main"><h3><a href="<%= base %>/ideas/<%= item.id %>"><%= item.title %></a></h3><% if (item.location || destination) { %><p><%= item.location || destination.title %></p><% } %><div class="selected-meta"><span class="badge <%= item.status %>"><%= h.statuses[item.status] %></span></div></div>
+        <div class="selected-row-cost"><% if (costBearing) { const p = item.cost !== null && h.price(item.cost, item.currency); %><strong title="<%= p ? p.title : '' %>"><%= p ? p.text : 'Quote needed' %></strong><% if (p) { %><span class="fine-print"><%= p.currency %> total</span><% } %><% } %>
+          <% if (viewer.isOrganizer) { %><form action="<%= base %>/ideas/<%= item.id %>/status" method="post"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="status" value="shortlisted"><input type="hidden" name="returnTo" value="selected"><button class="button subtle" <%- item.status === 'booked' ? 'data-booked-removal="true"' : '' %>>Return to shortlist<span class="sr-only">: <%= item.title %></span></button></form><% } %>
+        </div>
+      </article><% }) %>
+    </section><% }) %>
+  </div>
+  <p class="plan-reservation-note">Bookings happen with the provider. Changing status here never makes or cancels a reservation.</p>
+</div>
+<% } %>

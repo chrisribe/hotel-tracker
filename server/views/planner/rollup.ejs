@@ -1,0 +1,8 @@
+<% const r = rollup; const ranges = typeof compact !== 'undefined' && compact ? [] : r.ranges.filter(range => range.count > 1 || range.kind === 'activity'); %>
+<% if (r.estimates.length || ranges.length || r.missing) { %>
+<dl class="rollup">
+  <% r.estimates.forEach(e => { const complete = e.kinds.length > 1, only = h.singular[e.kinds[0]]; %><div class="rollup-estimate<%= complete ? '' : ' partial' %>"<% if (e.converted) { %> title="Converted from the quoted currencies at ECB reference rates"<% } else if (r.currency && e.currency !== r.currency) { %> title="Quoted in <%= e.currency %>; no exchange rate available"<% } %>><dt><%= complete ? 'From' : only + ' from' %></dt><dd><% const amount = e.converted ? '≈ ' + h.money(Math.round(e.total), e.currency) : h.money(e.total, e.currency); %><% if (complete) { %><strong><%= amount %></strong><% } else { %><%= amount %><% } %> <%= e.currency %><small><%= complete ? 'cheapest stay + transport' : (e.kinds[0] === 'stay' ? 'transport not quoted yet' : 'stay not quoted yet') %><% if (h.travelers) { %> · <%= h.each(e.total, e.currency, !complete || r.missing > 0) %><% } %></small></dd></div><% }) %>
+  <% ranges.forEach(range => { %><div><dt><%= h.plural[range.kind] %></dt><dd><%= range.converted ? '≈ ' : '' %><%= h.money(Math.round(range.min), range.currency) %><% if (range.max > range.min) { %>–<%= h.money(Math.round(range.max), range.currency) %><% } %><% if (range.count > 1) { %><small><%= range.count %> quotes</small><% } %></dd></div><% }) %>
+  <% if (r.missing) { %><div class="rollup-missing"><dt class="sr-only">Missing</dt><dd><%= r.missing %> without a quote</dd></div><% } %>
+</dl>
+<% } %>
