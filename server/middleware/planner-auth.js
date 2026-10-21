@@ -42,7 +42,7 @@ function render(req, res, view, data = {}, error = null, status = 200) {
     'idea-form': 'Research idea', idea: 'Research idea', share: 'Share trip', 'trip-edit': 'Edit trip', join: 'Join trip', error: 'Request unavailable' };
   return res.status(status).render('planner-shell', {
     view,
-    title: `${titles[view]} — Hotel Tracker`,
+    title: `${titles[view]} — PlanTrip`,
     data: { trip: null, trips: [], ...data },
     viewer: req.viewer || { userId: null, isOrganizer: false, name: '', participantId: null, tripId: null },
     csrfToken: req.session?.csrfToken || '',

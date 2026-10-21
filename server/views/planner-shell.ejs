@@ -48,7 +48,7 @@
 <% if (workspace) { %>
 <div class="app-shell">
   <aside class="sidebar" aria-label="Main navigation">
-    <a class="brand" href="/plans"><svg class="brand-mark" aria-hidden="true"><use href="#i-compass"/></svg><span>Hotel Tracker<span class="brand-sub">Good trips start together.</span></span></a>
+    <a class="brand" href="/plans"><svg class="brand-mark" aria-hidden="true"><use href="#i-compass"/></svg><span>PlanTrip<span class="brand-sub">Good trips start together.</span></span></a>
     <div class="primary-nav">
       <nav aria-label="Workspace">
         <a href="/plans" class="nav-link <%= data.trip ? 'workspace-return' : '' %> <%= view === 'plans' ? 'active' : '' %>" <%- view === 'plans' ? 'aria-current="page"' : '' %>><svg class="icon" aria-hidden="true"><use href="#i-<%= data.trip ? 'arrow' : 'grid' %>"/></svg>My trips</a>
@@ -73,11 +73,11 @@
       <% if (error && view !== 'error') { %><div class="notice error" role="alert"><strong>Let’s fix that.</strong> <%= error %><% if (data.errorTarget) { %> <a href="#<%= data.errorTarget %>"><%= data.errorTargetLabel %></a><% } %></div><% } %>
       <%- include('planner/' + view, { data, viewer, csrfToken, error, h }) %>
     </main>
-    <footer class="app-footer"><span>Hotel Tracker · V1</span></footer>
+    <footer class="app-footer"><span>PlanTrip · V1</span></footer>
   </div>
 </div>
 <% } else { %>
-<div class="welcome-shell"><header class="welcome-header"><a href="/plans" class="brand"><svg class="brand-mark" aria-hidden="true"><use href="#i-compass"/></svg><span>Hotel Tracker</span></a><span>Plan something worth sharing.</span></header><main id="main" class="welcome-main"><% if (error && view !== 'error') { %><div class="notice error" role="alert"><%= error %></div><% } %><%- include('planner/' + view, { data, viewer, csrfToken, error, h }) %></main><footer class="welcome-footer">A private place for your next shared adventure.</footer></div>
+<div class="welcome-shell"><header class="welcome-header"><a href="/plans" class="brand"><svg class="brand-mark" aria-hidden="true"><use href="#i-compass"/></svg><span>PlanTrip</span></a><span>Plan something worth sharing.</span></header><main id="main" class="welcome-main"><% if (error && view !== 'error') { %><div class="notice error" role="alert"><%= error %></div><% } %><%- include('planner/' + view, { data, viewer, csrfToken, error, h }) %></main><footer class="welcome-footer">A private place for your next shared adventure.</footer></div>
 <% } %>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 </body>
