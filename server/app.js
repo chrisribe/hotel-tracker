@@ -26,8 +26,6 @@ function dropInvalid(settings, key, isValid, warning) {
 function readSettings(overrides) {
   const env = process.env;
   const settings = {
-    adminUser: env.ADMIN_USER,
-    adminPass: env.ADMIN_PASS,
     sessionSecret: env.SESSION_SECRET,
     cookieSecure: env.COOKIE_SECURE === 'true',
     trustProxy: env.TRUST_PROXY === '1',
@@ -37,6 +35,7 @@ function readSettings(overrides) {
     ...overrides,
   };
   if (env.HOTEL_API_TOKEN) console.warn('HOTEL_API_TOKEN is no longer used; the API only accepts HOTEL_AGENT_TOKEN.');
+  if (env.ADMIN_USER || env.ADMIN_PASS) console.warn('ADMIN_USER/ADMIN_PASS are no longer used; create accounts with `npm run create-user -- <username>`.');
   dropInvalid(settings, 'agentToken', v => v.length >= 32,
     'HOTEL_AGENT_TOKEN must be at least 32 characters; API disabled.');
   dropInvalid(settings, 'discordWebhook', (v) => DISCORD_WEBHOOK.test(v),

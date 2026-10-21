@@ -6,9 +6,10 @@ services:
     ports:
       - "3100:3000"
     environment:
-      DATABASE_URL: postgresql://hotel:hotelpass@db:5432/hotel_tracker
-      ADMIN_USER: ${ADMIN_USER:-admin}
-      ADMIN_PASS: ${ADMIN_PASS:-changeme}
+      DATABASE_URL: postgresql://hotel:${DB_PASSWORD:-hotelpass}@db:5432/hotel_tracker
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      TRUST_PROXY: ${TRUST_PROXY:-}
       HOTEL_AGENT_TOKEN: ${HOTEL_AGENT_TOKEN:-}
       DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
       DISCORD_MENTION_USER_ID: ${DISCORD_MENTION_USER_ID:-}
@@ -22,10 +23,10 @@ services:
     image: postgres:17-alpine
     environment:
       POSTGRES_USER: hotel
-      POSTGRES_PASSWORD: hotelpass
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-hotelpass}
       POSTGRES_DB: hotel_tracker
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - hotel_db_data:/var/lib/postgresql/data
     healthcheck:

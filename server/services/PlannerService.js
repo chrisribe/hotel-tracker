@@ -273,7 +273,7 @@ class PlannerService {
   }
 
   async list(viewer) {
-    return new TripsDAO(this.pool).listForViewer(viewer.isOrganizer, viewer.tripId);
+    return new TripsDAO(this.pool).listForViewer(viewer.userId, viewer.tripId);
   }
 
   // With start_research ticked, the Trip Butler is asked right away (the description is required then).
@@ -281,20 +281,22 @@ class PlannerService {
     const v = tripValues(body);
     return transaction(this.pool, async db => {
       const dao = daos(db);
-      const context = { dao, trip: await dao.trips.create(v) };
+      const context = { dao, trip: await dao.trips.create({ ...v, owner_id: viewer.userId }) };
       await dao.participants.upsertOrganizer(context.trip.id, viewer.name);
       if (body.start_research) await this.requestGeneration(context);
       return context.trip;
     });
   }
 
+  // The organizer is the account that owns the trip (or the agent API, limited to one active run).
   async withTrip(tripId, viewer, work) {
     tripId = id(tripId, 'trip');
     return transaction(this.pool, async db => {
       const dao = daos(db);
       // Serialize a small group's operations, including revocation and invite rotation.
       const trip = await dao.trips.lock(tripId);
-      if (!trip || (!viewer.isOrganizer && viewer.tripId !== tripId)) throw httpError(404, 'Trip not found.');
+      const isOrganizer = Boolean(viewer.isRestrictedAgent) || (viewer.userId != null && trip?.owner_id === viewer.userId);
+      if (!trip || (!isOrganizer && viewer.tripId !== tripId)) throw httpError(404, 'Trip not found.');
       if (viewer.isRestrictedAgent) {
         if (!viewer.runId || !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(viewer.runId)) throw httpError(409, 'An exact X-Hotel-Run-Id from the queue is required.');
         if (!await dao.trips.activeGeneration(tripId, viewer.runId)) throw httpError(409, 'Research request is inactive, expired or replaced.');
@@ -306,12 +308,12 @@ class PlannerService {
         participant = await dao.participants.upsertAgent(tripId, viewer.name);
         if (!participant.active) participant = null;
       } else {
-        participant = viewer.isOrganizer
+        participant = isOrganizer
           ? await dao.participants.findOrganizer(tripId)
           : await dao.participants.findActive(tripId, viewer.participantId);
       }
-      if (!participant || (!viewer.isOrganizer && participant.is_organizer)) throw httpError(403, 'Your trip access has been removed.');
-      return work({ db, dao, trip, participant, isRestrictedAgent: Boolean(viewer.isRestrictedAgent) });
+      if (!participant || (!isOrganizer && participant.is_organizer)) throw httpError(403, 'Your trip access has been removed.');
+      return work({ db, dao, trip, participant, isOrganizer, isRestrictedAgent: Boolean(viewer.isRestrictedAgent) });
     });
   }
 
@@ -722,10 +724,10 @@ class PlannerService {
   async demo(viewer) {
     return transaction(this.pool, async db => {
       const dao = daos(db);
-      await dao.trips.lockDemo();
-      const existing = await dao.trips.findDemo();
+      await dao.trips.lockDemo(viewer.userId);
+      const existing = await dao.trips.findDemo(viewer.userId);
       if (existing) return existing;
-      const trip = await dao.trips.createDemo(DEMO_TRIP.name, DEMO_TRIP.description);
+      const trip = await dao.trips.createDemo(DEMO_TRIP.name, DEMO_TRIP.description, viewer.userId);
       const participant = await dao.participants.upsertOrganizer(trip.id, viewer.name);
       const context = { db, dao, trip, participant };
       await seedDemoIdeas(body => this.writeIdea(context, body));
@@ -741,9 +743,10 @@ class PlannerService {
       await dao.trips.lock(trip.id);
       // Rotation can have completed while this join was waiting for the trip lock.
       trip = await this.inviteTrip(token, db);
-      if (viewer.isOrganizer) return { trip, participant: null };
+      if (viewer.userId != null && trip.owner_id === viewer.userId) return { trip, participant: null };
       if (revoked) throw httpError(403, 'Your trip access has been removed. Ask the organizer for help.');
-      if (viewer.participantId) {
+      // An account holder may switch to another friend's trip; a plain guest has one trip per session.
+      if (viewer.participantId && (viewer.tripId === trip.id || !viewer.userId)) {
         if (viewer.tripId !== trip.id) throw httpError(403, 'Log out before joining a different trip.');
         const participant = await dao.participants.findActive(trip.id, viewer.participantId);
         if (!participant) throw httpError(403, 'Your trip access has been removed.');

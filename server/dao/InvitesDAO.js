@@ -7,7 +7,7 @@ class InvitesDAO {
   }
 
   async findTripByHash(tokenHash) {
-    const r = await this.db.query(`SELECT t.id, t.name, t.is_demo
+    const r = await this.db.query(`SELECT t.id, t.name, t.is_demo, t.owner_id
       FROM trips t JOIN trip_invites i ON i.trip_id = t.id WHERE i.token_hash = $1`, [tokenHash]);
     return r.rows[0];
   }

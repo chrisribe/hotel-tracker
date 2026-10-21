@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const auth = require('../middleware/planner-auth');
+const UsersDAO = require('../dao/UsersDAO');
 const { PlannerService, ASSISTANT_NAME, MEMBER_RUN_LIMIT, CURRENCIES, choice, dateText } = require('../services/PlannerService');
 const pick = (body, keys) => Object.fromEntries(keys.filter(key => key in body).map(key => [key, body[key]]));
 const service = req => new PlannerService(req.app.get('pool'));
@@ -20,18 +21,20 @@ async function orInvalid(action, onInvalid) {
 router.use(['/plans', '/join'], auth.csrfProtection);
 
 router.get('/login', (req, res) => {
-  if (req.viewer.isOrganizer) return res.redirect('/plans');
+  if (req.viewer.userId) return res.redirect('/plans');
   auth.render(req, res, 'login');
 });
 router.post('/login', auth.csrfProtection, async (req, res) => {
   await auth.attempt(req, 'login', 10);
   const { username, password } = req.body;
-  if (typeof username !== 'string' || typeof password !== 'string' || username.length > 120 || password.length > 1024 ||
-      !auth.credentialsMatch(username, password, req.app.get('plannerConfig'))) {
+  const valid = typeof username === 'string' && typeof password === 'string' && username.length <= 120 && password.length <= 1024;
+  const user = valid ? await new UsersDAO(req.app.get('pool')).findByUsername(username.trim().toLowerCase()) : null;
+  // Always hash, so an unknown username takes as long as a wrong password.
+  if (!await auth.verifyPassword(valid ? password : '', user?.password_hash) || !user) {
     return auth.render(req, res, 'login', {}, 'Invalid username or password.', 400);
   }
   await auth.regenerate(req);
-  req.session.isOrganizer = true;
+  req.session.userId = user.id;
   await auth.saveSession(req);
   res.redirect('/plans');
 });
@@ -46,7 +49,7 @@ router.get('/plans', auth.authenticated, async (req, res) => {
   auth.render(req, res, 'plans', { trips });
 });
 
-router.post('/plans', auth.authenticated, auth.organizer, async (req, res) => {
+router.post('/plans', auth.authenticated, auth.account, async (req, res) => {
   const planner = service(req);
   await orInvalid(async () => {
     const trip = await planner.create(req.body, req.viewer);
@@ -55,7 +58,7 @@ router.post('/plans', auth.authenticated, auth.organizer, async (req, res) => {
   }, async error => auth.render(req, res, 'plans', { trips: await planner.list(req.viewer), values: req.body }, error.message, 400));
 });
 
-router.post('/plans/demo', auth.authenticated, auth.organizer, async (req, res) => {
+router.post('/plans/demo', auth.authenticated, auth.account, async (req, res) => {
   const trip = await service(req).demo(req.viewer);
   res.redirect(`/plans/${trip.id}`);
 });
@@ -67,15 +70,20 @@ function displayMoney(req, trip) {
   return { currency, travelers: trip.travelers, date: rates.current?.date || null, convert: (amount, from) => rates.convert(amount, from, currency) };
 }
 
-// A route inside one trip: signed in (plus any extra guards), run in the trip's transaction.
+// A route inside one trip: signed in, run in the trip's transaction. Pass ORGANIZER first for organizer-only routes
+// (checked once the trip is loaded, since being the organizer means owning this trip).
 // The handler returns { view, data, error?, status? }, { redirect } or { json };
 // an optional `after` runs once the transaction has committed.
-function tripRoute(method, path, ...stack) {
-  const handler = stack.pop();
-  router[method](path, auth.authenticated, ...stack, async (req, res) => {
+const ORGANIZER = 'organizer-only';
+function tripRoute(method, path, ...args) {
+  const handler = args.pop();
+  const organizerOnly = args[0] === ORGANIZER;
+  router[method](path, auth.authenticated, async (req, res) => {
     const planner = service(req);
     const result = await planner.withTrip(req.params.id, req.viewer, async context => {
-      req.viewer = { ...req.viewer, tripId: context.trip.id, participantId: context.participant.id };
+      req.viewer = { ...req.viewer, isOrganizer: context.isOrganizer, tripId: context.trip.id,
+        participantId: context.participant.id, name: context.participant.name };
+      if (organizerOnly && !context.isOrganizer) throw auth.httpError(403, 'Only the organizer can do that.');
       context.money = res.locals.money = displayMoney(req, context.trip);
       return handler(req, planner, context);
     });
@@ -204,8 +212,8 @@ onTrip.post('/plans/:id/display-currency', async (req, planner, context) => {
 
 // The organizer edits the trip details. The description is what the Trip Butler researches, but saving never asks it.
 const tripForm = (trip, values) => ({ trip, values: values || { ...trip, travel_start: dateText(trip.travel_start), travel_end: dateText(trip.travel_end) } });
-onTrip.get('/plans/:id/edit', auth.organizer, async (req, planner, context) => ({ view: 'trip-edit', data: tripForm(context.trip) }));
-onTrip.post('/plans/:id/edit', auth.organizer, (req, planner, context) => orInvalid(async () => {
+onTrip.get('/plans/:id/edit', ORGANIZER, async (req, planner, context) => ({ view: 'trip-edit', data: tripForm(context.trip) }));
+onTrip.post('/plans/:id/edit', ORGANIZER, (req, planner, context) => orInvalid(async () => {
   await planner.updateTrip(context, pick(req.body, ['name', 'description', 'travel_start', 'travel_end', 'travelers']));
   return { redirect: tripPath(context) };
 }, async error => invalid('trip-edit', error, tripForm(context.trip, req.body))));
@@ -225,7 +233,7 @@ onTrip.post('/plans/:id/question', (req, planner, context) => orInvalid(async ()
 }, async error => invalid('board', error, { ...await planner.board(context, {}), questionValue: req.body.question })));
 
 // The organizer withdraws a waiting request (e.g. the assistant never picked it up); asking again re-queues and re-pings.
-onTrip.post('/plans/:id/question/cancel', auth.organizer, async (req, planner, context) => {
+onTrip.post('/plans/:id/question/cancel', ORGANIZER, async (req, planner, context) => {
   await planner.cancelGeneration(context);
   return { redirect: tripPath(context, '#butler') };
 });
@@ -249,25 +257,26 @@ async function pingDiscord({ discordWebhook: webhook, discordMention: mention },
 
 // ── Sharing ──
 
-onTrip.get('/plans/:id/share', auth.organizer, async (req, planner, context) => ({
+onTrip.get('/plans/:id/share', ORGANIZER, async (req, planner, context) => ({
   view: 'share', data: { trip: context.trip, invitePath: await planner.invite(context), members: await planner.members(context) },
 }));
 
-onTrip.post('/plans/:id/invite/rotate', auth.organizer, async (req, planner, context) => {
+onTrip.post('/plans/:id/invite/rotate', ORGANIZER, async (req, planner, context) => {
   await planner.invite(context, true);
   return { redirect: tripPath(context, '/share') };
 });
 
-onTrip.post('/plans/:id/members/:memberId/remove', auth.organizer, async (req, planner, context) => {
+onTrip.post('/plans/:id/members/:memberId/remove', ORGANIZER, async (req, planner, context) => {
   await planner.removeMember(context, req.params.memberId);
   return { redirect: tripPath(context, '/share') };
 });
 
 const joinPage = (trip, token, values) => ({ trip: { name: trip.name, is_demo: trip.is_demo }, token, values });
+const ownsTrip = (viewer, trip) => Boolean(viewer.userId) && trip.owner_id === viewer.userId;
 
 router.get('/join/:token', async (req, res) => {
   const trip = await service(req).inviteTrip(req.params.token);
-  if (req.viewer.isOrganizer || (req.viewer.tripId === trip.id && req.viewer.participantId)) return res.redirect(`/plans/${trip.id}`);
+  if (ownsTrip(req.viewer, trip) || (req.viewer.tripId === trip.id && req.viewer.participantId)) return res.redirect(`/plans/${trip.id}`);
   if (req.membershipRevoked) throw auth.httpError(403, 'Your trip access has been removed. Ask the organizer for help.');
   auth.render(req, res, 'join', joinPage(trip, req.params.token, {}));
 });
@@ -276,13 +285,13 @@ router.post('/join/:token', async (req, res) => {
   await auth.attempt(req, 'join', 30);
   const planner = service(req);
   try {
-    // Organizer identity is never replaced by a guest identity.
-    if (req.viewer.isOrganizer) {
-      const trip = await planner.inviteTrip(req.params.token);
-      return res.redirect(`/plans/${trip.id}`);
-    }
     const joined = await planner.join(req.params.token, req.body.name, req.viewer, req.membershipRevoked);
+    // The organizer's own trip: never replaced by a guest identity.
+    if (!joined.participant) return res.redirect(`/plans/${joined.trip.id}`);
+    // An account holder joining a friend's trip stays signed in to their account.
+    const userId = req.viewer.userId;
     await auth.regenerate(req);
+    if (userId) req.session.userId = userId;
     req.session.participantId = joined.participant.id;
     req.session.tripId = joined.trip.id;
     await auth.saveSession(req);

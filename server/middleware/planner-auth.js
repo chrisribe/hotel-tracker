@@ -1,11 +1,34 @@
-const { randomBytes, createHash, createHmac, timingSafeEqual } = require('node:crypto');
+const { randomBytes, createHash, createHmac, timingSafeEqual, scrypt } = require('node:crypto');
+const { promisify } = require('node:util');
 const ParticipantsDAO = require('../dao/ParticipantsDAO');
 const AttemptsDAO = require('../dao/AttemptsDAO');
+const UsersDAO = require('../dao/UsersDAO');
 
 const digest = value => createHash('sha256').update(String(value)).digest();
 const tokenHash = value => digest(value).toString('hex');
 const randomToken = () => randomBytes(32).toString('hex');
 const safeEqual = (left, right) => timingSafeEqual(digest(left), digest(right));
+
+// Passwords: Node's built-in scrypt (OWASP parameters N=2^15, r=8, p=3), stored as scrypt$N$r$p$salt$hash.
+const scryptAsync = promisify(scrypt);
+const SCRYPT = { N: 32768, r: 8, p: 3 };
+const MAXMEM = 64 * 1024 * 1024;
+// Checked when the username is unknown, so a miss takes as long as a wrong password.
+const UNKNOWN_USER = `scrypt$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${randomBytes(16).toString('base64')}$${randomBytes(32).toString('base64')}`;
+
+async function hashPassword(password) {
+  const salt = randomBytes(16);
+  const hash = await scryptAsync(password, salt, 32, { ...SCRYPT, maxmem: MAXMEM });
+  return `scrypt$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${salt.toString('base64')}$${hash.toString('base64')}`;
+}
+
+async function verifyPassword(password, stored) {
+  const [scheme, N, r, p, salt, hash] = (stored || UNKNOWN_USER).split('$');
+  if (scheme !== 'scrypt') return false;
+  const expected = Buffer.from(hash, 'base64');
+  const actual = await scryptAsync(password, Buffer.from(salt, 'base64'), expected.length, { N: +N, r: +r, p: +p, maxmem: MAXMEM });
+  return timingSafeEqual(actual, expected) && Boolean(stored);
+}
 
 function httpError(status, message) {
   const error = new Error(message);
@@ -14,14 +37,14 @@ function httpError(status, message) {
 }
 
 function render(req, res, view, data = {}, error = null, status = 200) {
-  const titles = { login: 'Organizer login', plans: 'Trip plans', board: 'Trip research',
+  const titles = { login: 'Sign in', plans: 'Trip plans', board: 'Trip research',
     compare: 'Compare options', selected: 'Selected plan',
     'idea-form': 'Research idea', idea: 'Research idea', share: 'Share trip', 'trip-edit': 'Edit trip', join: 'Join trip', error: 'Request unavailable' };
   return res.status(status).render('planner-shell', {
     view,
     title: `${titles[view]} — Hotel Tracker`,
     data: { trip: null, trips: [], ...data },
-    viewer: req.viewer || { isOrganizer: false, name: '', participantId: null, tripId: null },
+    viewer: req.viewer || { userId: null, isOrganizer: false, name: '', participantId: null, tripId: null },
     csrfToken: req.session?.csrfToken || '',
     error,
   });
@@ -50,16 +73,25 @@ function csrfProtection(req, res, next) {
   next();
 }
 
+// A session can hold an account (userId) and one trip joined by invite (participantId + tripId).
+// isOrganizer is never set here: trip routes set it when the account owns the trip being opened.
 async function identify(req, res, next) {
   req.session.csrfToken ||= randomToken();
-  req.viewer = { isOrganizer: false, name: '', participantId: null, tripId: null };
-  if (req.session.isOrganizer === true) {
-    req.viewer = { ...req.viewer, isOrganizer: true, name: req.app.get('plannerConfig').adminUser };
-  } else if (req.session.participantId) {
+  req.viewer = { userId: null, isOrganizer: false, name: '', participantId: null, tripId: null };
+  if (req.session.userId) {
+    const user = await new UsersDAO(req.app.get('pool')).find(req.session.userId);
+    if (user) req.viewer = { ...req.viewer, userId: user.id, name: user.username };
+    else delete req.session.userId;
+  }
+  if (req.session.participantId) {
     const participant = await new ParticipantsDAO(req.app.get('pool'))
       .findActiveGuest(req.session.tripId, req.session.participantId);
     if (participant) {
-      req.viewer = { isOrganizer: false, name: participant.name, participantId: participant.id, tripId: participant.trip_id };
+      req.viewer = { ...req.viewer, name: req.viewer.name || participant.name, participantId: participant.id, tripId: participant.trip_id };
+    } else if (req.viewer.userId) {
+      // Removed from someone else's trip: the account keeps working.
+      delete req.session.participantId;
+      delete req.session.tripId;
     } else req.membershipRevoked = true;
   }
   next();
@@ -67,20 +99,13 @@ async function identify(req, res, next) {
 
 function authenticated(req, res, next) {
   if (req.membershipRevoked) return next(httpError(403, 'Your trip access has been removed.'));
-  if (!req.viewer.isOrganizer && !req.viewer.participantId) return res.redirect('/login');
+  if (!req.viewer.userId && !req.viewer.participantId) return res.redirect('/login');
   next();
 }
 
-function organizer(req, res, next) {
-  if (!req.viewer.isOrganizer) return next(httpError(403, 'Only the organizer can do that.'));
+function account(req, res, next) {
+  if (!req.viewer.userId) return next(httpError(403, 'Sign in to an organizer account to do that.'));
   next();
-}
-
-function credentialsMatch(user, password, config) {
-  // Evaluate both comparisons, including for an unknown username.
-  const userMatches = safeEqual(user, config.adminUser || randomToken());
-  const passwordMatches = safeEqual(password, config.adminPass || randomToken());
-  return Boolean(config.adminUser && config.adminPass && userMatches && passwordMatches);
 }
 
 const attemptKey = (req, scope) => createHmac('sha256', req.app.get('sessionSecret')).update(`${scope}:${req.ip}`).digest('hex');
@@ -112,5 +137,5 @@ function saveSession(req) {
   return new Promise((resolve, reject) => req.session.save(error => error ? reject(error) : resolve()));
 }
 
-module.exports = { render, httpError, sameOrigin, csrfProtection, identify, authenticated, organizer,
-  credentialsMatch, attempt, ensureNotBlocked, regenerate, saveSession, randomToken, tokenHash, safeEqual };
+module.exports = { render, httpError, sameOrigin, csrfProtection, identify, authenticated, account,
+  hashPassword, verifyPassword, attempt, ensureNotBlocked, regenerate, saveSession, randomToken, tokenHash, safeEqual };

@@ -1,25 +1,25 @@
 class TripsDAO {
   constructor(pool) { this.pool = pool; }
 
-  async create({ name, description, destination, travel_start, travel_end, currency, travelers }) {
+  async create({ name, description, destination, travel_start, travel_end, currency, travelers, owner_id }) {
     const r = await this.pool.query(
-      `INSERT INTO trips (name, description, destination, travel_start, travel_end, currency, travelers)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [name, description ?? null, destination || null, travel_start || null, travel_end || null, currency, travelers ?? null]
+      `INSERT INTO trips (name, description, destination, travel_start, travel_end, currency, travelers, owner_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [name, description ?? null, destination || null, travel_start || null, travel_end || null, currency, travelers ?? null, owner_id]
     );
     return r.rows[0];
   }
 
-  // Organizers see every plan; guests only the one they joined.
-  async listForViewer(isOrganizer, tripId) {
+  // An account sees the trips it owns, plus the one trip the session joined by invite.
+  async listForViewer(userId, tripId) {
     const r = await this.pool.query(
       `SELECT t.*,
               (SELECT COUNT(*)::int FROM research_items i WHERE i.trip_id = t.id) AS item_count,
               (SELECT COUNT(*)::int FROM participants p WHERE p.trip_id = t.id AND p.active) AS member_count
        FROM trips t
-       WHERE $1::boolean OR t.id = $2
+       WHERE t.owner_id = $1 OR t.id = $2
        ORDER BY t.created_at DESC, t.id DESC`,
-      [isOrganizer, tripId]
+      [userId, tripId]
     );
     return r.rows;
   }
@@ -115,19 +115,19 @@ class TripsDAO {
     return r.rows[0];
   }
 
-  async findDemo() {
-    const r = await this.pool.query('SELECT * FROM trips WHERE is_demo');
+  async findDemo(ownerId) {
+    const r = await this.pool.query('SELECT * FROM trips WHERE is_demo AND owner_id = $1', [ownerId]);
     return r.rows[0];
   }
 
-  async createDemo(name, description) {
-    const r = await this.pool.query('INSERT INTO trips (name, description, is_demo) VALUES ($1,$2,TRUE) RETURNING *', [name, description]);
+  async createDemo(name, description, ownerId) {
+    const r = await this.pool.query('INSERT INTO trips (name, description, is_demo, owner_id) VALUES ($1,$2,TRUE,$3) RETURNING *', [name, description, ownerId]);
     return r.rows[0];
   }
 
-  // Held until the transaction ends so concurrent requests create only one demo per schema.
-  async lockDemo() {
-    await this.pool.query("SELECT pg_advisory_xact_lock(hashtext(current_schema()), hashtext('hotel-tracker-demo'))");
+  // Held until the transaction ends so concurrent requests create only one demo per account.
+  async lockDemo(ownerId) {
+    await this.pool.query("SELECT pg_advisory_xact_lock(hashtext(current_schema()), hashtext('hotel-tracker-demo-' || $1::int))", [ownerId]);
   }
 
 }

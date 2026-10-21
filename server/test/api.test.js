@@ -4,17 +4,17 @@ const { randomBytes } = require('node:crypto');
 const { Pool } = require('pg');
 const { createApp } = require('../app');
 const { PlannerService } = require('../services/PlannerService');
+const UsersDAO = require('../dao/UsersDAO');
 
 const schemaName = `api_test_${randomBytes(8).toString('hex')}`;
 const connectionString = process.env.TEST_DATABASE_URL || 'postgresql://hotel:hotelpass@localhost:5432/hotel_tracker';
 const AGENT_TOKEN = randomBytes(32).toString('hex');
-const config = { adminUser: 'test-organizer', adminPass: 'test-password', cookieSecure: false,
-  agentToken: AGENT_TOKEN, discordWebhook: '', discordMention: '' };
+const config = { cookieSecure: false, agentToken: AGENT_TOKEN, discordWebhook: '', discordMention: '' };
 let adminPool, pool, planner;
 const servers = [];
 
 // Trips and research requests are managed on the website, so tests set them up through the service.
-const organizer = { isOrganizer: true, name: 'test-organizer' };
+const organizer = { userId: null, isOrganizer: true, name: 'test-organizer' };
 const newTrip = body => planner.create(body, organizer);
 const asOrganizer = (tripId, work) => planner.withTrip(tripId, organizer, work);
 const tripRow = async tripId => (await pool.query('SELECT * FROM trips WHERE id = $1', [tripId])).rows[0];
@@ -46,6 +46,7 @@ before(async () => {
   pool = new Pool({ connectionString, options: `-c search_path=${schemaName}`, max: 8 });
   api = await start();
   planner = new PlannerService(pool);
+  organizer.userId = (await new UsersDAO(pool).upsert(organizer.name, 'unused')).id;
 });
 
 beforeEach(async () => { await pool.query('DELETE FROM planner_attempts'); });

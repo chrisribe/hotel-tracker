@@ -1,4 +1,12 @@
 const schema = `
+-- Organizer accounts, created with "npm run create-user" (no public sign-up). Guests join trips by invite instead.
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE CHECK (username ~ '^[a-z0-9_.-]{3,40}$'),
+  password_hash TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS trips (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
@@ -33,7 +41,11 @@ ALTER TABLE trips ADD COLUMN IF NOT EXISTS butler_question TEXT CHECK (char_leng
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS butler_question_at TIMESTAMPTZ;
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS runs_day DATE;
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS runs_today INTEGER NOT NULL DEFAULT 0;
-CREATE UNIQUE INDEX IF NOT EXISTS one_demo_trip ON trips(is_demo) WHERE is_demo;
+-- The account that organizes the trip. Trips from before accounts have none until create-user claims them.
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS owner_id INTEGER REFERENCES users(id);
+CREATE INDEX IF NOT EXISTS trips_owner ON trips(owner_id);
+DROP INDEX IF EXISTS one_demo_trip;
+CREATE UNIQUE INDEX IF NOT EXISTS one_demo_per_owner ON trips(owner_id) WHERE is_demo;
 
 CREATE TABLE IF NOT EXISTS participants (
   id SERIAL PRIMARY KEY,

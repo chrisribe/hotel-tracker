@@ -8,7 +8,7 @@ A private group-trip research workspace: collect destinations, places to stay, r
 
 From the repository root, run `docker compose up -d --build`, then open **http://localhost:3100**. Schema setup and additive migrations run automatically before the server accepts requests. PostgreSQL data and browser sessions persist in the named Docker volume. Do not remove the volume unless you intend to erase the data.
 
-Organizer credentials default to **admin / changeme** for local development. Set `ADMIN_USER` and `ADMIN_PASS` in the Compose environment before exposing this app outside your machine. The new sign-in page is at `/login`.
+Organizers sign in at `/login` with an account; there is no public sign-up. Create one (or reset its password) with `docker compose exec server npm run create-user -- <username>`. Each account sees and manages only the trips it created; friends join a trip through its invite link, and an account holder can join someone else's trip the same way. Trips made before accounts existed have no organizer until `create-user` offers to give them to the account it creates.
 
 ## Core planner
 
@@ -67,7 +67,7 @@ Replacing an invite stops new joins through the old link. Removing a participant
 
 A guest session currently belongs to one trip. Sign out before joining a different group; there is no cross-device identity recovery yet.
 
-**Localhost links work only on your computer.** For real group access, deploy behind HTTPS at an address the group can reach. Set `COOKIE_SECURE=true` and, only behind a trusted single reverse proxy, `TRUST_PROXY=1` in the server environment. A persistent `SESSION_SECRET` may be supplied; otherwise one is generated and stored in PostgreSQL. Do not publish the default credentials or expose the PostgreSQL port publicly. Compose's local port bindings are development defaults, not a hardened public deployment.
+**Localhost links work only on your computer.** For real group access, deploy behind HTTPS at an address the group can reach. Set `COOKIE_SECURE=true` and, only behind a trusted single reverse proxy, `TRUST_PROXY=1` in the server environment. A persistent `SESSION_SECRET` may be supplied; otherwise one is generated and stored in PostgreSQL. Use passwords of at least 12 characters (enforced by `create-user`). Set `DB_PASSWORD` before the database is first created; PostgreSQL is bound to `127.0.0.1` only. Compose's local port bindings are development defaults, not a hardened public deployment.
 
 ## Verification
 
