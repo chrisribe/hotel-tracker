@@ -218,6 +218,15 @@ onTrip.post('/plans/:id/edit', ORGANIZER, (req, planner, context) => orInvalid(a
   return { redirect: tripPath(context) };
 }, async error => invalid('trip-edit', error, tripForm(context.trip, req.body))));
 
+onTrip.post('/plans/:id/delete', ORGANIZER, async (req, planner, context) => {
+  await planner.removeTrip(context);
+  if (req.session?.tripId === context.trip.id) {
+    req.session.tripId = null;
+    req.session.participantId = null;
+  }
+  return { redirect: '/plans' };
+});
+
 // ── Trip Butler ──
 
 // Any member asks the Trip Butler (optionally with a question). Over the members' daily limit a question is kept for the next run.

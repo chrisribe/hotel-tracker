@@ -9,3 +9,12 @@
   <label for="trip-travelers">Travelers <span class="optional">Optional</span><input type="number" id="trip-travelers" name="travelers" min="1" max="100" value="<%= v.travelers || '' %>" aria-describedby="travelers-hint"><small id="travelers-hint">Can differ from who joined. Totals are divided by this for a rough per-person share; leave empty to hide it.</small></label>
   <div class="form-actions"><button class="button primary">Save changes</button><a class="button subtle" href="<%= base %>">Cancel</a></div>
 </form>
+
+<details class="danger-zone">
+  <summary>Delete this trip</summary>
+  <p>This deletes the trip, all ideas, votes, comments, links, photos, and members. This cannot be undone.</p>
+  <form method="post" action="<%= base %>/delete" data-confirm="Delete this trip and all research? This cannot be undone.">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <button class="button danger">Delete trip</button>
+  </form>
+</details>

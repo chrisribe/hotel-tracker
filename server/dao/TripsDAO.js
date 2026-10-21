@@ -33,6 +33,11 @@ class TripsDAO {
     return r.rows[0];
   }
 
+  async delete(id) {
+    const r = await this.pool.query('DELETE FROM trips WHERE id = $1 RETURNING id', [id]);
+    return r.rows[0] || null;
+  }
+
   // Keeps the waiting request (time, run ID, usage) if there is one; otherwise starts a fresh run.
   async requestGeneration(id) {
     const r = await this.pool.query(

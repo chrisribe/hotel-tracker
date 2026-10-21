@@ -214,6 +214,27 @@ test('a guest cannot edit organizer-only trip settings', async () => {
   assert.equal((await owner.request(path)).page.data.trip.name, 'Beach week');
 });
 
+test('an organizer can delete a trip from settings', async () => {
+  const { owner, path } = await createTrip();
+  await owner.post(`${path}/ideas`, { kind: 'stay', title: 'Will be deleted' });
+
+  const response = await owner.post(`${path}/delete`);
+
+  assert.equal(response.location, '/plans');
+  assert.equal((await owner.request(path)).status, 404);
+  assert.equal((await owner.request('/plans')).page.data.trips.some(t => `/plans/${t.id}` === path), false);
+});
+
+test('a guest cannot delete the trip', async () => {
+  const { owner, path } = await createTrip();
+  const guest = await joinGuest(owner, path);
+
+  const response = await guest.post(`${path}/delete`);
+
+  assert.equal(response.status, 403);
+  assert.equal((await owner.request(path)).status, 200);
+});
+
 test('another account cannot access a private trip', async () => {
   const { path } = await createTrip();
   const outsider = browser();

@@ -525,6 +525,10 @@ class PlannerService {
     await context.dao.participants.deactivate(context.trip.id, member.id);
   }
 
+  async removeTrip(context) {
+    await context.dao.trips.delete(context.trip.id);
+  }
+
   async board(context, query) {
     const { dao, trip, participant } = context;
     const filters = {
