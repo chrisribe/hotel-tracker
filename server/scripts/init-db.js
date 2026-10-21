@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS research_sources (
   label TEXT NOT NULL CHECK (char_length(btrim(label))>0 AND char_length(label)<=120),
   url TEXT NOT NULL CHECK (char_length(url) BETWEEN 1 AND 2048 AND url ~ '^https?://[^/?#]+'
     AND url !~ '[[:space:][:cntrl:]]' AND strpos(url,chr(92))=0 AND url !~ '^https?://[^/?#]*@'),
-  created_by INTEGER REFERENCES participants(id),
+  created_by INTEGER REFERENCES participants(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS research_sources_item ON research_sources(item_id);
@@ -161,7 +161,7 @@ CREATE TABLE IF NOT EXISTS research_images (
   source_url TEXT CHECK (source_url IS NULL OR (char_length(source_url) BETWEEN 1 AND 2048 AND source_url ~ '^https?://[^/?#]+'
     AND source_url !~ '[[:space:][:cntrl:]]' AND strpos(source_url,chr(92))=0 AND source_url !~ '^https?://[^/?#]*@')),
   is_cover BOOLEAN NOT NULL DEFAULT FALSE,
-  created_by INTEGER REFERENCES participants(id),
+  created_by INTEGER REFERENCES participants(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS research_images_item ON research_images(item_id);
@@ -208,6 +208,25 @@ async function migrate(pool) {
     // Serialize boot migrations; schema qualification keeps integration tests isolated.
     await client.query("SELECT pg_advisory_xact_lock(hashtext(current_schema()), hashtext('hotel-tracker-schema'))");
     await client.query(schema);
+    await client.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'research_sources_created_by_fkey') THEN
+          ALTER TABLE research_sources DROP CONSTRAINT research_sources_created_by_fkey;
+        END IF;
+        ALTER TABLE research_sources
+          ADD CONSTRAINT research_sources_created_by_fkey
+          FOREIGN KEY (created_by) REFERENCES participants(id) ON DELETE SET NULL;
+
+        IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'research_images_created_by_fkey') THEN
+          ALTER TABLE research_images DROP CONSTRAINT research_images_created_by_fkey;
+        END IF;
+        ALTER TABLE research_images
+          ADD CONSTRAINT research_images_created_by_fkey
+          FOREIGN KEY (created_by) REFERENCES participants(id) ON DELETE SET NULL;
+      END
+      $$;
+    `);
   });
 }
 
