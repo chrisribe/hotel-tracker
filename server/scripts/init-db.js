@@ -41,6 +41,11 @@ ALTER TABLE trips ADD COLUMN IF NOT EXISTS butler_question TEXT CHECK (char_leng
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS butler_question_at TIMESTAMPTZ;
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS runs_day DATE;
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS runs_today INTEGER NOT NULL DEFAULT 0;
+-- Butler session policy: one-shot run, fixed window, or unlimited until canceled.
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS butler_session_mode TEXT NOT NULL DEFAULT 'single'
+  CHECK (butler_session_mode IN ('single','windowed','unlimited'));
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS butler_session_minutes INTEGER NOT NULL DEFAULT 60
+  CHECK (butler_session_minutes BETWEEN 5 AND 10080);
 -- The account that organizes the trip. Trips from before accounts have none until create-user claims them.
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS owner_id INTEGER REFERENCES users(id);
 CREATE INDEX IF NOT EXISTS trips_owner ON trips(owner_id);

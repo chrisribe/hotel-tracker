@@ -280,6 +280,41 @@ test('an organizer can cancel Butler research', async () => {
   assert.equal((await owner.request(path)).page.data.trip.generation_requested_at, null);
 });
 
+test('organizer can configure Butler session mode and window', async () => {
+  const { owner, path } = await createTrip();
+  let trip = (await owner.request(path)).page.data.trip;
+  assert.equal(trip.butler_session_mode, 'single');
+  assert.equal(trip.butler_session_minutes, 60);
+
+  let response = await owner.post(`${path}/edit`, {
+    name: trip.name,
+    description: trip.description || '',
+    travel_start: '',
+    travel_end: '',
+    travelers: '',
+    butler_session_mode: 'windowed',
+    butler_session_minutes: '180',
+  });
+  assert.equal(response.location, path);
+  trip = (await owner.request(path)).page.data.trip;
+  assert.equal(trip.butler_session_mode, 'windowed');
+  assert.equal(trip.butler_session_minutes, 180);
+
+  response = await owner.post(`${path}/edit`, {
+    name: trip.name,
+    description: trip.description || '',
+    travel_start: '',
+    travel_end: '',
+    travelers: '',
+    butler_session_mode: 'unlimited',
+    butler_session_minutes: '180',
+  });
+  assert.equal(response.location, path);
+  trip = (await owner.request(path)).page.data.trip;
+  assert.equal(trip.butler_session_mode, 'unlimited');
+  assert.equal(trip.butler_session_minutes, 180);
+});
+
 test('idea writes require a CSRF token', async () => {
   const { owner, path } = await createTrip();
 

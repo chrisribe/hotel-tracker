@@ -24,7 +24,10 @@
 <% {
    const run = trip.last_run_summary;
    const questionValue = typeof data.questionValue === 'string' ? data.questionValue : (trip.butler_question || '');
-   const started = Boolean(trip.last_run_at), waiting = Boolean(trip.generation_requested_at); %>
+   const started = Boolean(trip.last_run_at), waiting = Boolean(trip.generation_requested_at);
+   const sessionMode = trip.butler_session_mode || 'single';
+   const sessionMinutes = trip.butler_session_minutes || 60;
+   const sessionText = sessionMode === 'unlimited' ? 'Session: unlimited' : (sessionMode === 'windowed' ? `Session: ${sessionMinutes} min window` : 'Session: single run'); %>
 <%# Open to invite a first ask or show a saved/rejected question; closed while a request is waiting so the status reads as the answer. %>
 <details class="trip-brief" id="butler" <%= typeof data.questionValue === 'string' || (!waiting && (!started || trip.butler_question)) ? 'open' : '' %><% if (waiting) { %> data-status-url="<%= base %>/butler-status"<% } %>>
   <summary><span class="trip-brief-title">Ask the <%= ASSISTANT_NAME %></span>
@@ -32,6 +35,7 @@
     <% if (waiting) { %><span class="brief-asked"><%= trip.butler_question ? '“' + trip.butler_question + '”' : 'Researching the trip description' %></span><% } %></summary>
   <div class="brief-body">
   <% if (run && run.note) { %><p class="fine-print"><%= ASSISTANT_NAME %>: <%= run.note %></p><% } %>
+  <p class="fine-print"><%= sessionText %></p>
     <form class="brief-form" method="post" action="<%= base %>/question">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <label for="butler-question"><%= started ? 'What should the ' + ASSISTANT_NAME + ' check?' : 'Anything specific to look for?' %><% if (trip.description) { %> <span class="optional">Optional</span><% } %><textarea id="butler-question" name="question" rows="2" maxlength="500" <%= trip.description ? '' : 'required' %> aria-describedby="question-hint" placeholder="<%= started ? 'Also check flights from Toronto' : 'All-inclusives near a good beach, flights from Montreal' %>"><%= questionValue %></textarea>

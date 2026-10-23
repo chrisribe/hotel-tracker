@@ -214,7 +214,7 @@ onTrip.post('/plans/:id/display-currency', async (req, planner, context) => {
 const tripForm = (trip, values) => ({ trip, values: values || { ...trip, travel_start: dateText(trip.travel_start), travel_end: dateText(trip.travel_end) } });
 onTrip.get('/plans/:id/edit', ORGANIZER, async (req, planner, context) => ({ view: 'trip-edit', data: tripForm(context.trip) }));
 onTrip.post('/plans/:id/edit', ORGANIZER, (req, planner, context) => orInvalid(async () => {
-  await planner.updateTrip(context, pick(req.body, ['name', 'description', 'travel_start', 'travel_end', 'travelers']));
+  await planner.updateTrip(context, pick(req.body, ['name', 'description', 'travel_start', 'travel_end', 'travelers', 'butler_session_mode', 'butler_session_minutes']));
   return { redirect: tripPath(context) };
 }, async error => invalid('trip-edit', error, tripForm(context.trip, req.body))));
 

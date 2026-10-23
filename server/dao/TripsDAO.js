@@ -1,11 +1,14 @@
 class TripsDAO {
   constructor(pool) { this.pool = pool; }
 
-  async create({ name, description, destination, travel_start, travel_end, currency, travelers, owner_id }) {
+  async create({ name, description, destination, travel_start, travel_end, currency, travelers,
+    butler_session_mode, butler_session_minutes, owner_id }) {
     const r = await this.pool.query(
-      `INSERT INTO trips (name, description, destination, travel_start, travel_end, currency, travelers, owner_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [name, description ?? null, destination || null, travel_start || null, travel_end || null, currency, travelers ?? null, owner_id]
+      `INSERT INTO trips (name, description, destination, travel_start, travel_end, currency, travelers,
+        butler_session_mode, butler_session_minutes, owner_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      [name, description ?? null, destination || null, travel_start || null, travel_end || null, currency, travelers ?? null,
+        butler_session_mode || 'single', butler_session_minutes ?? 60, owner_id]
     );
     return r.rows[0];
   }
@@ -24,11 +27,14 @@ class TripsDAO {
     return r.rows;
   }
 
-  async update(id, { name, description, destination, travel_start, travel_end, currency, travelers }) {
+  async update(id, { name, description, destination, travel_start, travel_end, currency, travelers,
+    butler_session_mode, butler_session_minutes }) {
     const r = await this.pool.query(
-      `UPDATE trips SET name=$1, description=$2, destination=$3, travel_start=$4, travel_end=$5, currency=$6, travelers=$7
-       WHERE id=$8 RETURNING *`,
-      [name, description ?? null, destination || null, travel_start || null, travel_end || null, currency, travelers ?? null, id]
+      `UPDATE trips SET name=$1, description=$2, destination=$3, travel_start=$4, travel_end=$5, currency=$6, travelers=$7,
+        butler_session_mode=$8, butler_session_minutes=$9
+       WHERE id=$10 RETURNING *`,
+      [name, description ?? null, destination || null, travel_start || null, travel_end || null, currency, travelers ?? null,
+        butler_session_mode || 'single', butler_session_minutes ?? 60, id]
     );
     return r.rows[0];
   }
@@ -39,12 +45,17 @@ class TripsDAO {
   }
 
   // Keeps the waiting request (time, run ID, usage) if there is one; otherwise starts a fresh run.
+  // Session mode controls expiry: single/windowed use minutes, unlimited has no expiry.
   async requestGeneration(id) {
     const r = await this.pool.query(
       `UPDATE trips SET
          generation_run_id = CASE WHEN generation_requested_at IS NULL OR generation_expires_at <= statement_timestamp() OR generation_run_id IS NULL THEN gen_random_uuid() ELSE generation_run_id END,
          generation_usage = CASE WHEN generation_requested_at IS NULL OR generation_expires_at <= statement_timestamp() OR generation_run_id IS NULL THEN '{"creations":0,"comments":0,"writes":0}'::jsonb ELSE generation_usage END,
-         generation_expires_at = CASE WHEN generation_requested_at IS NULL OR generation_expires_at <= statement_timestamp() OR generation_run_id IS NULL THEN statement_timestamp() + interval '1 hour' ELSE generation_expires_at END,
+         generation_expires_at = CASE
+           WHEN generation_requested_at IS NULL OR generation_expires_at <= statement_timestamp() OR generation_run_id IS NULL
+             THEN CASE WHEN butler_session_mode = 'unlimited' THEN statement_timestamp() + interval '10 years'
+               ELSE statement_timestamp() + make_interval(mins => butler_session_minutes) END
+           ELSE generation_expires_at END,
          generation_requested_at = CASE WHEN generation_requested_at IS NULL OR generation_expires_at <= statement_timestamp() OR generation_run_id IS NULL THEN statement_timestamp() ELSE generation_requested_at END
        WHERE id = $1 RETURNING *`, [id]);
     return r.rows[0];
@@ -74,7 +85,9 @@ class TripsDAO {
 
   // The trip's one open question for the Trip Butler; a new one replaces it.
   async setQuestion(id, question) {
-    const r = await this.pool.query('UPDATE trips SET butler_question = $2, butler_question_at = statement_timestamp() WHERE id = $1 RETURNING *', [id, question]);
+    const r = await this.pool.query(
+      'UPDATE trips SET butler_question = $2, butler_question_at = statement_timestamp() WHERE id = $1 RETURNING *',
+      [id, question]);
     return r.rows[0];
   }
 
@@ -96,7 +109,8 @@ class TripsDAO {
                 THEN 'refresh' ELSE 'generate' END AS mode,
               t.generation_requested_at AS requested_at, t.last_run_at, t.last_run_description AS previous_description,
               t.generation_run_id AS run_id, t.generation_expires_at AS expires_at,
-              t.butler_question AS question, t.butler_question_at AS question_at
+              t.butler_question AS question, t.butler_question_at AS question_at,
+              t.butler_session_mode AS session_mode, t.butler_session_minutes AS session_minutes
        FROM trips t
        WHERE t.generation_requested_at IS NOT NULL
          AND t.generation_run_id IS NOT NULL AND t.generation_expires_at > clock_timestamp()

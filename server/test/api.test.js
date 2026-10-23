@@ -354,6 +354,20 @@ test('the shared question reaches the agent and is cleared only once a run has s
   assert.deepEqual([report.json.trip.butler_question, report.json.trip.generation_requested_at], [null, null]);
 });
 
+test('queue exposes Butler session context', async () => {
+  const tripId = (await newTrip({ name: 'Session context', description: 'Beach + flights' })).id;
+  await asOrganizer(tripId, ctx => planner.updateTrip(ctx, {
+    butler_session_mode: 'windowed',
+    butler_session_minutes: 180,
+  }));
+  await asOrganizer(tripId, ctx => planner.askButler(ctx, organizer, { question: 'Check flights from YUL' }));
+  await asOrganizer(tripId, ctx => planner.askButler(ctx, organizer, { question: 'Prioritize all-inclusives' }));
+
+  const queued = (await api('/generation-queue?limit=20')).json.requests.find(r => r.trip_id === tripId);
+  assert.equal(queued.session_mode, 'windowed');
+  assert.equal(queued.session_minutes, 180);
+});
+
 test('agent reads and all writes require a live exact run; cancellation, expiry and report revoke immediately', async () => {
   const { agent, call, path, trip, request } = await agentRun();
   const memberCount = (await pool.query('SELECT count(*)::int AS n FROM participants WHERE trip_id=$1', [trip.id])).rows[0].n;

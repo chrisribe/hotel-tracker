@@ -13,7 +13,9 @@ const { DEMO_TRIP, seedDemoIdeas } = require('./plannerDemo');
 const KINDS = ['destination', 'stay', 'transport', 'activity', 'link'];
 const STATUSES = ['considering', 'shortlisted', 'selected', 'booked', 'eliminated'];
 const CURRENCIES = ['CAD', 'USD', 'EUR', 'GBP'];
-const TRIP_FIELDS = ['name', 'description', 'destination', 'travel_start', 'travel_end', 'currency', 'travelers'];
+const SESSION_MODES = ['single', 'windowed', 'unlimited'];
+const TRIP_FIELDS = ['name', 'description', 'destination', 'travel_start', 'travel_end', 'currency', 'travelers',
+  'butler_session_mode', 'butler_session_minutes'];
 const IDEA_FIELDS = ['kind', 'title', 'location', 'notes', 'url', 'destination_id', 'cost', 'currency', 'capacity', 'details', 'last_refresh_note'];
 // What the group sees the API assistant called (member name, board copy). Hermes is only the backend.
 const ASSISTANT_NAME = 'Trip Butler';
@@ -141,6 +143,13 @@ function travelers(value) {
   return count;
 }
 
+function sessionMinutes(value) {
+  if (value == null || value === '') return 60;
+  const minutes = id(value, 'session minutes');
+  if (minutes < 5 || minutes > 10080) throw httpError(400, 'Session minutes must be between 5 and 10080.');
+  return minutes;
+}
+
 // Total quote divided by the trip's travelers, to the cent; null when either is unknown.
 function perPerson(cost, count) {
   return cost == null || !count ? null : Math.round(Number(cost) * 100 / count) / 100;
@@ -155,6 +164,8 @@ function tripValues(body) {
     travel_end: date(body.travel_end, 'end date'),
     currency: choice(body.currency, CURRENCIES, 'currency', 'CAD'),
     travelers: travelers(body.travelers),
+    butler_session_mode: choice(body.butler_session_mode, SESSION_MODES, 'butler session mode', 'single'),
+    butler_session_minutes: sessionMinutes(body.butler_session_minutes),
   };
   if (values.travel_start && values.travel_end && values.travel_start > values.travel_end) throw httpError(400, 'End date must be on or after the start date.');
   return values;
@@ -444,7 +455,8 @@ class PlannerService {
     const question = text(body.question, 'Question', 500);
     if (question) context.trip = await dao.trips.setQuestion(trip.id, question);
     const waiting = await dao.trips.activeGeneration(trip.id, trip.generation_run_id);
-    if (!waiting && (context.trip.description || context.trip.butler_question) && !viewer.isOrganizer &&
+    const countsToDailyCap = context.trip.butler_session_mode === 'single';
+    if (!waiting && (context.trip.description || context.trip.butler_question) && !viewer.isOrganizer && countsToDailyCap &&
         !await dao.trips.countMemberRun(trip.id, MEMBER_RUN_LIMIT)) {
       return { trip: context.trip, queued: false, capped: true, saved: Boolean(question) };
     }
