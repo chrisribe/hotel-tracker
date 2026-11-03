@@ -454,7 +454,7 @@ class PlannerService {
     const { dao, trip } = context;
     const question = text(body.question, 'Question', 500);
     if (question) context.trip = await dao.trips.setQuestion(trip.id, question);
-    const waiting = await dao.trips.activeGeneration(trip.id, trip.generation_run_id);
+    const waiting = await dao.trips.activeGeneration(trip.id, trip.generation_run_id, { waiting: true });
     const countsToDailyCap = context.trip.butler_session_mode === 'single';
     if (!waiting && (context.trip.description || context.trip.butler_question) && !viewer.isOrganizer && countsToDailyCap &&
         !await dao.trips.countMemberRun(trip.id, MEMBER_RUN_LIMIT)) {

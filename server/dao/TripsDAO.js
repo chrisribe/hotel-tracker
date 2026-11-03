@@ -1,3 +1,5 @@
+const REPORT_GRACE = '2 hours';
+
 class TripsDAO {
   constructor(pool) { this.pool = pool; }
 
@@ -67,14 +69,16 @@ class TripsDAO {
     return r.rows[0];
   }
 
+  // Reporting dequeues the request but keeps the run ID usable for REPORT_GRACE (same per-run caps),
+  // so the agent can retry rejected writes or report again without a new queue entry.
   // Clears the pending request unless a newer one arrived after the run started (requestedAt = what the run picked up).
   // The question is cleared only if it is not newer than the one the run saw (questionAt, else requestedAt).
   // Keeps the description as of this run so the next run can see what changed.
   async finishRun(id, summary, requestedAt, questionAt = null) {
     const r = await this.pool.query(
       `UPDATE trips SET last_run_at = NOW(), last_run_summary = $2::jsonb, last_run_description = description,
-        generation_run_id = CASE WHEN $3::timestamptz IS NULL OR date_trunc('milliseconds', generation_requested_at) <= $3 THEN NULL ELSE generation_run_id END,
-        generation_expires_at = CASE WHEN $3::timestamptz IS NULL OR date_trunc('milliseconds', generation_requested_at) <= $3 THEN NULL ELSE generation_expires_at END,
+        generation_expires_at = CASE WHEN $3::timestamptz IS NULL OR date_trunc('milliseconds', generation_requested_at) <= $3
+          THEN GREATEST(generation_expires_at, statement_timestamp() + interval '${REPORT_GRACE}') ELSE generation_expires_at END,
          generation_requested_at = CASE WHEN $3::timestamptz IS NULL OR date_trunc('milliseconds', generation_requested_at) <= $3 THEN NULL ELSE generation_requested_at END,
          butler_question = CASE WHEN COALESCE($4::timestamptz, $3) IS NULL OR date_trunc('milliseconds', butler_question_at) <= COALESCE($4, $3) THEN NULL ELSE butler_question END,
          butler_question_at = CASE WHEN COALESCE($4::timestamptz, $3) IS NULL OR date_trunc('milliseconds', butler_question_at) <= COALESCE($4, $3) THEN NULL ELSE butler_question_at END
@@ -124,9 +128,11 @@ class TripsDAO {
     await this.pool.query('UPDATE trips SET generation_usage = $2::jsonb WHERE id = $1', [id, JSON.stringify(usage)]);
   }
 
-  async activeGeneration(id, runId) {
+  // A run stays usable after its report for a grace window (see finishRun) so the agent can fix
+  // rejected writes; pass { waiting: true } to require a still-queued (unreported) request.
+  async activeGeneration(id, runId, { waiting = false } = {}) {
     const r = await this.pool.query(`SELECT 1 FROM trips WHERE id = $1 AND generation_run_id = $2::uuid
-      AND generation_requested_at IS NOT NULL AND generation_expires_at > clock_timestamp()`, [id, runId]);
+      AND ($3::boolean IS FALSE OR generation_requested_at IS NOT NULL) AND generation_expires_at > clock_timestamp()`, [id, runId, waiting]);
     return r.rows.length > 0;
   }
   async lock(id) {

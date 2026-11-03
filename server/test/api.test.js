@@ -400,7 +400,9 @@ test('agent reads and all writes require a live exact run; cancellation, expiry 
   assert.equal((await agent('/generate/report', { runId: next.run_id, method: 'POST', body: { requested_at: request.requested_at } })).status, 409);
   assert.deepEqual((await tripRow(trip.id)).last_run_at, before, 'stale report leaves log alone');
   assert.equal((await agent('/generate/report', { runId: next.run_id, method: 'POST', body: { requested_at: next.requested_at, created: 1 } })).status, 200);
-  assert.equal((await agent('', { runId: next.run_id })).status, 409);
+  assert.equal((await agent('', { runId: next.run_id })).status, 200, 'reported run keeps a grace window');
+  assert.equal((await agent('/ideas', { runId: next.run_id, method: 'POST', body: { title: 'Fix after report' } })).status, 201);
+  assert.equal(await inQueue(trip.id), false, 'reported run leaves the queue');
   const final = await queueRun(trip.id);
   assert.deepEqual((await tripRow(trip.id)).generation_usage, { creations: 0, comments: 0, writes: 0 });
   await pool.query("UPDATE trips SET generation_expires_at = clock_timestamp() - interval '1 second' WHERE id=$1", [trip.id]);
