@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PlanTrip v1 — Decisions + matrix (mockups)</title>
+<style>
+:root{--ink:#1d2430;--mute:#667085;--line:#e4e7ec;--bg:#fff;--teal:#0f766e;--teal2:#ccfbf1;--amber:#b45309;--amber2:#fef3c7;--red:#b42318;--red2:#fee4e2;--green:#067647;--green2:#dcfae6;--blue:#1d4ed8;--blue2:#dbeafe}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+main{max-width:980px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:2rem;margin:.2em 0}
+h2{font-size:1.3rem;margin:48px 0 4px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+h2 small{color:var(--mute);font-weight:400;font-size:.9rem}
+.lead{color:var(--mute);margin:0 0 12px}
+.pill{display:inline-block;border-radius:999px;padding:2px 10px;font-size:.8rem;background:#f2f4f7;margin:2px 4px 2px 0}
+.pill.t{background:var(--teal2);color:var(--teal)}.pill.a{background:var(--amber2);color:var(--amber)}
+.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:20px 0}
+.card{border:1px solid var(--line);border-left:4px solid;border-radius:8px;padding:10px 14px}
+.card b{display:block;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.c1{border-left-color:var(--red)}.c2{border-left-color:var(--amber)}.c3{border-left-color:var(--teal)}.c4{border-left-color:var(--green)}
+nav.toc{position:sticky;top:0;background:#fffe;backdrop-filter:blur(4px);border-bottom:1px solid var(--line);padding:8px 16px;z-index:5;overflow-x:auto;white-space:nowrap}
+nav.toc a{color:var(--teal);margin-right:14px;text-decoration:none;font-size:.9rem}
+.row{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
+.note{flex:1 1 260px;min-width:240px}
+.note ol,.note ul{padding-left:20px}
+/* phone frame */
+.phone{width:360px;max-width:100%;border:10px solid #111;border-radius:32px;overflow:hidden;background:#f8fafc;box-shadow:0 6px 24px #0002;flex:0 0 auto}
+.bar{background:var(--teal);color:#fff;padding:10px 14px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.bar small{opacity:.8;font-weight:400}
+.scr{padding:12px;font-size:14px}
+.scr.tall{min-height:520px}
+.crumb{font-size:12px;color:var(--mute);margin-bottom:6px}
+.box{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:10px}
+.btn{display:inline-block;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;font-size:13px;margin:2px 4px 2px 0;cursor:pointer;font:inherit;font-size:13px}
+.btn.p{background:var(--teal);color:#fff;border-color:var(--teal)}
+.btn.d{color:var(--red);border-color:#fda29b}
+.thumb{width:56px;height:56px;border-radius:8px;flex:0 0 56px;display:grid;place-items:center;font-size:24px;color:#fff}
+.g1{background:linear-gradient(135deg,#0ea5e9,#14b8a6)}.g2{background:linear-gradient(135deg,#f59e0b,#ef4444)}.g3{background:linear-gradient(135deg,#8b5cf6,#ec4899)}.g4{background:linear-gradient(135deg,#22c55e,#0ea5e9)}
+.item{display:flex;gap:10px;align-items:flex-start}
+.item p{margin:0}
+.sub{color:var(--mute);font-size:12px}
+.sug{background:var(--blue2);color:var(--blue);border-radius:8px;padding:6px 8px;font-size:12px;margin-top:6px}
+.input{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;color:var(--mute)}
+/* matrix */
+.mx{overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.mx table{border-collapse:separate;border-spacing:0;font-size:13px}
+.mx th,.mx td{border-bottom:1px solid var(--line);padding:7px 8px;vertical-align:top;background:#fff;min-width:92px;scroll-snap-align:start}
+.mx th:first-child,.mx td:first-child{position:sticky;left:0;z-index:2;min-width:96px;max-width:96px;background:#f8fafc;color:var(--mute);font-weight:500;border-right:1px solid var(--line)}
+.mx thead th{font-weight:600;text-align:left}
+.rank{display:inline-block;background:var(--teal);color:#fff;border-radius:999px;font-size:11px;padding:0 7px;margin-right:4px}
+.check{color:var(--amber);background:var(--amber2);border-radius:6px;padding:1px 6px;font-size:12px;white-space:nowrap}
+.src{color:var(--teal);font-size:11px;text-decoration:none}
+.votes{white-space:nowrap}
+.dropped{opacity:.55}
+.dropped td,.dropped th{background:#f9fafb}
+.why{background:var(--red2);color:var(--red);border-radius:6px;padding:4px 6px;font-size:11px;display:block;margin-top:4px}
+.chosen{outline:2px solid var(--green);outline-offset:-2px}
+/* desktop frame */
+.desk{border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 6px 24px #0001;margin-top:12px}
+.desk .scr{min-height:0}
+.desk .mx td,.desk .mx th{min-width:150px}
+.desk .mx th:first-child,.desk .mx td:first-child{min-width:150px;max-width:150px}
+/* sheet */
+.sheet{background:#fff;border-radius:14px 14px 0 0;box-shadow:0 -6px 20px #0002;padding:14px;margin:0 -12px -12px}
+.sheet h4{margin:0 0 6px}
+.opt{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px;margin:6px 0}
+.opt.on{border-color:var(--red);background:var(--red2)}
+.dim{position:relative}
+.dim:before{content:"";position:absolute;inset:0;background:#0004;z-index:1}
+.dim > *{position:relative}
+.dim .sheet{z-index:2}
+/* map */
+.map{height:150px;border-radius:10px;position:relative;overflow:hidden;background:
+ radial-gradient(circle at 70% 40%,#bae6fd 0 30%,transparent 31%),
+ linear-gradient(160deg,#e0f2fe 0 35%,#ecfccb 36% 100%);border:1px solid var(--line)}
+.pin{position:absolute;font-size:22px;transform:translate(-50%,-100%)}
+.ring{position:absolute;border:2px dashed var(--red);border-radius:50%;width:70px;height:70px;transform:translate(-50%,-50%)}
+/* tree */
+.tree{font-size:14px}
+.tree ul{list-style:none;padding-left:18px;margin:4px 0;border-left:2px solid var(--line)}
+.tree li{margin:6px 0}
+.tag{font-size:11px;border-radius:6px;padding:1px 6px;background:#f2f4f7;color:var(--mute)}
+table.plain{border-collapse:collapse;width:100%;font-size:14px;margin:8px 0}
+table.plain th,table.plain td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+table.plain th{background:#f8fafc}
+footer{color:var(--mute);font-size:13px;margin-top:48px;border-top:1px solid var(--line);padding-top:12px}
+@media (max-width:640px){.cards{grid-template-columns:1fr}.phone{border-width:6px;border-radius:22px}}
+@media print{nav.toc{display:none}.phone,.desk{break-inside:avoid}}
+</style>
+</head>
+<body>
+<nav class="toc" aria-label="Sections">
+  <a href="#s1">1 Overview</a><a href="#s2">2 Inbox</a><a href="#s3">3 Pin a place</a><a href="#s4">4 Decision tree</a><a href="#s5">5 Matrix (mobile)</a><a href="#s6">6 Drop with reason</a><a href="#s7">7 Desktop</a><a href="#s8">8 Butler</a>
+</nav>
+<main>
+<header id="s1">
+  <span class="pill a">Mockup — not implemented</span><span class="pill t">PRD #6</span><span class="pill">hotel-tracker</span>
+  <h1>PlanTrip v1: from a board of cards to decisions</h1>
+  <p class="lead">Capture fast, keep one entry per real place, compare in a matrix, and never forget why something was dropped.</p>
+  <div class="cards">
+    <div class="card c1"><b>Symptom</b>Near-duplicate cards, compare page rarely used, “why did we drop that?” forgotten.</div>
+    <div class="card c2"><b>Cause</b>The unit is a free-form card. No place identity, no shared criteria, no drop reason.</div>
+    <div class="card c3"><b>Fix</b>Inbox → pinned places → two-level decisions → matrix with “to check” cells → drop requires a reason.</div>
+    <div class="card c4"><b>Outcome</b>The group sees one ranked grid per decision; dropped options keep their reason; the Butler fills gaps, humans decide.</div>
+  </div>
+  <p class="sub">Example data is illustrative, loosely based on trip 3 (Martinique villa bundle vs Algarve vs Açores vs a Rep Dom all-inclusive package). Prices are placeholders, not quotes.</p>
+</header>
+
+<h2 id="s2">2 · Inbox <small>capture now, sort later</small></h2>
+<div class="row">
+  <div class="phone" role="img" aria-label="Mobile inbox screen">
+    <div class="bar">Trip: Réunion 2027 <small>Inbox · 4</small></div>
+    <div class="scr">
+      <div class="input">＋ Paste a link, photo, video or name…</div>
+      <p class="sub" style="margin:10px 0 6px">To sort</p>
+      <div class="box item">
+        <div class="thumb g1">🏝</div>
+        <div><p><b>Instagram photo</b> — “villa view Le Diamant”</p><p class="sub">Mel · 2 min ago</p>
+          <div class="sug">🤖 Looks like <b>Villa Anse Cafard</b> (Martinique) — same area, 90 m</div>
+          <button class="btn p">Attach</button><button class="btn">New option</button><button class="btn d">Discard</button></div>
+      </div>
+      <div class="box item">
+        <div class="thumb g2">▶</div>
+        <div><p><b>YouTube</b> — “Algarve in July: honest review”</p><p class="sub">Chris · 1 h ago</p>
+          <button class="btn p">Attach to Algarve</button><button class="btn d">Discard</button></div>
+      </div>
+      <div class="box item">
+        <div class="thumb g3">✎</div>
+        <div><p><b>Name</b> — “Majestic Mirage”</p><p class="sub">Hermes · today</p>
+          <div class="sug">🤖 Already exists as <b>Majestic Mirage Punta Cana</b>. Merge?</div>
+          <button class="btn p">Merge</button><button class="btn">Not the same</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <ol>
+      <li><b>One field.</b> Paste anything and it lands here. No need to choose a place first.</li>
+      <li><b>Sort later:</b> attach to an existing place or option, make it a new option, or discard.</li>
+      <li><b>Butler suggestions are blue.</b> They are only suggestions. Nothing is merged or moved until a person taps.</li>
+    </ol>
+    <p class="sub">Boundary: inbox items are not compared or ranked until they are sorted.</p>
+  </div>
+</div>
+
+<h2 id="s3">3 · Pin a place <small>OpenStreetMap = identity</small></h2>
+<div class="row">
+  <div class="phone" role="img" aria-label="Pin search screen with duplicate warning">
+    <div class="bar">Pin a place <small>✕</small></div>
+    <div class="scr">
+      <div class="input" style="color:var(--ink)">🔎 majestic mirage</div>
+      <div class="box" style="margin-top:8px">
+        <div class="opt">📍 <div><b>Majestic Mirage Punta Cana</b><div class="sub">Hotel · Bávaro, La Altagracia, DO</div></div></div>
+        <div class="opt">📍 <div><b>Majestic Colonial Punta Cana</b><div class="sub">Hotel · Bávaro, La Altagracia, DO</div></div></div>
+        <p class="sub" style="margin:6px 0 0">Not listed? <a class="src" href="#s3">Paste a map link</a> · <a class="src" href="#s3">Drop pin by hand</a></p>
+      </div>
+      <div class="map" aria-hidden="true">
+        <span class="ring" style="left:52%;top:52%"></span>
+        <span class="pin" style="left:50%;top:55%">📍</span><span class="pin" style="left:57%;top:50%">📌</span>
+      </div>
+      <div class="box" style="margin-top:10px;border-color:#fda29b;background:var(--red2)">
+        <b>Same place?</b> “Majestic Mirage” is 40 m from an existing place.
+        <div><button class="btn p">Yes, merge (keep name as alias)</button><button class="btn">No, different place</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <ul>
+      <li><b>Search</b> uses OSM place search (Nominatim). Tap a result to save its coordinates and OSM id.</li>
+      <li><b>Fallback:</b> paste a map link that contains coordinates, or drop the pin by hand. Airbnb villas often need this.</li>
+      <li><b>Same place?</b> The app asks when two places share an OSM id or are within about 150 m. Merging keeps the other name as an alias.</li>
+      <li>Unpinned places show <span class="check">📍 to pin</span>. The Butler can suggest a pin; a person confirms.</li>
+    </ul>
+    <p class="sub">Tradeoff: the 150 m check could flag two neighbouring resorts. That's why it asks instead of auto-merging.</p>
+  </div>
+</div>
+
+<h2 id="s4">4 · Decision tree <small>two levels, no deeper</small></h2>
+<div class="row">
+  <div class="note tree box">
+    <b>🗺 Where do we go?</b> <span class="tag">top decision</span>
+    <ul>
+      <li>🇲🇶 <b>Martinique</b> <span class="tag">bundle</span>
+        <ul>
+          <li>🏠 Which villa? <span class="tag">3 options · 1 dropped</span></li>
+          <li>✈️ Flights from Montréal <span class="tag">2 options</span></li>
+          <li>✈️ Flights from Paris <span class="tag">2 options</span></li>
+          <li>🚗 Car <span class="tag">1 option</span></li>
+        </ul></li>
+      <li>🇵🇹 <b>Algarve</b> <span class="tag">bundle</span>
+        <ul><li>🏠 Which villa? <span class="tag">2 options</span></li></ul></li>
+      <li>🇵🇹 <b>Açores</b> <span class="tag">bundle</span></li>
+      <li>🇩🇴 <b>Rep Dom — Riu all-inclusive</b> <span class="tag">package · one price</span></li>
+    </ul>
+  </div>
+  <div class="note">
+    <ul>
+      <li><b>Top level:</b> destinations or packages compete against each other.</li>
+      <li><b>Inside a destination:</b> sub-decisions compare its parts (villa against villa, flight against flight).</li>
+      <li>A <b>package</b> is a single option with a single price, so it competes directly with a bundle.</li>
+    </ul>
+    <p class="sub">Not in v1: automatically summing a bundle's parts into the destination total (that's v1.2, with costs per origin group). For now, someone fills the “cost per person” cell by hand.</p>
+  </div>
+</div>
+
+<h2 id="s5">5 · Matrix on mobile <small>criteria = rows, options = swipeable columns</small></h2>
+<div class="row">
+  <div class="phone" role="img" aria-label="Mobile matrix for top decision">
+    <div class="bar">Where do we go? <small>4 options</small></div>
+    <div class="scr">
+      <div class="crumb">Réunion 2027 › Decisions · <span class="check">5 to check</span></div>
+      <div class="mx box" style="padding:0">
+      <table>
+        <thead><tr><th>Option</th><th><span class="rank">1</span>Martinique</th><th><span class="rank">2</span>Açores</th><th><span class="rank">3</span>Rep Dom Riu</th><th class="dropped">Algarve</th></tr></thead>
+        <tbody>
+          <tr><td>Cost / person</td><td>~2 300 $ <a class="src" href="#s5">src</a></td><td>~1 900 $</td><td>1 539 $ <a class="src" href="#s5">src</a></td><td class="dropped">~2 600 $</td></tr>
+          <tr><td>Weather (July)</td><td>Hot, some rain</td><td>Mild, variable</td><td>Hot</td><td class="dropped">Dry, hot</td></tr>
+          <tr><td>Flight YUL</td><td>Direct</td><td><span class="check">to check</span></td><td>Direct</td><td class="dropped">1 stop</td></tr>
+          <tr><td>Flight Paris</td><td>Direct</td><td>Direct</td><td>~9 h 30</td><td class="dropped">Direct</td></tr>
+          <tr><td>Seaweed</td><td>Some risk</td><td>None</td><td>Peak season</td><td class="dropped">None</td></tr>
+          <tr><td>Group villa</td><td>Yes</td><td>Yes</td><td>No (rooms)</td><td class="dropped"><span class="check">to check</span></td></tr>
+          <tr><td>Votes</td><td class="votes">👍 4 👎 0</td><td class="votes">👍 3 👎 1</td><td class="votes">👍 1 👎 3</td><td class="dropped votes">👍 2 👎 2</td></tr>
+          <tr><td></td><td><button class="btn">👍</button><button class="btn">👎</button></td><td><button class="btn">👍</button><button class="btn">👎</button></td><td><button class="btn">👍</button><button class="btn d">Drop…</button></td><td class="dropped"><span class="why">Dropped by Mel · Nov 9 · <b>Cost / person</b>: “too much with flights”</span><button class="btn">Revive</button></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="sub" style="margin:4px 0">← swipe for more options →</p><button class="btn">＋ row</button><button class="btn">＋ option from inbox</button>
+    </div>
+  </div>
+  <div class="note">
+    <ul>
+      <li>The <b>first column stays fixed</b> and options swipe sideways, one column per snap. The page itself never scrolls sideways.</li>
+      <li><b>Cells</b> hold a value and an optional <a class="src" href="#s5">src</a> link. Empty cells say <span class="check">to check</span>.</li>
+      <li><b>Ranking</b> is cost per person, then 👍 count. No hidden weights.</li>
+      <li><b>Dropped</b> options move to the end, greyed out, and show their reason.</li>
+      <li>Tap an option's name to open its photos, sources and comments.</li>
+    </ul>
+    <p class="sub">Note: in this example the Rep Dom package costs less but ranks 3rd. Strictly following “cost first” would put it 1st. <b>Open question:</b> should 👍 count first, or cost first? The mockup shows the votes-first result so you can see how it feels.</p>
+  </div>
+</div>
+
+<h2 id="s6">6 · Drop with a reason <small>one tap + pick the criterion that killed it</small></h2>
+<div class="row">
+  <div class="phone" role="img" aria-label="Drop reason sheet">
+    <div class="bar">Where do we go?</div>
+    <div class="scr tall dim" style="display:flex;flex-direction:column;justify-content:flex-end">
+      <div class="sheet">
+        <h4>Drop “Rep Dom — Riu”?</h4>
+        <p class="sub" style="margin:0 0 6px">What killed it? (required)</p>
+        <div class="opt">○ Cost / person</div>
+        <div class="opt">○ Flight Paris</div>
+        <div class="opt on">● Seaweed</div>
+        <div class="opt">○ Group villa</div>
+        <div class="input" style="margin:8px 0;color:var(--ink)">Peak sargassum in July on the east coast</div>
+        <button class="btn d">Drop</button><button class="btn">Cancel</button>
+        <p class="sub" style="margin:6px 0 0">Anyone can drop or revive. History is kept.</p>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <table class="plain">
+      <tr><th>Today</th><th>Proposed</th></tr>
+      <tr><td>The card gets deleted or ignored. The reason lives in someone's memory.</td><td>Dropping requires a criterion. The reason shows on the greyed card.</td></tr>
+      <tr><td>Someone re-adds it weeks later.</td><td>It's still visible at the end of the matrix, with “Revive” one tap away.</td></tr>
+      <tr><td>Only the organizer changes status.</td><td>Any member can drop or revive. The group organizes itself.</td></tr>
+    </table>
+    <p class="sub">Later (v1.1): when someone re-captures a dropped place, the inbox warns “dropped on Nov 9 because of seaweed”.</p>
+  </div>
+</div>
+
+<h2 id="s7">7 · Same matrix on desktop <small>sub-decision: Martinique › Which villa?</small></h2>
+<p class="sub">On narrow screens this table scrolls sideways inside its frame.</p>
+<div class="desk" role="img" aria-label="Desktop villa matrix">
+  <div class="bar">Martinique › Which villa? <small>3 options · 1 dropped · 2 to check</small></div>
+  <div class="scr">
+    <div class="mx">
+    <table>
+      <thead><tr><th>Option</th><th class="chosen"><span class="rank">1</span>Villa Anse Cafard ✅ chosen</th><th><span class="rank">2</span>Villa Trois-Îlets</th><th class="dropped">Villa Sainte-Anne</th></tr></thead>
+      <tbody>
+        <tr><td>Photo</td><td class="chosen"><div class="thumb g1" style="width:100%;height:60px">🏝</div></td><td><div class="thumb g4" style="width:100%;height:60px">🌴</div></td><td class="dropped"><div class="thumb g2" style="width:100%;height:60px">🏠</div></td></tr>
+        <tr><td>📍 Place</td><td class="chosen">Le Diamant</td><td>Les Trois-Îlets</td><td class="dropped"><span class="check">📍 to pin</span></td></tr>
+        <tr><td>Total (14 nights)</td><td class="chosen">~6 900 $ <a class="src" href="#s7">airbnb</a></td><td>~7 400 $ <a class="src" href="#s7">airbnb</a></td><td class="dropped">~5 800 $</td></tr>
+        <tr><td>Bedrooms</td><td class="chosen">4</td><td>4</td><td class="dropped">3</td></tr>
+        <tr><td>Beach distance</td><td class="chosen">200 m</td><td><span class="check">to check</span></td><td class="dropped">1.5 km</td></tr>
+        <tr><td>Pool</td><td class="chosen">Yes</td><td>Yes</td><td class="dropped">No</td></tr>
+        <tr><td>Votes</td><td class="chosen votes">👍 5 👎 0</td><td class="votes">👍 3 👎 1</td><td class="dropped votes">👍 0 👎 3<span class="why">Dropped by Chris · Nov 4 · <b>Bedrooms</b>: “only 3, we need 4”</span></td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+<p class="sub">The green outline means the organizer marked it chosen. Choosing doesn't book anything.</p>
+
+<h2 id="s8">8 · What the Butler can and can't do <small>it fills cells, humans decide</small></h2>
+<table class="plain">
+  <tr><th>Butler can</th><th>Butler cannot</th><th>Why</th></tr>
+  <tr><td>Fill <span class="check">to check</span> cells (value + source)</td><td>Create options or decisions</td><td>Creating cards directly caused most of the duplicates</td></tr>
+  <tr><td>Add finds to the inbox</td><td>Merge places</td><td>Merges are hard to undo</td></tr>
+  <tr><td>Suggest pins, merges, drops</td><td>Drop or revive</td><td>The group owns its decisions</td></tr>
+  <tr><td>Answer questions as comments</td><td>Change who is chosen</td><td>Only the organizer records the final choice</td></tr>
+</table>
+<p>Each run reports something like <b>“Filled 9 of 14 cells · 3 inbox items · 2 suggestions”</b>, so its work can be measured. Your local Hermes uses an <b>owner token</b> that doesn't need a run id. Runs queued from the site keep the run-id lock.</p>
+
+<footer>
+  Derived from PRD <a href="https://github.com/chrisribe/hotel-tracker/issues/6">chrisribe/hotel-tracker#6</a> (the canonical source). This is a static mockup: no scripts, no network requests, and illustrative data only.<br>
+  Open questions: rank by votes or cost first · default criteria for each kind · how the inbox capture handles a shared link from the phone.
+</footer>
+</main>
+</body>
+</html>
